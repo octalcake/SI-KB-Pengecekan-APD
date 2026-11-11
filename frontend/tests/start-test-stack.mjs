@@ -67,7 +67,7 @@ const goEnv = {
 	GEMINI_TIMEOUT_MS: '30000',
 	GEMINI_MAX_ATTEMPTS: '2',
 	GEMINI_STORE: 'false',
-	REPORT_PROMPT_VERSION: 'k3-report-v1',
+	REPORT_PROMPT_VERSION: 'k3-report-v2',
 	DISPLAY_TIMEZONE: 'Asia/Jakarta'
 };
 

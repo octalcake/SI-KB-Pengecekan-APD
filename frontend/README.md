@@ -12,7 +12,8 @@ Dokumen acuan:
 
 ## 1. Prasyarat Runtime Lokal
 
-- **Node.js**: v22+ (diuji pada Node.js `v24.18.1` dengan modul bawaan `node:sqlite` untuk harness pengujian disposable) dan **npm** (`11.x`).
+- **Bun**: `1.4.4` untuk instalasi dan perintah proyek; versi dikunci di `package.json`.
+- **Node.js**: v24+ (diuji pada Node.js `v24.18.1` dengan modul bawaan `node:sqlite` untuk harness pengujian disposable).
 - **Backend Go (`../backend`)**: harus sudah disiapkan dan dijalankan sesuai petunjuk yang ada di [`../README.md`](../README.md) dan [`../backend/.env.example`](../backend/.env.example).
   - Jangan menghapus direktori penyimpanan lokal `backend/storage/` (`k3.sqlite` maupun `evidence/`) saat memulai ulang layanan agar histori sesi, bukti foto asli, temuan, dan laporan yang sudah disetujui tetap terjaga.
 
@@ -24,7 +25,7 @@ Jalankan instalasi deterministik dari lockfile di direktori `frontend/`:
 
 ```sh
 cd frontend
-npm ci
+bun install --frozen-lockfile
 ```
 
 ---
@@ -67,7 +68,7 @@ Dari direktori `frontend/`:
 
 ```sh
 cd frontend
-npm run dev -- --host localhost --port 5173 --strictPort
+bun run dev --host localhost --port 5173 --strictPort
 ```
 
 Buka **`http://localhost:5173`** di browser dan masuk menggunakan akun petugas yang telah di-seed (default `petugas`).
@@ -80,8 +81,10 @@ Buka **`http://localhost:5173`** di browser dan masuk menggunakan akun petugas y
 
 ```sh
 cd frontend
-npm run check
-npm run build
+bun run lint
+bun run check
+bun run build
+bun audit --audit-level=high
 ```
 
 ### Pengujian End-to-End Playwright (Satu Worker Serial, Stack Disposable Terisolasi)
@@ -97,7 +100,7 @@ $env:TEST_WEB_PORT='62173'
 $env:TEST_API_PORT='62080'
 $env:GOMAXPROCS='2'
 $env:GOFLAGS='-p=2'
-npx playwright test --workers=1
+bun run test:e2e --workers=1
 ```
 
 Tangkapan layar dan ringkasan hash perjalanan terintegrasi disimpan di `test-results/acceptance/` (diabaikan Git). Atur `TEST_ACCEPTANCE_CAPTURE_DIR` untuk menggunakan direktori lain.
@@ -105,7 +108,7 @@ Tangkapan layar dan ringkasan hash perjalanan terintegrasi disimpan di `test-res
 ```sh
 # Bash / POSIX
 cd frontend
-TEST_WEB_PORT=62173 TEST_API_PORT=62080 GOMAXPROCS=2 GOFLAGS=-p=2 npx playwright test --workers=1
+TEST_WEB_PORT=62173 TEST_API_PORT=62080 GOMAXPROCS=2 GOFLAGS=-p=2 bun run test:e2e --workers=1
 ```
 
 Cakupan spesifikasi pengujian di `frontend/tests/`:

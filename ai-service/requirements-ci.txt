@@ -1,0 +1,7 @@
+# API tests inject a fake detector; torch, Ultralytics and model weights are not needed.
+-c requirements.lock
+-r requirements-dev.txt
+fastapi
+pydantic-settings
+python-multipart
+opencv-python

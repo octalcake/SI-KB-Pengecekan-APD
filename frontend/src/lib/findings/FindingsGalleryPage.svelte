@@ -204,7 +204,7 @@
 		await loadFindings(pageNumber);
 	}
 
-	function handleManualCreated(newFinding: Finding) {
+	function handleManualCreated() {
 		// Prepend or reload page 1
 		void loadFindings(1);
 	}

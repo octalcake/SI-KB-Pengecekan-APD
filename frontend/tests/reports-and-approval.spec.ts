@@ -120,7 +120,7 @@ async function startDisposableReportStack(options: {
 		GEMINI_TIMEOUT_MS: '30000',
 		GEMINI_MAX_ATTEMPTS: '2',
 		GEMINI_STORE: 'false',
-		REPORT_PROMPT_VERSION: 'k3-report-v1',
+		REPORT_PROMPT_VERSION: 'k3-report-v2',
 		DISPLAY_TIMEZONE: 'Asia/Jakarta'
 	};
 
@@ -406,7 +406,7 @@ test.describe('P0-05: Penyusunan laporan inspeksi, snapshot sumber, staleness, d
 		);
 
 		// Uji pemulihan respons hilang (network abort): klik lagi pada sesi yang sama memakai request_key yang sama!
-		let observedGenerateKeys: string[] = [];
+		const observedGenerateKeys: string[] = [];
 		await page.route('**/api/v1/reports/generate', async (route) => {
 			const postData = route.request().postDataJSON() as { request_key: string };
 			observedGenerateKeys.push(postData.request_key);
