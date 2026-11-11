@@ -10,7 +10,8 @@ const browserGlobals = new Set([
 	'fetch', 'XMLHttpRequest', 'WebSocket', 'MediaStream', 'MediaDevices',
 	'HTMLVideoElement', 'HTMLCanvasElement', 'requestAnimationFrame', 'cancelAnimationFrame',
 	'setInterval', 'clearInterval', 'setTimeout', 'clearTimeout', 'crypto', 'URL',
-	'globalThis', 'self', 'location', 'history'
+	'globalThis', 'self', 'location', 'history',
+	'$state', '$derived', '$effect', '$props', '$bindable', '$inspect', '$host'
 ]);
 const browserConstructors = new Set(['Blob', 'File', 'FormData', 'AbortController', 'URLSearchParams']);
 const httpGlobals = new Set(['fetch', 'XMLHttpRequest', 'WebSocket']);
@@ -83,6 +84,7 @@ export function checkArchitecture(inputFiles) {
 								!/^features\/[^/]+\/(domain|application)\.ts$/.test(target)) add(name, `foreign private dependency ${target}`);
 							if (inner && (there.app || ['infrastructure', 'presentation'].includes(there.layer) || target.startsWith('shared/http/'))) add(name, `outward dependency ${target}`);
 							if (inner && here.layer === 'domain' && (there.layer === 'application' || target.endsWith('/application.ts'))) add(name, `domain imports application ${target}`);
+							if (here.layer === 'infrastructure' && (there.app || there.layer === 'presentation')) add(name, `outward dependency ${target}`);
 							if (here.layer === 'presentation' && (there.layer === 'infrastructure' || target.startsWith('shared/http/'))) add(name, `presentation imports transport ${target}`);
 							if (/^features\/[^/]+\/(domain|application)\.ts$/.test(name) &&
 								(!['domain', ...(name.endsWith('/application.ts') ? ['application'] : [])].includes(there.layer) || here.feature !== there.feature)) add(name, `public contract exports non-inner dependency ${target}`);
@@ -117,17 +119,24 @@ export function checkArchitecture(inputFiles) {
 			visit(ast);
 		}
 	}
-	// Pure shared helpers and public contracts cannot hide an outward dependency.
+	// Helpers cannot hide outward dependencies; presentation stops at app composition.
 	for (const name of files.keys()) {
 		const here = location(name);
-		if (!name.startsWith('features/') || (!['domain', 'application'].includes(here.layer) && !publicContract(name))) continue;
+		if (!name.startsWith('features/')) continue;
+		const inner = ['domain', 'application'].includes(here.layer) || publicContract(name);
+		const infrastructure = here.layer === 'infrastructure';
+		const presentation = here.layer === 'presentation';
+		if (!inner && !infrastructure && !presentation) continue;
 		const seen = new Set([name]);
 		function walk(current) {
 			for (const target of edges.get(current) ?? []) {
 				if (seen.has(target)) continue;
 				seen.add(target);
 				const there = location(target);
-				if (runtime.has(target) || there.app || ['presentation', 'infrastructure'].includes(there.layer) || target.startsWith('shared/http/')) add(name, `transitive outward dependency ${target}`);
+				if (presentation && there.app) continue;
+				if (inner && (runtime.has(target) || there.app || ['presentation', 'infrastructure'].includes(there.layer) || target.startsWith('shared/http/'))) add(name, `transitive outward dependency ${target}`);
+				if (infrastructure && (there.app || there.layer === 'presentation')) add(name, `transitive outward dependency ${target}`);
+				if (presentation && (there.layer === 'infrastructure' || target.startsWith('shared/http/'))) add(name, `transitive transport dependency ${target}`);
 				walk(target);
 			}
 		}

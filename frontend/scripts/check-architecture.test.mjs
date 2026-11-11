@@ -22,7 +22,7 @@ test('resolves relative cross-feature private access and catches UI-bearing barr
 	assert.match(check({ 'features/b/domain.ts': "export * from './presentation/view';", 'features/b/presentation/view.ts': '' }).join(), /public contract/);
 });
 test('forbids frameworks, browser runtime, HTTP and shared-to-feature imports', () => {
-	for (const source of ["import { onMount } from 'svelte';", "import { page } from '$app/state';", 'navigator.mediaDevices;', 'globalThis.fetch("/api/v1");', 'URL.createObjectURL(blob);']) {
+	for (const source of ["import { onMount } from 'svelte';", "import { page } from '$app/state';", 'let value = $state(0);', 'navigator.mediaDevices;', 'globalThis.fetch("/api/v1");', 'URL.createObjectURL(blob);']) {
 		assert.notEqual(check({ 'features/a/application/work.ts': source }).length, 0);
 	}
 	assert.match(check({ 'shared/helper.ts': "export * from '../features/a/domain';", 'features/a/domain.ts': '' }).join(), /shared imports/);
@@ -44,4 +44,32 @@ test('rejects transitive outward dependencies and computed browser access', () =
 	assert.deepEqual(check({ 'features/a/domain/model.ts': 'interface Project { location: string; } const project = { location: "Site" }; project.location;' }), []);
 	assert.match(check({ 'features/a/domain.ts': 'export type { Component } from "svelte";' }).join(), /external dependency/);
 	assert.match(check({ 'features/a/presentation/view.ts': 'globalThis["fetch"]("/api/v1");' }).join(), /presentation calls/);
+});
+
+test('infrastructure cannot reach presentation or composition through helpers', () => {
+	for (const target of ['features/a/presentation/view.ts', 'app/a.ts']) {
+		assert.match(check({
+			'features/a/infrastructure/http.ts': `import '#lib/${target.slice(0, -3)}';`,
+			[target]: ''
+		}).join(), /outward/);
+		assert.match(check({
+			'features/a/infrastructure/http.ts': "import '../helper';",
+			'features/a/helper.ts': `export * from '#lib/${target.slice(0, -3)}';`,
+			[target]: ''
+		}).join(), /features\/a\/infrastructure\/http\.ts: transitive outward/);
+	}
+});
+
+test('presentation reaches adapters only through the composition seam', () => {
+	assert.match(check({
+		'features/a/presentation/view.ts': "import '#lib/shared/helper';",
+		'shared/helper.ts': "export * from './http/client';",
+		'shared/http/client.ts': ''
+	}).join(), /features\/a\/presentation\/view\.ts: transitive transport/);
+	assert.deepEqual(check({
+		'features/a/presentation/view.ts': "import '#lib/app/a';",
+		'app/a.ts': "import '#lib/features/a/infrastructure/http';",
+		'features/a/infrastructure/http.ts': "import '#lib/shared/http/client';",
+		'shared/http/client.ts': ''
+	}), []);
 });

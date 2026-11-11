@@ -93,7 +93,13 @@ export function createCaptureLoop(options: CreateCaptureLoopOptions) {
 	}
 
 	function revokeSnapshotUrl(url: string | null | undefined) {
-		if(url?.startsWith('blob:')) options.revokeObjectUrl(url);
+		if(url?.startsWith('blob:')) {
+			try {
+				options.revokeObjectUrl(url);
+			} catch {
+				// URL cleanup must not interrupt capture or session shutdown.
+			}
+		}
 	}
 
 	async function tick(): Promise<CaptureTickResult> {

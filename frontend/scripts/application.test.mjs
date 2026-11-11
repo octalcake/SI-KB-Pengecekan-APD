@@ -178,3 +178,25 @@ test('capture skips busy ticks, releases camera before stop, discards canceled s
 	assert.deepEqual(events, ['release', 'stop', 'blob:canceled']);
 	assert.equal(loop.getState().active, false);
 });
+
+test('capture still discards a canceled sample when URL cleanup fails', async () => {
+	const { createCaptureLoop } = await loadTypescript('features/monitoring/application/capture-workflow.ts');
+	let finishSample;
+	let revocations = 0;
+	let stops = 0;
+	const loop = createCaptureLoop({
+		sessionId: 1, nowMonotonicMs: () => 1000, nowUtcIso: () => '2026-11-11T00:00:00Z',
+		sampleJpeg: () => new Promise((resolve) => { finishSample = resolve; }),
+		sendFrame: async () => { throw Error('canceled sample must not be sent'); },
+		stopSession: async () => { stops++; }, releaseCamera: () => {},
+		revokeObjectUrl: () => { revocations++; throw Error('URL cleanup failed'); },
+		classifyError: () => { throw Error('canceled sample must not become an inference error'); },
+		createAbortController: () => new AbortController(), schedule: () => () => {}
+	});
+	const pending = loop.tick();
+	await loop.stop();
+	finishSample({ objectUrl: 'blob:canceled', blob: new Blob(), width: 1, height: 1 });
+	assert.deepEqual(await pending, { skippedBusy: false, stopped: true });
+	assert.equal(revocations, 1);
+	assert.equal(stops, 1);
+});
