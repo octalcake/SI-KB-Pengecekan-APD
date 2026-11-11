@@ -33,7 +33,7 @@ docker compose down                     # stop (data tetap di volume "storage")
 docker compose down -v                  # stop + HAPUS database dan evidence
 ```
 
-Model YOLO: taruh `best.pt` dan `model_manifest.json` di `ai-service/models/` (di-mount read-only ke container). Tanpa weights, mode `real` berstatus not-ready; CRUD tetap jalan.
+Model YOLO: `best.pt` dan `model_manifest.json` ada di `ai-service/models/` (di-mount read-only ke container; hash dicek terhadap manifest). Tanpa weights atau hash beda, mode `real` berstatus not-ready; CRUD tetap jalan.
 
 Gemini: isi `GEMINI_ENABLED=true` dan `GEMINI_API_KEY` di `.env` root, lalu `docker compose up -d backend`.
 
@@ -43,9 +43,10 @@ Gemini: isi `GEMINI_ENABLED=true` dan `GEMINI_API_KEY` di `.env` root, lalu `doc
 # AI service
 cd ai-service
 python -m venv .venv && .venv/Scripts/activate   # Linux/mac: source .venv/bin/activate
-pip install -r requirements.lock
+pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.in   # lock khusus Linux/Docker
 cp .env.example .env                              # isi AI_INTERNAL_TOKEN
 uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1
+# test: pip install -r requirements-dev.txt && python -m pytest tests
 
 # Backend
 cd backend

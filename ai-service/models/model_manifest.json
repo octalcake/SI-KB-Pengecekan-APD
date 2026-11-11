@@ -1,0 +1,343 @@
+{
+  "model_version": "ppe-demo-v1",
+  "created_at": "2026-11-11T04:39:57+00:00",
+  "weights_file": "best.pt",
+  "weights_sha256": "b6b91b8c04c5c1b1a7586259f3630689a6a344ff79c9f92ce30c741777c6a356",
+  "base_weights": "yolo26n.pt",
+  "imgsz": 640,
+  "native_classes": {
+    "0": "helmet",
+    "1": "gloves",
+    "2": "vest",
+    "3": "boots",
+    "4": "goggles",
+    "5": "Person",
+    "6": "no_helmet",
+    "7": "no_goggle",
+    "8": "no_gloves",
+    "9": "no_boots",
+    "10": "forklift",
+    "11": "no_vest"
+  },
+  "logical_class_map": {
+    "helmet": 0,
+    "vest": 2,
+    "person": 5,
+    "no_helmet": 6,
+    "no_vest": 11
+  },
+  "person_class_id": 5,
+  "violation_class_ids": {
+    "NO_HELMET": 6,
+    "NO_VEST": 11
+  },
+  "supported_violations": [
+    "NO_HELMET",
+    "NO_VEST"
+  ],
+  "recommended_mode": "A real penuh",
+  "thresholds": {
+    "person": 0.3,
+    "violation": 0.25,
+    "predict_floor": 0.1
+  },
+  "thresholds_initial_srs": {
+    "person": 0.35,
+    "violation": 0.5,
+    "predict_floor": 0.1
+  },
+  "thresholds_source": "validation sweep (sel 9); test tidak dipakai tuning",
+  "tracker_config": "bytetrack-k3.yaml",
+  "dataset": {
+    "source": "construction_ppe",
+    "downloaded_at": "2026-11-11T04:34:47+00:00",
+    "name": "Ultralytics Construction-PPE",
+    "url": "https://docs.ultralytics.com/datasets/detect/construction-ppe",
+    "version": "construction-ppe.yaml dari ultralytics 8.4.210",
+    "license": "CC BY 4.0 (periksa ulang atribusi pada halaman dataset)",
+    "notes": "Campuran foto nyata dan gambar generated; tidak ada test split resmi.",
+    "root": "/content/datasets/construction-ppe",
+    "splits": {
+      "train": "/content/datasets/construction-ppe/images/train",
+      "val": "/content/datasets/construction-ppe/images/val"
+    }
+  },
+  "class_counts": {
+    "train": {
+      "helmet": 1282,
+      "gloves": 1548,
+      "vest": 1476,
+      "boots": 2003,
+      "goggles": 612,
+      "Person": 1962,
+      "no_helmet": 634,
+      "no_goggle": 265,
+      "no_gloves": 839,
+      "no_boots": 569,
+      "forklift": 275,
+      "no_vest": 437
+    },
+    "val": {
+      "helmet": 294,
+      "gloves": 381,
+      "vest": 340,
+      "boots": 481,
+      "goggles": 139,
+      "Person": 481,
+      "no_helmet": 179,
+      "no_goggle": 82,
+      "no_gloves": 203,
+      "no_boots": 178,
+      "forklift": 73,
+      "no_vest": 130
+    }
+  },
+  "training": {
+    "epochs": 20,
+    "batch": 16,
+    "patience": 5,
+    "seed": 42,
+    "minutes": 3.7,
+    "run_dir": "ppe_20261111-043416",
+    "gpu": "NVIDIA A100-SXM4-40GB"
+  },
+  "versions": {
+    "python": "3.13.16",
+    "torch": "2.14.1+cu130",
+    "ultralytics": "8.4.210"
+  },
+  "validation_metrics": {
+    "metrics/precision(B)": 0.8238801425223022,
+    "metrics/recall(B)": 0.6654158115108797,
+    "metrics/mAP50(B)": 0.72422593162803,
+    "metrics/mAP50-95(B)": 0.5157107915370774,
+    "fitness": 0.5157107915370774
+  },
+  "per_class_validation": [
+    {
+      "split": "val",
+      "class_id": 0,
+      "native": "helmet",
+      "logical": "helmet",
+      "precision": 0.9028,
+      "recall": 0.7755,
+      "mAP50": 0.8161,
+      "mAP50-95": 0.6094
+    },
+    {
+      "split": "val",
+      "class_id": 1,
+      "native": "gloves",
+      "logical": "",
+      "precision": 0.8806,
+      "recall": 0.7323,
+      "mAP50": 0.8066,
+      "mAP50-95": 0.6109
+    },
+    {
+      "split": "val",
+      "class_id": 2,
+      "native": "vest",
+      "logical": "vest",
+      "precision": 0.9309,
+      "recall": 0.8317,
+      "mAP50": 0.8803,
+      "mAP50-95": 0.6787
+    },
+    {
+      "split": "val",
+      "class_id": 3,
+      "native": "boots",
+      "logical": "",
+      "precision": 0.8035,
+      "recall": 0.6632,
+      "mAP50": 0.7518,
+      "mAP50-95": 0.56
+    },
+    {
+      "split": "val",
+      "class_id": 4,
+      "native": "goggles",
+      "logical": "",
+      "precision": 0.8132,
+      "recall": 0.9209,
+      "mAP50": 0.9321,
+      "mAP50-95": 0.5757
+    },
+    {
+      "split": "val",
+      "class_id": 5,
+      "native": "Person",
+      "logical": "person",
+      "precision": 0.9364,
+      "recall": 0.8871,
+      "mAP50": 0.9425,
+      "mAP50-95": 0.7827
+    },
+    {
+      "split": "val",
+      "class_id": 6,
+      "native": "no_helmet",
+      "logical": "no_helmet",
+      "precision": 0.7963,
+      "recall": 0.5251,
+      "mAP50": 0.6164,
+      "mAP50-95": 0.3665
+    },
+    {
+      "split": "val",
+      "class_id": 7,
+      "native": "no_goggle",
+      "logical": "",
+      "precision": 0.4014,
+      "recall": 0.0491,
+      "mAP50": 0.136,
+      "mAP50-95": 0.0385
+    },
+    {
+      "split": "val",
+      "class_id": 8,
+      "native": "no_gloves",
+      "logical": "",
+      "precision": 0.8762,
+      "recall": 0.5577,
+      "mAP50": 0.6168,
+      "mAP50-95": 0.3794
+    },
+    {
+      "split": "val",
+      "class_id": 9,
+      "native": "no_boots",
+      "logical": "",
+      "precision": 0.87,
+      "recall": 0.6404,
+      "mAP50": 0.7365,
+      "mAP50-95": 0.5575
+    },
+    {
+      "split": "val",
+      "class_id": 10,
+      "native": "forklift",
+      "logical": "",
+      "precision": 0.7631,
+      "recall": 0.7942,
+      "mAP50": 0.7898,
+      "mAP50-95": 0.5767
+    },
+    {
+      "split": "val",
+      "class_id": 11,
+      "native": "no_vest",
+      "logical": "no_vest",
+      "precision": 0.9121,
+      "recall": 0.6077,
+      "mAP50": 0.6658,
+      "mAP50-95": 0.4525
+    }
+  ],
+  "fixed_threshold_report": [
+    {
+      "split": "val",
+      "logical": "person",
+      "threshold": 0.3,
+      "tp": 426,
+      "fp": 12,
+      "fn": 55,
+      "gt": 481,
+      "precision": 0.9726027397260274,
+      "recall": 0.8856548856548857,
+      "f1": 0.9270946681175192
+    },
+    {
+      "split": "val",
+      "logical": "no_helmet",
+      "threshold": 0.25,
+      "tp": 101,
+      "fp": 13,
+      "fn": 78,
+      "gt": 179,
+      "precision": 0.8859649122807017,
+      "recall": 0.5642458100558659,
+      "f1": 0.689419795221843
+    },
+    {
+      "split": "val",
+      "logical": "no_vest",
+      "threshold": 0.25,
+      "tp": 77,
+      "fp": 3,
+      "fn": 53,
+      "gt": 130,
+      "precision": 0.9625,
+      "recall": 0.5923076923076923,
+      "f1": 0.7333333333333334
+    }
+  ],
+  "test_results": null,
+  "independent_test_available": false,
+  "gate": {
+    "min_precision": 0.5,
+    "min_recall": 0.5,
+    "min_val_instances": 10,
+    "results": {
+      "person": {
+        "train_instances>0": true,
+        "val_instances>=10": true,
+        "precision>=0.5": true,
+        "recall>=0.5": true
+      },
+      "NO_HELMET": {
+        "train_instances>0": true,
+        "val_instances>=10": true,
+        "precision>=0.5": true,
+        "recall>=0.5": true
+      },
+      "NO_VEST": {
+        "train_instances>0": true,
+        "val_instances>=10": true,
+        "precision>=0.5": true,
+        "recall>=0.5": true
+      }
+    }
+  },
+  "latency_colab": [
+    {
+      "device": "0",
+      "imgsz": 640,
+      "n": 60,
+      "p50_ms": 12.5,
+      "p95_ms": 13.1
+    },
+    {
+      "device": "cpu",
+      "imgsz": 640,
+      "n": 60,
+      "p50_ms": 38.9,
+      "p95_ms": 39.7,
+      "cpu_threads": 8,
+      "format": "pt"
+    },
+    {
+      "device": "cpu",
+      "imgsz": 480,
+      "n": 60,
+      "p50_ms": 33.0,
+      "p95_ms": 35.0,
+      "cpu_threads": 8,
+      "format": "pt"
+    }
+  ],
+  "tracking_smoke_test": {
+    "clip": null,
+    "samples": 0
+  },
+  "validated_for_live": false,
+  "limitations": [
+    "Tracking ID bukan identitas pekerja",
+    "Model hanya indikasi visual dan membutuhkan verifikasi petugas K3",
+    "Unknown/occlusion bukan bukti tanpa APD",
+    "Latency CPU laptop demo, ID switch pada 1 FPS, dan aturan 2/3 dalam 2 detik harus diuji di Go + FastAPI",
+    "Near-duplicate dan grouping per video tidak diverifikasi tanpa manifest",
+    "Belum dievaluasi pada test webcam independen"
+  ]
+}
