@@ -2,7 +2,7 @@
 
 Parent spec: [P0 frontend integration](../../spec-p0-frontend-integration.md).
 Tracker: GitHub publication pending.
-Blocked by: P0-02, P0-04, P0-05, P0-06 (external real-AI prerequisites must be reported, never silently waived).
+Blocked by: P0-02, P0-03, P0-04, P0-05. Backend/model readiness is an external dependency; do not implement it as part of acceptance.
 Assigned lane: Antigravity 3 for runtime evidence; Antigravity 1 for final UI corrections, sequentially.
 Status: blocked.
 

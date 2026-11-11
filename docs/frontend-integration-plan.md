@@ -1,6 +1,6 @@
 # P0 frontend and end-to-end integration plan
 
-Status: planning deliverable; implementation has not started.
+Status: historical planning deliverable. The user's subsequent [frontend-only scope correction](frontend-only-scope.md) supersedes every backend/Python/Go implementation assignment below. Current delivery is Svelte frontend integration with existing APIs only; backend-only work is excluded.
 
 Prepared 2026-11-11 against upstream `main` at `cbfcf803c78061d0de79b9368197c6447614d1d1`.
 Repository: https://github.com/octalcake/SI-KB-Pengecekan-APD

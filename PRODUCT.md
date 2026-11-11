@@ -20,6 +20,7 @@ Indonesian-language operational application. One active camera session globally.
 
 ## Capabilities and Constraints
 
+- Current implementation work is frontend only: build Svelte screens and consume existing Go APIs. Go/Python implementation, schema changes, model/runtime setup, and missing backend endpoints are outside the user's scope. See docs/frontend-only-scope.md, which supersedes historical task language.
 - Preserve SvelteKit 3/Svelte 5/TypeScript, Go/SQLite/evidence storage, and FastAPI. The SRS and its API contract are the domain authority.
 - Login, project/zone CRUD, monitoring, evidence review, follow-up, draft editing and approval, dashboard summary, and basic failure recovery are P0.
 - Automatically supported categories are NO_HELMET and NO_VEST only when the model manifest/runtime supports them.

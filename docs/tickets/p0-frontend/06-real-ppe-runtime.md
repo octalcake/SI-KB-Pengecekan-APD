@@ -4,7 +4,7 @@ Parent spec: [P0 frontend integration](../../spec-p0-frontend-integration.md).
 Tracker: GitHub publication pending.
 Blocked by: P0-03; actual Colab export/checkpoint and compatible CPU dependencies.
 Assigned lane: Antigravity 3, Gemini 4 Argon, high.
-Status: blocked.
+Status: outside the user's frontend-only scope. Do not implement backend/model/runtime work. Treat real model readiness as an external dependency exposed through existing API responses.
 
 ## What it delivers
 

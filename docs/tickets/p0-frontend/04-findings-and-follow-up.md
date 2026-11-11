@@ -2,8 +2,8 @@
 
 Parent spec: [P0 frontend integration](../../spec-p0-frontend-integration.md).
 Tracker: GitHub publication pending.
-Blocked by: P0-03.
-Assigned lane: Antigravity 2, Gemini 4 Argon, high; account verification is currently required before dispatch.
+Blocked by: P0-01 for shared auth/API integration. Existing finding APIs allow independent frontend work without requiring the new monitoring UI.
+Assigned lane: Antigravity 2, Gemini 4 Argon, high. Frontend only; backend code is out of scope.
 Status: blocked.
 
 ## What it delivers

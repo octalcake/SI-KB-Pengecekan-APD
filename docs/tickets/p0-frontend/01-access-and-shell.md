@@ -23,5 +23,5 @@ An officer can log in through the existing Go API, reopen an authenticated works
 
 ## Scope
 
-No project forms, camera, findings, or reports yet. Reuse existing Go auth and only fix backend behavior if a failing public-boundary case demonstrates the need.
+No project forms, camera, findings, or reports yet. Frontend only: consume existing Go auth unchanged. Report backend gaps instead of changing Go/Python code, schema, or server configuration. See the authoritative frontend-only scope correction.
 

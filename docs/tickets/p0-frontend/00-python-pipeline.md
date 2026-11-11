@@ -4,7 +4,7 @@ Parent spec: [P0 frontend integration](../../spec-p0-frontend-integration.md).
 Tracker: GitHub publication pending.
 Blocked by: None; existing Go auth/project/session/frame/evidence APIs already provide the public test seam.
 Assigned lane: Antigravity 3, Gemini 4 Argon, high.
-Status: ready-for-agent.
+Status: cancelled from delivery by the user's frontend-only scope correction. Do not implement. The attempted delegate failed before any file edits.
 
 ## What it delivers
 
