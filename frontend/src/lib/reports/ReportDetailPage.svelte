@@ -1,12 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { authSession } from '#lib';
 	import {
 		approveReportApi,
-		createManualReportApi,
 		createOperationRequestKey,
 		deleteReportApi,
 		getReportApi,
-		getSharedAuthSession,
 		regenerateReportApi,
 		updateReportApi
 	} from './api';
@@ -29,7 +28,7 @@
 
 	let { reportId }: Props = $props();
 
-	const auth = getSharedAuthSession();
+	const auth = authSession;
 
 	let report = $state<Report | null>(null);
 	let loading = $state<boolean>(true);
@@ -50,14 +49,12 @@
 	// Modal / confirmation toggles
 	let showRegenerateConfirm = $state<boolean>(false);
 	let showDeleteConfirm = $state<boolean>(false);
-	let showRecreateTemplateConfirm = $state<boolean>(false);
 
 	// Busy flags
 	let savingEdit = $state<boolean>(false);
 	let regenerating = $state<boolean>(false);
 	let approving = $state<boolean>(false);
 	let deletingReport = $state<boolean>(false);
-	let recreatingTemplate = $state<boolean>(false);
 
 	let mutationError = $state<ParsedReportError | null>(null);
 	let mutationSuccess = $state<string | null>(null);
@@ -143,7 +140,6 @@
 		retainedRegenerateVersion = null;
 		showRegenerateConfirm = false;
 		showDeleteConfirm = false;
-		showRecreateTemplateConfirm = false;
 		mutationError = null;
 		mutationSuccess = null;
 		void loadDetail(id, true);
@@ -260,31 +256,6 @@
 			// Note: formTitle and formContent are intentionally NOT overwritten so officer's unsaved draft edits survive Gemini/external failure!
 		} finally {
 			regenerating = false;
-		}
-	}
-
-	async function handleRecreateFreshTemplateDraft() {
-		if (!report || recreatingTemplate || report.status !== 'draft') return;
-		mutationError = null;
-		mutationSuccess = null;
-		recreatingTemplate = true;
-		const sessionId = report.session_id;
-		try {
-			await deleteReportApi(report.id, report.version);
-			const freshReport = await createManualReportApi({
-				session_id: sessionId,
-				use_template: true
-			});
-			showRecreateTemplateConfirm = false;
-			await goto(`/reports/${freshReport.id}`);
-		} catch (err) {
-			mutationError = parseReportApiError(
-				err,
-				'Gagal menyusun ulang draft template dari sumber terbaru.'
-			);
-			showRecreateTemplateConfirm = false;
-		} finally {
-			recreatingTemplate = false;
 		}
 	}
 
@@ -421,7 +392,8 @@
 				<p>
 					Satu atau lebih temuan terkonfirmasi pada Sesi S-{report.session_id} telah diubah sejak snapshot laporan ini dibuat (<code>source_hash</code> saat ini berbeda).
 					<strong>Menyimpan suntingan teks judul/narasi TIDAK akan menyegarkan status stale.</strong>
-					Laporan yang stale diblokir dari persetujuan (<code>409 STALE_REPORT</code>). Untuk memperbarui snapshot sumber sebelum menyetujui, lakukan <strong>Regenerate Draft (Gemini)</strong> atau <strong>Buat Ulang Draft Template dari Sumber Terbaru</strong>.
+					Draft perlu dibuat ulang dan tombol persetujuan dinonaktifkan selama sumber berstatus stale (<code>409 STALE_REPORT</code>).
+					Endpoint backend yang tersedia hanya mendukung penyegaran snapshot di tempat melalui <strong>Regenerate Draft dengan Gemini</strong>. Apabila layanan Gemini tidak tersedia, snapshot template/manual tidak dapat disegarkan secara otomatis di tempat; Anda dapat mempertahankan draft ini, atau menghapus draft secara eksplisit lalu membuat draft Template/Manual baru dari halaman Daftar Laporan.
 				</p>
 			</div>
 		{/if}
@@ -463,20 +435,6 @@
 							data-testid="retry-regenerate-same-key"
 						>
 							Pulihkan / Coba Ulang Regenerate dengan Kunci Sama ({retainedRegenerateKey.slice(0, 8)}…)
-						</button>
-					{/if}
-
-					{#if (mutationError.isGeminiUnavailable || mutationError.isInvalidGeminiOutput || mutationError.isStaleReport) && !isApproved}
-						<button
-							type="button"
-							class="btn-secondary"
-							onclick={() => {
-								showRecreateTemplateConfirm = true;
-							}}
-							disabled={recreatingTemplate}
-							data-testid="open-recreate-template-confirm"
-						>
-							Buat Ulang Draft Template dari Sumber Terbaru
 						</button>
 					{/if}
 				</div>
@@ -577,7 +535,10 @@
 					<div class="lifecycle-box" data-testid="regenerate-section">
 						<h3>Penyegaran Snapshot Sumber &amp; Regenerasi Draft</h3>
 						<p class="box-desc">
-							Jika temuan terkonfirmasi pada Sesi S-{report.session_id} berubah (status <code>STALE</code>) atau Anda ingin menyusun ulang narasi dari sumber terbaru, gunakan aksi di bawah. Karena aksi ini akan menggantikan judul dan narasi draft saat ini, sistem mewajibkan konfirmasi eksplisit agar suntingan Anda tidak tertimpa tanpa sengaja.
+							Jika temuan terkonfirmasi pada Sesi S-{report.session_id} berubah (status <code>STALE</code>) atau Anda ingin menyusun ulang narasi dari sumber terbaru melalui Gemini, gunakan aksi di bawah. Karena regenerasi akan menggantikan judul dan narasi draft saat ini apabila berhasil, sistem mewajibkan konfirmasi eksplisit agar suntingan Anda tidak tertimpa tanpa sengaja. Kegagalan generasi tidak pernah menghapus draft secara otomatis.
+						</p>
+						<p class="helper-note" data-testid="non-gemini-stale-refresh-note">
+							Catatan batasan backend: Penyegaran snapshot di tempat (<code>POST /api/v1/reports/{report.id}/regenerate</code>) memerlukan layanan Gemini. Apabila Gemini tidak tersedia {!geminiConfigured ? '(saat ini belum dikonfigurasi pada server)' : ''}, snapshot template tidak dapat disegarkan di tempat melalui endpoint yang ada. Untuk menyusun draft Template atau Manual baru dengan snapshot mutakhir tanpa Gemini, hapus draft ini terlebih dahulu secara eksplisit lalu buat draft baru di halaman <a href="/reports">Daftar Laporan</a>.
 						</p>
 
 						<div class="regen-buttons">
@@ -586,25 +547,11 @@
 								class="btn-secondary"
 								onclick={() => {
 									showRegenerateConfirm = true;
-									showRecreateTemplateConfirm = false;
 								}}
-								disabled={regenerating || recreatingTemplate}
+								disabled={regenerating}
 								data-testid="open-regenerate-confirm-btn"
 							>
 								Regenerate Draft dengan Gemini
-							</button>
-
-							<button
-								type="button"
-								class="btn-outline"
-								onclick={() => {
-									showRecreateTemplateConfirm = true;
-									showRegenerateConfirm = false;
-								}}
-								disabled={regenerating || recreatingTemplate}
-								data-testid="open-recreate-template-btn"
-							>
-								Buat Ulang Draft Template dari Sumber Terbaru
 							</button>
 						</div>
 
@@ -656,48 +603,6 @@
 								</div>
 							</div>
 						{/if}
-
-						{#if showRecreateTemplateConfirm}
-							<div
-								class="confirm-dialog"
-								role="region"
-								aria-label="Konfirmasi Buat Ulang Draft Template"
-								data-testid="recreate-template-confirm-dialog"
-							>
-								<h4>Konfirmasi Buat Ulang Draft Template dari Sumber Terbaru</h4>
-								<p>
-									Aksi ini akan menghapus draft lama (#{report.id}) dan langsung membuat draft Template baru dengan snapshot temuan terkonfirmasi paling mutakhir dari Sesi S-{report.session_id} (tanpa memerlukan Gemini).
-									{#if hasUnsavedChanges}
-										<strong class="warn-inline">
-											Perhatian: Suntingan manual pada draft ini akan digantikan oleh teks template terbaru.
-										</strong>
-									{/if}
-								</p>
-								<div class="confirm-actions">
-									<button
-										type="button"
-										class="btn-primary"
-										onclick={handleRecreateFreshTemplateDraft}
-										disabled={recreatingTemplate}
-										data-testid="confirm-recreate-template-btn"
-									>
-										{recreatingTemplate
-											? 'Menyusun Ulang Draft Template...'
-											: 'Ya, Buat Ulang Draft Template Segar'}
-									</button>
-									<button
-										type="button"
-										class="btn-outline"
-										onclick={() => {
-											showRecreateTemplateConfirm = false;
-										}}
-										disabled={recreatingTemplate}
-									>
-										Batal
-									</button>
-								</div>
-							</div>
-						{/if}
 					</div>
 
 					<hr class="section-divider" />
@@ -723,12 +628,22 @@
 							<p class="field-error">{mutationError.fieldErrors.review_acknowledged}</p>
 						{/if}
 
+						{#if isStale}
+							<p class="field-error" data-testid="approve-disabled-reason">
+								Draft perlu dibuat ulang: tombol Setujui dinonaktifkan karena sumber temuan telah berubah (<code>STALE</code>). Segarkan snapshot melalui Regenerate Gemini, atau hapus draft ini secara eksplisit lalu buat draft Template/Manual baru.
+							</p>
+						{:else if !reviewAcknowledged}
+							<p class="helper-note" data-testid="approve-disabled-reason">
+								Centang pernyataan peninjauan petugas di atas untuk mengaktifkan tombol Setujui &amp; Kunci Laporan.
+							</p>
+						{/if}
+
 						<div class="approval-actions">
 							<button
 								type="button"
 								class="btn-approve"
 								onclick={handleApproveReport}
-								disabled={approving}
+								disabled={approving || isStale || !reviewAcknowledged}
 								data-testid="approve-report-btn"
 							>
 								{approving ? 'Menyetujui Laporan...' : 'Setujui & Kunci Laporan'}

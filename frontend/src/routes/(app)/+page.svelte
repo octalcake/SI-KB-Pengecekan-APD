@@ -129,6 +129,11 @@
 		};
 	});
 
+	// Monotonic request sequence tokens to ignore stale responses
+	let projectsReqSeq = 0;
+	let zonesReqSeq = 0;
+	let summaryReqSeq = 0;
+
 	onMount(() => {
 		void initializeDashboard();
 	});
@@ -138,39 +143,55 @@
 	}
 
 	async function loadProjectOptions() {
+		const seq = ++projectsReqSeq;
 		loadingLookups = true;
 		lookupError = null;
 		try {
 			const res = await listProjectsApi({ page: 1, page_size: 100 });
+			if (seq !== projectsReqSeq) return;
 			projects = res.data;
 		} catch (err) {
+			if (seq !== projectsReqSeq) return;
 			lookupError = isApiError(err) ? err.message : 'Gagal memuat daftar proyek untuk filter.';
 		} finally {
-			loadingLookups = false;
+			if (seq === projectsReqSeq) {
+				loadingLookups = false;
+			}
 		}
 	}
 
 	async function handleProjectFilterChange() {
+		const zSeq = ++zonesReqSeq;
 		filterZoneId = '';
 		zones = [];
+		lookupError = null;
 		const pid = Number(filterProjectId);
 		if (Number.isFinite(pid) && pid > 0) {
 			loadingZones = true;
+			void loadSummary();
 			try {
 				const res = await listZonesApi(pid, { page: 1, page_size: 100 });
+				if (zSeq !== zonesReqSeq || Number(filterProjectId) !== pid) return;
 				zones = res.data;
 			} catch (err) {
+				if (zSeq !== zonesReqSeq || Number(filterProjectId) !== pid) return;
 				lookupError = isApiError(err) ? err.message : 'Gagal memuat daftar zona untuk proyek terpilih.';
 			} finally {
-				loadingZones = false;
+				if (zSeq === zonesReqSeq) {
+					loadingZones = false;
+				}
 			}
+		} else {
+			loadingZones = false;
+			await loadSummary();
 		}
-		await loadSummary();
 	}
 
 	async function loadSummary() {
+		const seq = ++summaryReqSeq;
 		dateValidationError = null;
 		if (filterFromDate && filterToDate && filterFromDate > filterToDate) {
+			summaryLoading = false;
 			dateValidationError = 'Tanggal mulai tidak boleh melebihi tanggal akhir.';
 			return;
 		}
@@ -183,23 +204,31 @@
 			const pid = filterProjectId ? Number(filterProjectId) : undefined;
 			const zid = filterZoneId ? Number(filterZoneId) : undefined;
 
-			summary = await dashboardSummaryApi({
+			const nextSummary = await dashboardSummaryApi({
 				mode: filterMode,
 				project_id: pid && pid > 0 ? pid : undefined,
 				zone_id: zid && zid > 0 ? zid : undefined,
 				from: interval.from,
 				to: interval.to
 			});
+			if (seq !== summaryReqSeq) return;
+			summary = nextSummary;
 		} catch (err) {
+			if (seq !== summaryReqSeq) return;
 			summaryError = isApiError(err)
 				? err.message
 				: 'Gagal memuat ringkasan dashboard dari server backend.';
 		} finally {
-			summaryLoading = false;
+			if (seq === summaryReqSeq) {
+				summaryLoading = false;
+			}
 		}
 	}
 
 	async function handleResetDashboardFilters() {
+		zonesReqSeq++;
+		loadingZones = false;
+		lookupError = null;
 		filterMode = 'real';
 		filterProjectId = '';
 		filterZoneId = '';

@@ -347,25 +347,15 @@ export function createCaptureLoop(options: CreateCaptureLoopOptions) {
 			options.onSnapshot?.(nextSnapshot);
 
 			if (Array.isArray(frameRes.events) && frameRes.events.length > 0) {
-				const newItems: CapturedEventItem[] = frameRes.events.map((ev) => {
-					const firstPositiveTrack = (frameRes.tracks ?? []).find((t) =>
-						t.observations?.some((o) => o.state === 'positive')
-					);
-					const firstPosObs = firstPositiveTrack?.observations?.find(
-						(o) => o.state === 'positive'
-					);
-					return {
-						findingId: ev.finding_id,
-						sessionId: frameRes.session_id,
-						sequence: frameRes.frame_sequence,
-						capturedAtUtc: frameRes.captured_at,
-						evidenceUrl: ev.evidence_url,
-						verificationStatus: ev.verification_status ?? 'pending',
-						mode: frameRes.mode,
-						trackKey: firstPositiveTrack?.track_key ?? null,
-						detectedViolation: firstPosObs?.type ?? null
-					};
-				});
+				const newItems: CapturedEventItem[] = frameRes.events.map((ev) => ({
+					findingId: ev.finding_id,
+					sessionId: frameRes.session_id,
+					sequence: frameRes.frame_sequence,
+					capturedAtUtc: frameRes.captured_at,
+					evidenceUrl: ev.evidence_url,
+					verificationStatus: ev.verification_status ?? 'pending',
+					mode: frameRes.mode
+				}));
 				state.capturedEvents = [...newItems, ...state.capturedEvents];
 				options.onEvents?.(newItems);
 			}

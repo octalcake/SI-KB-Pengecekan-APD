@@ -399,5 +399,87 @@ test('P0-02 master data CRUD, conflict recovery, and mode-separated dashboard su
 
 	await page.getByLabel(/Status Proyek/i).selectOption('archived');
 	await expect(projACardInList).toBeVisible();
+
+	// 9. Standards #B regression: delayed dashboard summary & project->zones lookup responses do not overwrite latest filter selection
+	await page.getByLabel(/Status Proyek/i).selectOption('');
+	const projectCName = `Menara Inspeksi ${uniqueSuffix}`;
+	await page.getByLabel(/^Nama Proyek/i).fill(projectCName);
+	await page.getByLabel(/Lokasi/i).fill('Sidoarjo');
+	await page.getByLabel(/Deskripsi Proyek/i).fill('Proyek kedua untuk uji transisi rute dan filter.');
+	await page.getByRole('button', { name: /Tambah Proyek/i }).click();
+	const projectCCard = page.locator('[data-testid="project-item"]', { hasText: projectCName });
+	await expect(projectCCard).toBeVisible();
+
+	const dbForC = new DatabaseSync(dbPath);
+	const projCRow = dbForC
+		.prepare('SELECT id FROM projects WHERE name = ?')
+		.get(projectCName) as { id: number };
+	dbForC.close();
+
+	await page.getByRole('link', { name: /^Dashboard$/i }).click();
+	await expect(page).toHaveURL(/\/$/);
+	await expect(page.getByTestId('metric-sessions')).toHaveText('1');
+
+	// Delay real-mode summary and Project A zones lookup so they resolve AFTER switching to manual mode and clearing project filter
+	await page.route('/api/v1/dashboard/summary*', async (route) => {
+		const reqUrl = route.request().url();
+		if (reqUrl.includes('mode=simulated')) {
+			await new Promise((r) => setTimeout(r, 350));
+		}
+		await route.continue();
+	});
+	await page.route(`/api/v1/projects/${projRow.id}/zones*`, async (route) => {
+		await new Promise((r) => setTimeout(r, 350));
+		await route.continue();
+	});
+
+	// Trigger simulated summary (delayed) then immediately switch to manual (fast, 0 sessions/0 findings)
+	await page.getByLabel(/Mode Data/i).selectOption('simulated');
+	await page.getByLabel(/Mode Data/i).selectOption('manual');
+
+	// Trigger Project A zones lookup (delayed) then immediately clear back to Semua Proyek ('')
+	await page.getByLabel(/Filter Proyek/i).selectOption(String(projRow.id));
+	await page.getByLabel(/Filter Proyek/i).selectOption('');
+
+	// Wait longer than the 350ms delay and verify the delayed simulated summary & Project A zones did NOT overwrite the latest selection
+	await new Promise((r) => setTimeout(r, 500));
+	await expect(page.getByLabel(/Mode Data/i)).toHaveValue('manual');
+	await expect(page.getByTestId('metric-sessions')).toHaveText('0');
+	await expect(page.getByTestId('metric-findings-pending')).toHaveText('0');
+	await expect(page.getByLabel(/Filter Zona/i)).toBeDisabled();
+
+	await page.unroute('/api/v1/dashboard/summary*');
+	await page.unroute(`/api/v1/projects/${projRow.id}/zones*`);
+
+	// 10. Standards #B regression: navigating from /projects/A (with open edit form) to /projects/C clears Project A's editable form immediately and ignores delayed Project A responses
+	await page.goto(`/projects/${projRow.id}`);
+	await expect(page.getByRole('heading', { name: projectAName })).toBeVisible();
+	await page.getByRole('button', { name: /Edit Proyek/i }).click();
+	await expect(page.getByLabel(/Edit Nama Proyek/i)).toHaveValue(projectAName);
+
+	// Delay Project C load slightly and also trigger a delayed Project A reload before navigating to Project C
+	await page.route(`/api/v1/projects/${projRow.id}*`, async (route) => {
+		await new Promise((r) => setTimeout(r, 400));
+		await route.continue();
+	});
+	await page.route(`/api/v1/projects/${projCRow.id}`, async (route) => {
+		await new Promise((r) => setTimeout(r, 150));
+		await route.continue();
+	});
+
+	// Navigate client-side to Project C while Project A's edit form was open
+	await page.evaluate((targetUrl) => {
+		window.history.pushState({}, '', targetUrl);
+		window.dispatchEvent(new PopStateEvent('popstate'));
+	}, `/projects/${projCRow.id}`);
+	await page.goto(`/projects/${projCRow.id}`);
+
+	await expect(page.getByRole('heading', { name: projectCName })).toBeVisible();
+	await expect(page.getByLabel(/Edit Nama Proyek/i)).toHaveCount(0);
+	await new Promise((r) => setTimeout(r, 450));
+	await expect(page.getByRole('heading', { name: projectCName })).toBeVisible();
+
+	await page.unroute(`/api/v1/projects/${projRow.id}*`);
+	await page.unroute(`/api/v1/projects/${projCRow.id}`);
 });
 

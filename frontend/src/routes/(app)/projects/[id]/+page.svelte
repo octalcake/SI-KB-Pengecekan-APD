@@ -93,12 +93,50 @@
 
 	const totalZonePages = $derived(Math.max(1, Math.ceil(zonesMeta.total / zonesMeta.page_size)));
 
+	// Monotonic request sequence counters and active route tracking
+	let projectReqSeq = 0;
+	let zonesReqSeq = 0;
+	let activeRouteProjectId: number | null = null;
+
+	function resetRouteProjectState() {
+		project = null;
+		projectLoadError = null;
+		zones = [];
+		zonesMeta = { page: 1, page_size: zonePageSize, total: 0 };
+		zonePage = 1;
+		zonesLoadError = null;
+		actionNotice = null;
+		editingProject = false;
+		projEditFieldErrors = {};
+		projEditGeneralError = null;
+		projVersionConflict = null;
+		confirmingProjectDelete = false;
+		referenceConflict = null;
+		sessionActiveConflict = null;
+		createZoneName = '';
+		createZoneDesc = '';
+		createZoneFieldErrors = {};
+		createZoneError = null;
+		editingZoneId = null;
+		zoneEditFieldErrors = {};
+		zoneEditError = null;
+		zoneVersionConflict = null;
+		confirmingZoneDeleteId = null;
+	}
+
 	$effect(() => {
 		const id = projectId;
+		if (id !== activeRouteProjectId) {
+			activeRouteProjectId = id;
+			resetRouteProjectState();
+		}
 		if (Number.isFinite(id) && id > 0) {
 			void loadAll(id);
 		} else {
+			projectReqSeq++;
+			zonesReqSeq++;
 			loadingProject = false;
+			loadingZones = false;
 			projectLoadError = 'ID proyek tidak valid.';
 		}
 	});
@@ -108,34 +146,48 @@
 	}
 
 	async function loadProject(id = projectId) {
+		const seq = ++projectReqSeq;
 		loadingProject = true;
 		projectLoadError = null;
 		try {
-			project = await getProjectApi(id);
+			const loaded = await getProjectApi(id);
+			if (seq !== projectReqSeq || id !== projectId) return;
+			project = loaded;
 		} catch (err) {
+			if (seq !== projectReqSeq || id !== projectId) return;
 			projectLoadError = isApiError(err)
 				? err.message
 				: 'Gagal memuat detail proyek dari server.';
 		} finally {
-			loadingProject = false;
+			if (seq === projectReqSeq && id === projectId) {
+				loadingProject = false;
+			}
 		}
 	}
 
 	async function loadZones(id = projectId) {
+		const seq = ++zonesReqSeq;
+		const statusFilter = zoneStatusFilter;
+		const reqPage = zonePage;
+		const reqPageSize = zonePageSize;
 		loadingZones = true;
 		zonesLoadError = null;
 		try {
 			const res = await listZonesApi(id, {
-				status: zoneStatusFilter,
-				page: zonePage,
-				page_size: zonePageSize
+				status: statusFilter,
+				page: reqPage,
+				page_size: reqPageSize
 			});
+			if (seq !== zonesReqSeq || id !== projectId) return;
 			zones = res.data;
 			zonesMeta = res.meta;
 		} catch (err) {
+			if (seq !== zonesReqSeq || id !== projectId) return;
 			zonesLoadError = isApiError(err) ? err.message : 'Gagal memuat daftar zona proyek.';
 		} finally {
-			loadingZones = false;
+			if (seq === zonesReqSeq && id === projectId) {
+				loadingZones = false;
+			}
 		}
 	}
 

@@ -1,6 +1,7 @@
 export {
 	API_BASE,
 	ApiError,
+	apiBlob,
 	apiData,
 	apiList,
 	apiNoContent,
@@ -14,6 +15,7 @@ export {
 	onUnauthorized,
 	setCsrfToken,
 	systemStatusApi,
+	type ApiBlobResponse,
 	type ApiErrorInit,
 	type ApiRequestOptions
 } from '#lib/api/client';

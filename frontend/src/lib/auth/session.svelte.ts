@@ -27,11 +27,21 @@ class AuthSessionStore {
 	sessionNotice = $state<string | null>(null);
 
 	private inflightBootstrap: Promise<AuthBootstrapStatus> | null = null;
+	private beforeLogoutCallback: (() => Promise<void>) | null = null;
 
 	constructor() {
 		onUnauthorized(() => {
 			this.clearSession('Sesi Anda telah berakhir. Silakan masuk kembali.');
 		});
+	}
+
+	registerBeforeLogout(callback: (() => Promise<void>) | null): () => void {
+		this.beforeLogoutCallback = callback;
+		return () => {
+			if (this.beforeLogoutCallback === callback) {
+				this.beforeLogoutCallback = null;
+			}
+		};
 	}
 
 	clearSession(notice: string | null = null): void {
@@ -123,14 +133,23 @@ class AuthSessionStore {
 	}
 
 	async logout(): Promise<void> {
+		if (this.beforeLogoutCallback) {
+			try {
+				await this.beforeLogoutCallback();
+			} catch {
+				// Best-effort pre-logout cleanup: never block logout on stop failure
+			}
+		}
+
 		try {
 			await logoutApi();
-		} catch (err) {
-			if (!isApiError(err) || err.status !== 401) {
-				throw err;
-			}
-		} finally {
 			this.clearSession(null);
+		} catch (err) {
+			if (isApiError(err) && err.status === 401) {
+				this.clearSession(null);
+				return;
+			}
+			throw err;
 		}
 	}
 }

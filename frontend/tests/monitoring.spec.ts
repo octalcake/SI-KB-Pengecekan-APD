@@ -426,6 +426,20 @@ test('browser /monitoring journey: real Go project/zone lookup, truthful 503 AI_
 									bbox: [0.31, 0.11, 0.45, 0.29]
 								}
 							]
+						},
+						{
+							track_id: 21,
+							track_key: '21:1',
+							person_confidence: 0.91,
+							person_bbox: [0.62, 0.12, 0.92, 0.94],
+							observations: [
+								{
+									type: 'NO_VEST',
+									state: 'positive',
+									confidence: 0.87,
+									bbox: [0.65, 0.35, 0.88, 0.72]
+								}
+							]
 						}
 					],
 					events:
@@ -436,9 +450,41 @@ test('browser /monitoring journey: real Go project/zone lookup, truthful 503 AI_
 										finding_id: 105,
 										verification_status: 'pending',
 										evidence_url: '/api/v1/findings/105/evidence'
+									},
+									{
+										type: 'finding_created',
+										finding_id: 106,
+										verification_status: 'pending',
+										evidence_url: '/api/v1/findings/106/evidence'
 									}
 								]
 							: []
+				}
+			})
+		});
+	});
+
+	// Protected evidence thumbnail endpoints for findings #105 (200 JPEG) and #106 (410 EVIDENCE_MISSING)
+	const validJpegBuf = Buffer.from(
+		'/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=',
+		'base64'
+	);
+	await page.route('/api/v1/findings/105/evidence', async (route) => {
+		await route.fulfill({
+			status: 200,
+			contentType: 'image/jpeg',
+			body: validJpegBuf
+		});
+	});
+	await page.route('/api/v1/findings/106/evidence', async (route) => {
+		await route.fulfill({
+			status: 410,
+			contentType: 'application/json',
+			body: JSON.stringify({
+				error: {
+					code: 'EVIDENCE_MISSING',
+					message: 'File bukti JPEG untuk temuan #106 tidak ditemukan di penyimpanan.',
+					request_id: 'req-ev-410'
 				}
 			})
 		});
@@ -490,13 +536,33 @@ test('browser /monitoring journey: real Go project/zone lookup, truthful 503 AI_
 		.count();
 	expect(liveVideoOverlayCount).toBe(0);
 
-	// Verify normalized bbox overlay is rendered on the inferred JPEG snapshot stage
-	await expect(page.locator('[data-testid="snapshot-overlay-layer"] .person-bbox')).toHaveCount(1);
-	await expect(page.locator('[data-testid="snapshot-overlay-layer"] .obs-bbox')).toHaveCount(1);
+	// Verify normalized bbox overlay is rendered on the inferred JPEG snapshot stage for both tracks
+	await expect(page.locator('[data-testid="snapshot-overlay-layer"] .person-bbox')).toHaveCount(2);
+	await expect(page.locator('[data-testid="snapshot-overlay-layer"] .obs-bbox')).toHaveCount(2);
 	await expect(page.getByTestId('snapshot-meta-bar')).toContainText('Sequence: #1');
 
-	// Verify captured event card and direct finding link
-	await expect(page.getByTestId('captured-finding-105')).toBeVisible();
+	// Verify captured event cards (#105 and #106) do NOT guess unassociated trackKey or detectedViolation
+	const card105 = page.getByTestId('captured-finding-105');
+	const card106 = page.getByTestId('captured-finding-106');
+	await expect(card105).toBeVisible();
+	await expect(card106).toBeVisible();
+	await expect(card105).toContainText('Temuan #105');
+	await expect(card106).toContainText('Temuan #106');
+	await expect(card105).not.toContainText('17:1');
+	await expect(card106).not.toContainText('17:1');
+	await expect(card106).not.toContainText('Tanpa Helm');
+
+	// Verify protected evidence thumbnail states: #105 renders blob: image, #106 renders 410 EVIDENCE_MISSING error without placeholder photo
+	const thumbImg105 = page.getByTestId('capture-thumb-img-105');
+	await expect(thumbImg105).toBeVisible();
+	await expect(thumbImg105).toHaveAttribute('src', /^blob:/);
+
+	const thumbErr106 = page.getByTestId('capture-thumb-error-106');
+	await expect(thumbErr106).toBeVisible();
+	await expect(thumbErr106).toHaveAttribute('data-error-code', 'EVIDENCE_MISSING');
+	await expect(thumbErr106).toContainText(/410 EVIDENCE_MISSING/i);
+	await expect(page.getByTestId('capture-thumb-img-106')).toHaveCount(0);
+
 	const findingLink = page.getByTestId('open-finding-link-105');
 	await expect(findingLink).toHaveAttribute('href', '/findings/105');
 
@@ -560,4 +626,116 @@ test('browser /monitoring journey: real Go project/zone lookup, truthful 503 AI_
 	await expect(errorAlert).toHaveAttribute('data-error-code', 'TRACKER_RESET');
 	await expect(errorAlert).toContainText(/State Tracker AI Direset/i);
 	await expect(page.getByTestId('start-monitoring-btn')).toBeVisible();
+
+	// 9. Verify active-camera logout ordering & failure recovery (Spec #4):
+	//    - Start active camera session
+	//    - First logout attempt fails (500): session/stop was awaited BEFORE logout, camera released,
+	//      but authenticated state (Petugas: Anisa) is retained and error is displayed so officer can retry
+	//    - Second logout attempt succeeds (204): redirects to /login with NO false expired-session banner
+	await page.unroute('/api/v1/monitoring/sessions/77/frames');
+	await page.route('/api/v1/monitoring/sessions/77/frames', async (route) => {
+		const headers = route.request().headers();
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify({
+				data: {
+					session_id: 77,
+					frame_sequence: Number(headers['x-frame-sequence'] ?? '1'),
+					captured_at: headers['x-captured-at'] ?? '2026-11-11T02:15:22.000Z',
+					received_at: '2026-11-11T02:15:22.020Z',
+					width: 640,
+					height: 480,
+					inference_ms: 80,
+					model_version: 'test-fixture-v1',
+					mode: 'simulated',
+					tracks: [],
+					events: []
+				}
+			})
+		});
+	});
+
+	const callSequence: string[] = [];
+	await page.unroute('/api/v1/monitoring/sessions/77/stop');
+	await page.route('/api/v1/monitoring/sessions/77/stop', async (route) => {
+		callSequence.push('session_stop');
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify({
+				data: {
+					id: 77,
+					project_id: 1,
+					zone_id: 1,
+					started_by: 1,
+					source: 'browser_webcam',
+					status: 'stopped',
+					mode: 'simulated',
+					model_version: 'test-fixture-v1',
+					supported_violations: ['NO_HELMET', 'NO_VEST'],
+					started_at: '2026-11-11T02:15:00.000Z',
+					ended_at: '2026-11-11T02:15:10.000Z',
+					end_reason: 'user_stop',
+					last_frame_at: '2026-11-11T02:15:02.000Z',
+					config: {
+						sample_fps: 1,
+						confirm_hits: 2,
+						confirm_max_frames: 3,
+						confirm_window_ms: 2000,
+						track_timeout_ms: 5000
+					}
+				}
+			})
+		});
+	});
+
+	let logoutAttempts = 0;
+	await page.route('/api/v1/auth/logout', async (route) => {
+		logoutAttempts += 1;
+		callSequence.push(`auth_logout_${logoutAttempts}`);
+		if (logoutAttempts === 1) {
+			await route.fulfill({
+				status: 500,
+				contentType: 'application/json',
+				body: JSON.stringify({
+					error: {
+						code: 'INTERNAL_ERROR',
+						message: 'Gagal menghapus sesi di server sementara.',
+						request_id: 'req-logout-500'
+					}
+				})
+			});
+			return;
+		}
+		await route.continue();
+	});
+
+	await page.getByTestId('start-monitoring-btn').click();
+	await expect(page.getByTestId('stop-monitoring-btn')).toBeVisible();
+
+	const stoppedBeforeLogout = await page.evaluate(() => {
+		return (window as unknown as { __fakeTracksStopped: number }).__fakeTracksStopped;
+	});
+
+	// Click Keluar while camera session is active (attempt 1 -> 500 failure)
+	await page.getByRole('button', { name: /Keluar/i }).click();
+
+	// Stop was called BEFORE auth/logout, camera tracks were stopped, and user remains authenticated with visible error
+	await expect(
+		page.getByRole('alert').filter({ hasText: /Gagal menghapus sesi di server sementara/i })
+	).toBeVisible();
+	await expect(page).toHaveURL(/\/monitoring$/);
+	await expect(page.getByText(/Petugas:\s*Anisa/i)).toBeVisible();
+	expect(callSequence).toEqual(['session_stop', 'auth_logout_1']);
+
+	const stoppedAfterFailedLogout = await page.evaluate(() => {
+		return (window as unknown as { __fakeTracksStopped: number }).__fakeTracksStopped;
+	});
+	expect(stoppedAfterFailedLogout).toBeGreaterThan(stoppedBeforeLogout);
+
+	// Retry Keluar (attempt 2 -> real Go 204 logout)
+	await page.getByRole('button', { name: /Keluar/i }).click();
+	await expect(page).toHaveURL(/\/login$/);
+	await expect(page.getByText(/Sesi Anda telah berakhir/i)).toHaveCount(0);
 });
