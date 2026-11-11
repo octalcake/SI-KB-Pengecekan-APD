@@ -33,3 +33,36 @@ export type {
 	User,
 	ViolationType
 } from '#lib/types/api';
+
+export {
+	createProjectApi,
+	createZoneApi,
+	deleteProjectApi,
+	deleteZoneApi,
+	formatIndonesianDateTime,
+	getProjectApi,
+	getZoneApi,
+	listProjectsApi,
+	listZonesApi,
+	translateFieldError,
+	updateProjectApi,
+	updateZoneApi,
+	type Project,
+	type ProjectCreateInput,
+	type ProjectListFilter,
+	type ProjectUpdateInput,
+	type RecordStatus,
+	type Zone,
+	type ZoneCreateInput,
+	type ZoneListFilter,
+	type ZoneUpdateInput
+} from '#lib/projects/api';
+
+export {
+	dashboardSummaryApi,
+	localDateRangeToUtcInterval,
+	localDateStartToUtcIso,
+	type DashboardSummary,
+	type DashboardSummaryFilter
+} from '#lib/dashboard/api';
+
