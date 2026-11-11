@@ -1,6 +1,14 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import { isApiError } from '#lib/api/client';
 	import { authSession } from '#lib/auth/session.svelte';
-	import type { ViolationType } from '#lib/types/api';
+	import {
+		dashboardSummaryApi,
+		localDateRangeToUtcInterval,
+		type DashboardSummary
+	} from '#lib/dashboard/api';
+	import { listProjectsApi, listZonesApi, type Project, type Zone } from '#lib/projects/api';
+	import type { SystemMode, ViolationType } from '#lib/types/api';
 
 	const ALL_CATEGORIES: Array<{ code: ViolationType; label: string; description: string }> = [
 		{
@@ -16,6 +24,56 @@
 	];
 
 	const status = $derived(authSession.systemStatus);
+
+	// Dashboard summary & filters state
+	let summary = $state<DashboardSummary | null>(null);
+	let summaryLoading = $state(true);
+	let summaryError = $state<string | null>(null);
+	let dateValidationError = $state<string | null>(null);
+
+	let filterMode = $state<SystemMode>('real');
+	let filterProjectId = $state<string>('');
+	let filterZoneId = $state<string>('');
+	let filterFromDate = $state<string>('');
+	let filterToDate = $state<string>('');
+
+	// Lookup options from persisted master data
+	let projects = $state<Project[]>([]);
+	let zones = $state<Zone[]>([]);
+	let loadingLookups = $state(false);
+	let loadingZones = $state(false);
+	let lookupError = $state<string | null>(null);
+
+	const configuredTimezone = $derived(summary?.timezone || 'Asia/Jakarta');
+
+	const summaryTotalFindings = $derived(
+		summary
+			? summary.findings_pending + summary.findings_confirmed + summary.findings_rejected
+			: 0
+	);
+
+	const summaryModeBadge = $derived.by(() => {
+		const m = summary?.mode ?? filterMode;
+		if (m === 'real') {
+			return {
+				label: 'MODE NYATA (real)',
+				tone: 'ok' as const,
+				note: 'Menampilkan statistik sesi & temuan dari inferensi model nyata saja (tidak dicampur simulasi/manual).'
+			};
+		}
+		if (m === 'simulated') {
+			return {
+				label: 'MODE SIMULASI (simulated)',
+				tone: 'warn' as const,
+				note: 'Menampilkan hasil simulasi deterministik secara terpisah; bukan aktivitas inspeksi kamera nyata.'
+			};
+		}
+		return {
+			label: 'MODE MANUAL (manual)',
+			tone: 'warn' as const,
+			note: 'Menampilkan pencatatan observasi manual petugas secara terpisah tanpa inferensi otomatis.'
+		};
+	});
 
 	const modeDisplay = $derived.by(() => {
 		if (!status) return { label: 'Memuat...', code: '-', detail: 'Mengambil konfigurasi server.' };
@@ -71,13 +129,94 @@
 		};
 	});
 
-	async function handleRefreshStatus() {
-		await authSession.refreshSystemStatus();
+	onMount(() => {
+		void initializeDashboard();
+	});
+
+	async function initializeDashboard() {
+		await Promise.all([loadProjectOptions(), loadSummary()]);
+	}
+
+	async function loadProjectOptions() {
+		loadingLookups = true;
+		lookupError = null;
+		try {
+			const res = await listProjectsApi({ page: 1, page_size: 100 });
+			projects = res.data;
+		} catch (err) {
+			lookupError = isApiError(err) ? err.message : 'Gagal memuat daftar proyek untuk filter.';
+		} finally {
+			loadingLookups = false;
+		}
+	}
+
+	async function handleProjectFilterChange() {
+		filterZoneId = '';
+		zones = [];
+		const pid = Number(filterProjectId);
+		if (Number.isFinite(pid) && pid > 0) {
+			loadingZones = true;
+			try {
+				const res = await listZonesApi(pid, { page: 1, page_size: 100 });
+				zones = res.data;
+			} catch (err) {
+				lookupError = isApiError(err) ? err.message : 'Gagal memuat daftar zona untuk proyek terpilih.';
+			} finally {
+				loadingZones = false;
+			}
+		}
+		await loadSummary();
+	}
+
+	async function loadSummary() {
+		dateValidationError = null;
+		if (filterFromDate && filterToDate && filterFromDate > filterToDate) {
+			dateValidationError = 'Tanggal mulai tidak boleh melebihi tanggal akhir.';
+			return;
+		}
+
+		summaryLoading = true;
+		summaryError = null;
+		try {
+			const tz = summary?.timezone || 'Asia/Jakarta';
+			const interval = localDateRangeToUtcInterval(filterFromDate, filterToDate, tz);
+			const pid = filterProjectId ? Number(filterProjectId) : undefined;
+			const zid = filterZoneId ? Number(filterZoneId) : undefined;
+
+			summary = await dashboardSummaryApi({
+				mode: filterMode,
+				project_id: pid && pid > 0 ? pid : undefined,
+				zone_id: zid && zid > 0 ? zid : undefined,
+				from: interval.from,
+				to: interval.to
+			});
+		} catch (err) {
+			summaryError = isApiError(err)
+				? err.message
+				: 'Gagal memuat ringkasan dashboard dari server backend.';
+		} finally {
+			summaryLoading = false;
+		}
+	}
+
+	async function handleResetDashboardFilters() {
+		filterMode = 'real';
+		filterProjectId = '';
+		filterZoneId = '';
+		filterFromDate = '';
+		filterToDate = '';
+		zones = [];
+		dateValidationError = null;
+		await loadSummary();
+	}
+
+	async function handleRefreshAll() {
+		await Promise.all([authSession.refreshSystemStatus(), loadProjectOptions(), loadSummary()]);
 	}
 </script>
 
 <svelte:head>
-	<title>Ruang Kerja Inspeksi K3 — Status & Kesiapan Sistem</title>
+	<title>Dashboard & Ruang Kerja Inspeksi K3</title>
 </svelte:head>
 
 <div class="workspace-stack">
@@ -85,18 +224,224 @@
 		<div>
 			<h1>Ruang Kerja Inspeksi K3</h1>
 			<p class="lead">
-				Status autentikasi petugas dan kesiapan aktual layanan lokal berdasarkan pemeriksaan langsung ke server Go.
+				Ringkasan statistik inspeksi terfilter berdasarkan data persisten serta status kesiapan aktual layanan lokal.
 			</p>
 		</div>
-		<button
-			type="button"
-			class="refresh-button"
-			onclick={handleRefreshStatus}
-			disabled={authSession.systemStatusLoading}
-		>
-			{authSession.systemStatusLoading ? 'Memperbarui...' : 'Perbarui Status Sistem'}
-		</button>
+		<div class="header-actions">
+			<a href="/projects" class="secondary-link">Kelola Proyek & Zona</a>
+			<button
+				type="button"
+				class="refresh-button"
+				onclick={handleRefreshAll}
+				disabled={authSession.systemStatusLoading || summaryLoading}
+			>
+				{authSession.systemStatusLoading || summaryLoading
+					? 'Memperbarui...'
+					: 'Perbarui Status Sistem'}
+			</button>
+		</div>
 	</header>
+
+	<section class="panel" aria-labelledby="dashboard-summary-heading">
+		<div class="panel-header">
+			<div>
+				<h2 id="dashboard-summary-heading">Ringkasan Dashboard Inspeksi</h2>
+				<p class="panel-summary">
+					{summaryModeBadge.note}
+				</p>
+			</div>
+			<span class="status-tag" data-tone={summaryModeBadge.tone} data-testid="summary-mode-badge">
+				{summaryModeBadge.label}
+			</span>
+		</div>
+
+		<form
+			class="filter-grid"
+			aria-label="Filter ringkasan dashboard"
+			onsubmit={(e) => {
+				e.preventDefault();
+				void loadSummary();
+			}}
+		>
+			<div class="field-group">
+				<label for="dashboard-filter-mode">Mode Data</label>
+				<select
+					id="dashboard-filter-mode"
+					bind:value={filterMode}
+					onchange={() => void loadSummary()}
+				>
+					<option value="real">Nyata (real)</option>
+					<option value="simulated">Simulasi (simulated)</option>
+					<option value="manual">Manual (manual)</option>
+				</select>
+			</div>
+
+			<div class="field-group">
+				<label for="dashboard-filter-project">Filter Proyek</label>
+				<select
+					id="dashboard-filter-project"
+					bind:value={filterProjectId}
+					onchange={() => void handleProjectFilterChange()}
+					disabled={loadingLookups}
+				>
+					<option value="">Semua Proyek</option>
+					{#each projects as proj (proj.id)}
+						<option value={String(proj.id)}>
+							{proj.name}{proj.status === 'archived' ? ' (Diarsipkan)' : ''}
+						</option>
+					{/each}
+				</select>
+			</div>
+
+			<div class="field-group">
+				<label for="dashboard-filter-zone">Filter Zona</label>
+				<select
+					id="dashboard-filter-zone"
+					bind:value={filterZoneId}
+					onchange={() => void loadSummary()}
+					disabled={!filterProjectId || loadingZones}
+					title={!filterProjectId ? 'Pilih proyek terlebih dahulu untuk memfilter zona' : undefined}
+				>
+					<option value="">
+						{!filterProjectId ? 'Semua Zona (Pilih proyek dulu)' : 'Semua Zona pada Proyek'}
+					</option>
+					{#each zones as z (z.id)}
+						<option value={String(z.id)}>
+							{z.name}{z.status === 'archived' ? ' (Diarsipkan)' : ''}
+						</option>
+					{/each}
+				</select>
+			</div>
+
+			<div class="field-group">
+				<label for="dashboard-filter-from">Dari Tanggal ({configuredTimezone})</label>
+				<input
+					id="dashboard-filter-from"
+					type="date"
+					bind:value={filterFromDate}
+					onchange={() => void loadSummary()}
+				/>
+			</div>
+
+			<div class="field-group">
+				<label for="dashboard-filter-to">Sampai Tanggal ({configuredTimezone})</label>
+				<input
+					id="dashboard-filter-to"
+					type="date"
+					bind:value={filterToDate}
+					onchange={() => void loadSummary()}
+				/>
+			</div>
+
+			<div class="filter-actions">
+				<button
+					type="button"
+					class="secondary-button"
+					onclick={handleResetDashboardFilters}
+					disabled={
+						summaryLoading &&
+						filterMode === 'real' &&
+						!filterProjectId &&
+						!filterZoneId &&
+						!filterFromDate &&
+						!filterToDate
+					}
+				>
+					Reset Filter
+				</button>
+			</div>
+		</form>
+
+		{#if lookupError}
+			<div class="warn-banner" role="alert">
+				<strong>Catatan Filter:</strong> {lookupError}
+			</div>
+		{/if}
+
+		{#if dateValidationError}
+			<div class="error-banner" role="alert" data-error-kind="validation">
+				<strong>Rentang Tanggal Tidak Valid:</strong> {dateValidationError}
+			</div>
+		{/if}
+
+		{#if summaryError}
+			<div class="error-banner" role="alert" data-error-kind="backend">
+				<div class="banner-row">
+					<div>
+						<strong>Gagal Memuat Ringkasan Dashboard:</strong> {summaryError}
+					</div>
+					<button type="button" class="secondary-button" onclick={loadSummary}>
+						Coba Lagi
+					</button>
+				</div>
+			</div>
+		{:else if summaryLoading && !summary}
+			<div class="state-box" role="status" aria-busy="true">
+				Memuat angka ringkasan dashboard dari server...
+			</div>
+		{:else if summary}
+			<div class="metrics-grid" aria-busy={summaryLoading ? 'true' : undefined}>
+				<article class="metric-card">
+					<span class="metric-label">Sesi Inspeksi</span>
+					<strong class="metric-value" data-testid="metric-sessions">{summary.sessions}</strong>
+					<span class="metric-hint">Dihitung berdasarkan waktu mulai sesi (started_at)</span>
+				</article>
+
+				<article class="metric-card">
+					<span class="metric-label">Temuan Menunggu Review</span>
+					<strong class="metric-value" data-testid="metric-findings-pending">
+						{summary.findings_pending}
+					</strong>
+					<span class="metric-hint">Status verifikasi pending (captured_at)</span>
+				</article>
+
+				<article class="metric-card">
+					<span class="metric-label">Temuan Terkonfirmasi</span>
+					<strong class="metric-value" data-testid="metric-findings-confirmed">
+						{summary.findings_confirmed}
+					</strong>
+					<span class="metric-hint">Diverifikasi positif oleh petugas K3</span>
+				</article>
+
+				<article class="metric-card">
+					<span class="metric-label">Temuan Ditolak</span>
+					<strong class="metric-value" data-testid="metric-findings-rejected">
+						{summary.findings_rejected}
+					</strong>
+					<span class="metric-hint">Indikasi palsu/ditolak setelah pemeriksaan bukti</span>
+				</article>
+
+				<article class="metric-card highlight">
+					<span class="metric-label">Tindakan Terbuka</span>
+					<strong class="metric-value" data-testid="metric-actions-open">
+						{summary.confirmed_actions_open}
+					</strong>
+					<span class="metric-hint">Temuan confirmed dengan tindak lanjut belum selesai</span>
+				</article>
+			</div>
+
+			{#if summary.sessions === 0 && summaryTotalFindings === 0}
+				<div class="state-box empty" role="status">
+					<strong>Belum ada sesi atau temuan yang tercatat untuk filter ini.</strong>
+					<span>
+						Pastikan proyek dan zona aktif telah disiapkan di halaman <a href="/projects">Proyek & Zona</a> sebelum memulai sesi inspeksi.
+					</span>
+				</div>
+			{/if}
+
+			<div class="summary-meta-note" data-testid="dashboard-summary-meta">
+				<span>
+					<strong>Satuan hitung (<code>{summary.count_unit}</code>):</strong> Jumlah catatan temuan (<em>finding</em>), <strong>bukan jumlah pekerja unik</strong>.
+				</span>
+				<span>
+					<strong>Zona waktu tampilan:</strong> <code>{summary.timezone}</code> (batas tanggal filter lokal dikonversi ke interval UTC).
+				</span>
+				<span>
+					<strong>Mode ringkasan:</strong> <code>{summary.mode}</code> (data nyata, simulasi, dan manual tidak pernah digabung).
+				</span>
+			</div>
+		{/if}
+	</section>
 
 	{#if authSession.systemStatusError}
 		<div class="error-banner" role="alert">
@@ -236,7 +581,30 @@
 		color: var(--ink-secondary);
 	}
 
-	.refresh-button {
+	.header-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.625rem;
+	}
+
+	.secondary-link {
+		padding: 0.5rem 0.9rem;
+		border-radius: 8px;
+		border: 1px solid var(--accent-border);
+		background: var(--accent-surface);
+		color: var(--accent-primary);
+		font-weight: 600;
+		font-size: 0.875rem;
+		text-decoration: none;
+	}
+
+	.secondary-link:hover {
+		background: #fed7aa;
+	}
+
+	.refresh-button,
+	.secondary-button {
 		padding: 0.5rem 0.9rem;
 		border-radius: 8px;
 		border: 1px solid var(--border-strong);
@@ -247,11 +615,13 @@
 		cursor: pointer;
 	}
 
-	.refresh-button:hover:not(:disabled) {
+	.refresh-button:hover:not(:disabled),
+	.secondary-button:hover:not(:disabled) {
 		background: var(--bg-subtle);
 	}
 
-	.refresh-button:disabled {
+	.refresh-button:disabled,
+	.secondary-button:disabled {
 		opacity: 0.65;
 		cursor: not-allowed;
 	}
@@ -265,20 +635,39 @@
 		font-size: 0.875rem;
 	}
 
-	.panel {
-		background: var(--bg-surface);
-		border: 1px solid var(--border-default);
-		border-radius: 12px;
-		padding: 1.25rem 1.5rem;
+	.warn-banner {
+		padding: 0.75rem 1rem;
+		border-radius: 8px;
+		border: 1px solid var(--status-warn-border);
+		background: var(--status-warn-bg);
+		color: var(--status-warn-ink);
+		font-size: 0.875rem;
 	}
 
-	.panel-header {
+	.banner-row {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.75rem;
-		margin-bottom: 0.5rem;
+	}
+
+	.panel {
+		background: var(--bg-surface);
+		border: 1px solid var(--border-default);
+		border-radius: 12px;
+		padding: 1.25rem 1.5rem;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.panel-header {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 0.75rem;
 	}
 
 	.panel h2 {
@@ -287,9 +676,122 @@
 	}
 
 	.panel-summary {
-		margin: 0.35rem 0 1rem 0;
+		margin: 0.25rem 0 0 0;
 		font-size: 0.9375rem;
 		color: var(--ink-secondary);
+	}
+
+	.filter-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+		gap: 0.75rem;
+		align-items: end;
+		padding: 0.875rem;
+		border-radius: 8px;
+		background: var(--bg-subtle);
+		border: 1px solid var(--border-default);
+	}
+
+	.field-group {
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+	}
+
+	.field-group label {
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: var(--ink-primary);
+	}
+
+	.field-group select,
+	.field-group input {
+		padding: 0.45rem 0.65rem;
+		border-radius: 6px;
+		border: 1px solid var(--border-strong);
+		background: var(--bg-surface);
+		font-size: 0.875rem;
+	}
+
+	.field-group select:disabled {
+		background: var(--bg-subtle);
+		color: var(--ink-muted);
+		cursor: not-allowed;
+	}
+
+	.filter-actions {
+		display: flex;
+		align-items: center;
+	}
+
+	.metrics-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+		gap: 0.75rem;
+	}
+
+	.metric-card {
+		padding: 1rem;
+		border-radius: 10px;
+		border: 1px solid var(--border-default);
+		background: var(--bg-surface);
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
+	.metric-card.highlight {
+		border-color: var(--accent-border);
+		background: var(--accent-surface);
+	}
+
+	.metric-label {
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: var(--ink-secondary);
+	}
+
+	.metric-value {
+		font-size: 1.75rem;
+		line-height: 1.15;
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+		color: var(--ink-primary);
+	}
+
+	.metric-hint {
+		font-size: 0.75rem;
+		color: var(--ink-muted);
+	}
+
+	.state-box {
+		padding: 1rem;
+		border-radius: 8px;
+		border: 1px solid var(--border-default);
+		background: var(--bg-subtle);
+		font-size: 0.875rem;
+		color: var(--ink-secondary);
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
+	.summary-meta-note {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 1.5rem;
+		padding-top: 0.75rem;
+		border-top: 1px solid var(--border-default);
+		font-size: 0.8125rem;
+		color: var(--ink-secondary);
+	}
+
+	.summary-meta-note code {
+		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+		font-size: 0.78rem;
+		background: var(--bg-subtle);
+		padding: 0.1rem 0.35rem;
+		border-radius: 4px;
 	}
 
 	.status-tag {
@@ -413,12 +915,16 @@
 	}
 
 	.notice-panel p {
-		margin: 0.5rem 0 0 0;
+		margin: 0;
 		font-size: 0.875rem;
 		color: var(--ink-secondary);
 	}
 
 	@media (max-width: 720px) {
+		.panel {
+			padding: 1rem;
+		}
+
 		.spec-row {
 			grid-template-columns: 1fr;
 			gap: 0.25rem;

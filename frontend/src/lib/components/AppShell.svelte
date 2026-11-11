@@ -18,7 +18,7 @@
 
 	const defaultNavItems: NavItem[] = [
 		{ label: 'Dashboard', href: '/' },
-		{ label: 'Proyek & Zona', disabledReason: 'Belum tersedia pada tahap ini' },
+		{ label: 'Proyek & Zona', href: '/projects' },
 		{ label: 'Monitoring', href: '/monitoring' },
 		{ label: 'Temuan', disabledReason: 'Belum tersedia pada tahap ini' },
 		{ label: 'Laporan', disabledReason: 'Belum tersedia pada tahap ini' }
@@ -126,7 +126,10 @@
 				{#each navItems as item (item.label)}
 					<li class="nav-item">
 						{#if item.href}
-							{@const isCurrent = page.url.pathname === item.href}
+							{@const isCurrent =
+								item.href === '/'
+									? page.url.pathname === '/'
+									: page.url.pathname === item.href || page.url.pathname.startsWith(`${item.href}/`)}
 							<a
 								href={item.href}
 								class="nav-link"
