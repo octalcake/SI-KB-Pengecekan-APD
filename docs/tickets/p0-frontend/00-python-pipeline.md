@@ -1,7 +1,7 @@
 # P0-00: Produce an evidence-backed finding through the actual Python boundary
 
 Parent spec: [P0 frontend integration](../../spec-p0-frontend-integration.md).
-Tracker: GitHub publication pending.
+Tracker: https://github.com/octalcake/SI-KB-Pengecekan-APD/issues/5 — closed as not planned; outside frontend scope.
 Blocked by: None; existing Go auth/project/session/frame/evidence APIs already provide the public test seam.
 Assigned lane: Antigravity 3, Gemini 4 Argon, high.
 Status: cancelled from delivery by the user's frontend-only scope correction. Do not implement. The attempted delegate failed before any file edits.

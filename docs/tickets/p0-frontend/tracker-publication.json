@@ -1,0 +1,210 @@
+{
+  "repository": "octalcake/SI-KB-Pengecekan-APD",
+  "repositoryUrl": "https://github.com/octalcake/SI-KB-Pengecekan-APD",
+  "sourceCommit": "362086f9d4b3187847eaf7029ce42d015cd4c4ba",
+  "publishedAt": "2026-11-11T06:16:31Z",
+  "label": {
+    "name": "ready-for-agent",
+    "created": true
+  },
+  "spec": {
+    "key": "SPEC",
+    "sourceFile": "docs/spec-p0-frontend-integration.md",
+    "number": 4,
+    "id": "I_kwDOVqG4ns8AAAABeN7Cyg",
+    "title": "Build the P0 inspection frontend and integrate existing APIs",
+    "url": "https://github.com/octalcake/SI-KB-Pengecekan-APD/issues/4",
+    "state": "OPEN",
+    "labels": [
+      "ready-for-agent"
+    ],
+    "subIssues": [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "stateReason": null,
+    "blockedBy": [],
+    "blocking": []
+  },
+  "tickets": [
+    {
+      "key": "P0-00",
+      "sourceFile": "docs/tickets/p0-frontend/00-python-pipeline.md",
+      "number": 5,
+      "id": "I_kwDOVqG4ns8AAAABeN7ZLw",
+      "title": "P0-00: Backend pipeline - outside frontend scope",
+      "url": "https://github.com/octalcake/SI-KB-Pengecekan-APD/issues/5",
+      "state": "CLOSED",
+      "labels": [],
+      "parent": 4,
+      "blockedBy": [],
+      "blocking": [],
+      "stateReason": "NOT_PLANNED",
+      "subIssues": []
+    },
+    {
+      "key": "P0-01",
+      "sourceFile": "docs/tickets/p0-frontend/01-access-and-shell.md",
+      "number": 6,
+      "id": "I_kwDOVqG4ns8AAAABeN7atQ",
+      "title": "P0-01: Sign in and enter the inspection workspace",
+      "url": "https://github.com/octalcake/SI-KB-Pengecekan-APD/issues/6",
+      "state": "OPEN",
+      "labels": [
+        "ready-for-agent"
+      ],
+      "parent": 4,
+      "blockedBy": [],
+      "blocking": [
+        9,
+        8,
+        7
+      ],
+      "stateReason": null,
+      "subIssues": []
+    },
+    {
+      "key": "P0-02",
+      "sourceFile": "docs/tickets/p0-frontend/02-master-data-and-summary.md",
+      "number": 7,
+      "id": "I_kwDOVqG4ns8AAAABeN7b7A",
+      "title": "P0-02: Prepare projects and zones and inspect filtered totals",
+      "url": "https://github.com/octalcake/SI-KB-Pengecekan-APD/issues/7",
+      "state": "OPEN",
+      "labels": [
+        "ready-for-agent"
+      ],
+      "parent": 4,
+      "blockedBy": [
+        6
+      ],
+      "blocking": [
+        12
+      ],
+      "stateReason": null,
+      "subIssues": []
+    },
+    {
+      "key": "P0-03",
+      "sourceFile": "docs/tickets/p0-frontend/03-monitoring-and-evidence.md",
+      "number": 8,
+      "id": "I_kwDOVqG4ns8AAAABeN7dYQ",
+      "title": "P0-03: Integrate the browser monitoring frontend with existing APIs",
+      "url": "https://github.com/octalcake/SI-KB-Pengecekan-APD/issues/8",
+      "state": "OPEN",
+      "labels": [
+        "ready-for-agent"
+      ],
+      "parent": 4,
+      "blockedBy": [
+        6
+      ],
+      "blocking": [
+        12
+      ],
+      "stateReason": null,
+      "subIssues": []
+    },
+    {
+      "key": "P0-04",
+      "sourceFile": "docs/tickets/p0-frontend/04-findings-and-follow-up.md",
+      "number": 9,
+      "id": "I_kwDOVqG4ns8AAAABeN7erg",
+      "title": "P0-04: Review evidence and record follow-up",
+      "url": "https://github.com/octalcake/SI-KB-Pengecekan-APD/issues/9",
+      "state": "OPEN",
+      "labels": [
+        "ready-for-agent"
+      ],
+      "parent": 4,
+      "blockedBy": [
+        6
+      ],
+      "blocking": [
+        12,
+        10
+      ],
+      "stateReason": null,
+      "subIssues": []
+    },
+    {
+      "key": "P0-05",
+      "sourceFile": "docs/tickets/p0-frontend/05-reports-and-approval.md",
+      "number": 10,
+      "id": "I_kwDOVqG4ns8AAAABeN7gWQ",
+      "title": "P0-05: Draft, review, and approve an inspection report",
+      "url": "https://github.com/octalcake/SI-KB-Pengecekan-APD/issues/10",
+      "state": "OPEN",
+      "labels": [
+        "ready-for-agent"
+      ],
+      "parent": 4,
+      "blockedBy": [
+        9
+      ],
+      "blocking": [
+        12
+      ],
+      "stateReason": null,
+      "subIssues": []
+    },
+    {
+      "key": "P0-06",
+      "sourceFile": "docs/tickets/p0-frontend/06-real-ppe-runtime.md",
+      "number": 11,
+      "id": "I_kwDOVqG4ns8AAAABeN7iYQ",
+      "title": "P0-06: Model runtime - outside frontend scope",
+      "url": "https://github.com/octalcake/SI-KB-Pengecekan-APD/issues/11",
+      "state": "CLOSED",
+      "labels": [],
+      "parent": 4,
+      "blockedBy": [],
+      "blocking": [],
+      "stateReason": "NOT_PLANNED",
+      "subIssues": []
+    },
+    {
+      "key": "P0-07",
+      "sourceFile": "docs/tickets/p0-frontend/07-acceptance-and-handoff.md",
+      "number": 12,
+      "id": "I_kwDOVqG4ns8AAAABeN7j6g",
+      "title": "P0-07: Verify and hand off the integrated local inspection workflow",
+      "url": "https://github.com/octalcake/SI-KB-Pengecekan-APD/issues/12",
+      "state": "OPEN",
+      "labels": [
+        "ready-for-agent"
+      ],
+      "parent": 4,
+      "blockedBy": [
+        8,
+        10,
+        9,
+        7
+      ],
+      "blocking": [],
+      "stateReason": null,
+      "subIssues": []
+    }
+  ],
+  "publicationSourceCommit": "e34e07c0b3d807dbbd7a53794c1164754ee4de9d",
+  "scope": "frontend-only",
+  "scopeSyncedAt": "2026-11-11T06:24:28.818935+00:00",
+  "closedAsOutOfScope": [
+    5,
+    11
+  ],
+  "activeFrontendTickets": [
+    6,
+    7,
+    8,
+    9,
+    10,
+    12
+  ]
+}

@@ -1,7 +1,7 @@
 # P0-04: Review evidence and record follow-up
 
 Parent spec: [P0 frontend integration](../../spec-p0-frontend-integration.md).
-Tracker: GitHub publication pending.
+Tracker: https://github.com/octalcake/SI-KB-Pengecekan-APD/issues/9 — open frontend implementation ticket.
 Blocked by: P0-01 for shared auth/API integration. Existing finding APIs allow independent frontend work without requiring the new monitoring UI.
 Assigned lane: Antigravity 2, Gemini 4 Argon, high. Frontend only; backend code is out of scope.
 Status: blocked.

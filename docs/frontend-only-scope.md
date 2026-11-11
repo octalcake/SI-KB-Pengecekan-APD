@@ -12,7 +12,7 @@ The user clarified that this work is **frontend development and integration with
 ## Requested frontend ownership
 
 - Antigravity 1, Argon High: preserve and finish the existing login/session/app-shell work, then projects/zones/dashboard.
-- Antigravity 2, Argon High: finding/review/follow-up/manual-entry and report frontend integration. GitHub publication is deferred while the available browser and CLI are signed out.
+- Antigravity 2, Argon High: finding/review/follow-up/manual-entry and report frontend integration. GitHub publication is complete and the coordinator has synced its frontend-only scope; publication work does not expand this frontend coding assignment.
 - Antigravity 3, Argon High: browser monitoring/capture UI and existing session/frame API integration, with no server changes. Its last run failed before edits because account verification is required.
 
 Preserve existing frontend worktrees and edits. No provider/model substitution. Use worktree isolation and bounded test/build concurrency; shared frontend API exports come from the existing Antigravity 1 work.

@@ -1,7 +1,7 @@
 # P0-02: Prepare projects and zones and inspect filtered totals
 
 Parent spec: [P0 frontend integration](../../spec-p0-frontend-integration.md).
-Tracker: GitHub publication pending.
+Tracker: https://github.com/octalcake/SI-KB-Pengecekan-APD/issues/7 — open frontend implementation ticket.
 Blocked by: P0-01.
 Assigned lane: Antigravity 1, Gemini 4 Argon, high.
 Status: blocked.

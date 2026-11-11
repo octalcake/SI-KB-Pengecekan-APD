@@ -1,7 +1,7 @@
 # P0-05: Draft, review, and approve an inspection report
 
 Parent spec: [P0 frontend integration](../../spec-p0-frontend-integration.md).
-Tracker: GitHub publication pending.
+Tracker: https://github.com/octalcake/SI-KB-Pengecekan-APD/issues/10 — open frontend implementation ticket.
 Blocked by: P0-04.
 Assigned lane: Antigravity 2, Gemini 4 Argon, high. Frontend only; consume report APIs unchanged and report backend gaps.
 Status: blocked.
