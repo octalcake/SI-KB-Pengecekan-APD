@@ -518,7 +518,7 @@
 	.modal-panel {
 		width: 100%;
 		max-width: 1040px;
-		max-height: 94vh;
+		max-height: calc(100dvh - 1.5rem);
 		background: var(--bg-surface, #ffffff);
 		border: 1px solid var(--border-strong, #c9c3b6);
 		border-radius: 12px;
@@ -528,6 +528,7 @@
 	}
 
 	.modal-header {
+		flex-shrink: 0;
 		padding: 0.85rem 1rem;
 		border-bottom: 1px solid var(--border-default, #dcd7cb);
 		display: flex;
@@ -559,16 +560,19 @@
 		padding: 0.75rem;
 		background: #141210;
 		overflow: auto;
-		display: flex;
-		align-items: center;
-		justify-content: center;
+		display: block;
 		flex: 1;
 		min-height: 0;
 	}
 
 	.enlarged-stage {
 		max-width: 920px;
-		max-height: 72vh;
+		margin-inline: auto;
+	}
+
+	.enlarged-stage > .evidence-img {
+		position: absolute;
+		inset: 0;
 	}
 
 	@media (max-width: 640px) {
@@ -593,8 +597,5 @@
 			padding: 0.5rem;
 		}
 
-		.enlarged-stage {
-			max-height: 60vh;
-		}
 	}
 </style>

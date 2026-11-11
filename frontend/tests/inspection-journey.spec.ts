@@ -423,7 +423,7 @@ async function startDisposableJourneyStack(options: {
 		GEMINI_TIMEOUT_MS: '30000',
 		GEMINI_MAX_ATTEMPTS: '2',
 		GEMINI_STORE: 'false',
-		REPORT_PROMPT_VERSION: 'k3-report-v1',
+		REPORT_PROMPT_VERSION: 'k3-report-v2',
 		DISPLAY_TIMEZONE: 'Asia/Jakarta'
 	};
 
@@ -537,6 +537,7 @@ async function assertNoHorizontalOverflow(page: Page, contextLabel: string) {
 }
 
 test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQLite, bukti JPEG asli, dan batas AI eksternal', () => {
+	test.describe.configure({ mode: 'serial' });
 	let stack: DisposableJourneyStack;
 
 	test.beforeAll(async () => {
@@ -1054,10 +1055,20 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 		) {
 			await page.setViewportSize({ width, height });
 			const vpLabel = `${width}x${height}`;
+			if (routeLabel.endsWith('#modal')) {
+				const imageSize = await page.getByRole('dialog').locator('img').evaluate((image) => {
+					const rect = image.getBoundingClientRect();
+					return {
+						renderedRatio: rect.width / rect.height,
+						originalRatio: image.naturalWidth / image.naturalHeight
+					};
+				});
+				expect(Math.abs(imageSize.renderedRatio - imageSize.originalRatio)).toBeLessThan(0.02);
+			}
 			const res = await page.evaluate(() => {
 				const vw = document.documentElement.clientWidth;
 				const sw = document.documentElement.scrollWidth;
-				const isPhone = vw <= 480;
+				const isTouchLayout = vw <= 480 || window.matchMedia('(pointer: coarse)').matches;
 
 				const smallTouchTargets: string[] = [];
 				const smallFormFonts: string[] = [];
@@ -1096,14 +1107,14 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 					const isCheckboxOrRadio =
 						tag === 'input' && (type === 'checkbox' || type === 'radio');
 
-					if (isPhone && !isCheckboxOrRadio && rect.height < 43.5) {
+					if (isTouchLayout && !isCheckboxOrRadio && rect.height < 43.5) {
 						smallTouchTargets.push(
 							`${tag}[${label}](h=${Math.round(rect.height * 10) / 10}px,w=${Math.round(rect.width)}px)`
 						);
 					}
 
 					if (
-						isPhone &&
+						isTouchLayout &&
 						(tag === 'input' || tag === 'select' || tag === 'textarea') &&
 						!isCheckboxOrRadio
 					) {
@@ -1453,4 +1464,3 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 		}
 	});
 });
-

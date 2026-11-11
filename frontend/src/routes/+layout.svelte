@@ -112,7 +112,7 @@
 		height: auto;
 	}
 
-	@media (max-width: 768px) {
+	@media (max-width: 768px), (pointer: coarse) {
 		:global(input:not([type='checkbox']):not([type='radio']):not([type='hidden'])),
 		:global(select),
 		:global(textarea) {
@@ -120,7 +120,8 @@
 			min-height: 2.75rem;
 		}
 
-		:global(button:not([disabled])) {
+		:global(button),
+		:global(.nav-link) {
 			min-height: 2.75rem;
 		}
 
