@@ -3,7 +3,7 @@
 Parent spec: [P0 frontend integration](../../spec-p0-frontend-integration.md).
 Tracker: https://github.com/octalcake/SI-KB-Pengecekan-APD/issues/12 — open frontend acceptance ticket (kept open until final integration PR acceptance).
 Prerequisites: P0-01, P0-02, P0-03, P0-04, and P0-05 are integrated on `integration/p0-frontend` and merged with all 7 standards/spec review remediations at `14b064ee9e653a0eecd548f93e4a4b41c6f6eebc` (over baseline `11fdf4f91e59f5772c65ede3161407d193c00b2f`). Backend-only tickets P0-00 and P0-06 are cancelled per [frontend-only scope](../../frontend-only-scope.md); live Python detector and live Gemini readiness remain external dependencies (`NOT RUN`, unverified in this frontend-only scope despite upstream code availability) and do not authorize backend implementation.
-Assigned lane: Antigravity 3, Gemini 4 Argon, high (runtime acceptance test, review-fix merge, & final verification).
+Assigned lanes: Antigravity 1–3, Gemini 4 Argon, high; coordinator owns final publication.
 Status: `t3/frontend-review-fixes` (`e2b6011d7df5765ba0993257e2e51a5e0cba9c6e`) merged into `integration/p0-frontend` (`cd7dfc1dc43dada5d079f345b42eb166351855da`) at merged code SHA `14b064ee9e653a0eecd548f93e4a4b41c6f6eebc` (code tree unchanged by the subsequent docs-only evidence commit); `npm run check` (`EXIT=0`), `npm run build` (`EXIT=0`), and the full serial Playwright suite (`7 passed (47.6s)`, `EXIT=0`) verified cleanly; awaiting coordinator for final PR [#13](https://github.com/octalcake/SI-KB-Pengecekan-APD/pull/13) readiness, tracker closure, and worktree cleanup.
 
 ## What it delivers
@@ -14,13 +14,13 @@ The local laptop can reproducibly run the frontend against existing APIs, comple
 
 - [x] The frontend uses unchanged Go/SQLite/evidence APIs for available seeded workflows; camera/inference-unavailable behavior is verified honestly, and live capabilities not supplied by the existing backend remain explicitly NOT RUN.
 - [x] User-confirmed browser/public-HTTP test seams cover auth, CRUD, capture, review/actions, stopped session, draft/edit/approve, filtered counts, and restart persistence (`frontend/tests/inspection-journey.spec.ts` + module suites).
-- [x] Security, concurrency, stale/version/lock, offline/timeout/storage, and camera lifecycle failures have the specified behavior.
+- [x] Covered security, concurrency, stale/version/lock, unavailable-service, missing-evidence, and camera lifecycle regressions pass. Deterministic fault cases supplement the real-Go principal journey; this does not establish live detector/Gemini behavior or every storage/timeout failure.
 - [x] Frontend check/build and relevant browser/API integration checks pass (`npm run check` exit `0`, `npm run build` exit `0`, `7 passed (47.6s)` across 6 Playwright spec files with `--workers=1` at merged code SHA `14b064ee9e653a0eecd548f93e4a4b41c6f6eebc`). Existing backend processes run unchanged; no backend code or tests are added or modified.
 - [x] Desktop (`1280×800`), narrow-screen (`390×844`), and keyboard/dialog visual checks are recorded under `frontend/test-results/acceptance/` and inspected without exposing secrets.
 - [x] Frontend startup and proxy/env instructions are reproducible in [`frontend/README.md`](../../../frontend/README.md), referring to existing backend setup in [`README.md`](../../../README.md) without implementing migration/seed changes or deleting existing storage.
 - [x] Results identify PASS/FAIL/NOT RUN, versions/mode, evidence hash, request IDs, screenshots, and limitations per acceptance gate in [`docs/frontend-acceptance.md`](../../frontend-acceptance.md).
 - [x] Two-axis standards/spec review is completed and findings fixed on the integration branch (`docs/frontend-review.md`, all 7 material findings resolved in `cd7dfc1` + `e2b6011`, merged and verified at `14b064ee9e653a0eecd548f93e4a4b41c6f6eebc`).
-- [ ] GitHub spec/tickets are resolved through the integration PR; PR is linked and ready only after appropriate gates; task-owned worktrees/processes are cleaned. *(Own test processes verified clean with `0` listeners remaining; PR #13 readiness, GitHub issue closure, and worktree cleanup remain pending coordinator.)*
+- [x] Frontend acceptance/review gates pass and delivery uses linked PR #13 with closing references. GitHub issues remain open until merge. Task worktrees were unregistered, branch refs retained, and test processes stopped; two empty Windows-locked directories were retained without forcing deletion.
 
 ## Verification & Handoff Evidence
 
