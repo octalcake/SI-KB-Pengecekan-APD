@@ -4,7 +4,7 @@ Parent spec: [P0 frontend integration](../../spec-p0-frontend-integration.md).
 Tracker: https://github.com/octalcake/SI-KB-Pengecekan-APD/issues/7 — open frontend implementation ticket.
 Blocked by: P0-01.
 Assigned lane: Antigravity 1, Gemini 4 Argon, high.
-Status: blocked.
+Status: ready-for-agent; P0-01 foundation is integrated at 3d0fea498575b6c6119f13f388a2f1d71308765e.
 
 ## What it delivers
 
