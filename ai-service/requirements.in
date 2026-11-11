@@ -2,3 +2,10 @@ fastapi
 uvicorn
 python-multipart
 pydantic-settings
+# Must match model_manifest.json "versions.ultralytics"; tracker API is pinned to it (SRS §6.2).
+ultralytics==8.4.210
+# ByteTrack matching; without it Ultralytics tries to pip install at runtime.
+lap
+# CPU wheels via --extra-index-url https://download.pytorch.org/whl/cpu; same pair as the tested venv.
+torch==2.14.1
+torchvision==0.29.2
