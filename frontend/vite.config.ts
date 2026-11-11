@@ -19,6 +19,9 @@ export default defineConfig({
 	],
 	server: {
 		// Proxy keeps cookies and evidence same-origin; Docker overrides target to the backend service.
-		proxy: { '/api': process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:8080' }
+		// changeOrigin: false keeps Host=localhost:5173 so it passes the Go Host allowlist.
+		proxy: {
+			'/api': { target: process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:8080', changeOrigin: false }
+		}
 	}
 });
