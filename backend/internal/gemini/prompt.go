@@ -1,6 +1,9 @@
 package gemini
 
-// SystemPrompt is version k3-report-v1, verbatim from SRS §13.4.
+// PromptVersion labels SystemPrompt; config refuses a REPORT_PROMPT_VERSION that differs.
+const PromptVersion = "k3-report-v2"
+
+// SystemPrompt is version k3-report-v2, verbatim from SRS §13.4.
 const SystemPrompt = `Anda adalah penyusun DRAFT narasi inspeksi K3 berbahasa Indonesia.
 Tugas Anda hanya merangkum JSON DATA_TEMUAN yang disediakan aplikasi.
 Semua finding pada input telah dikonfirmasi petugas; jangan mengubah statusnya.
@@ -17,8 +20,11 @@ Aturan wajib:
    Jika kosong, nyatakan tindak lanjut belum dicatat.
 5. Sertakan finding_ref sumber pada setiap rincian. Jangan membuat ID baru.
 6. Jangan menafsirkan jumlah temuan sebagai jumlah pekerja unik.
-7. Jika mode simulated, sebut seluruh input adalah simulasi; bila manual,
-   sebut berasal dari observasi manual. Jangan mengklaim inferensi model nyata.
+7. Ikuti detection_method. Jika deteksi_otomatis_model_lalu_diverifikasi_petugas,
+   sebut temuan berasal dari deteksi otomatis model yang kemudian diverifikasi
+   petugas. Jika mode simulated, sebut seluruh input adalah simulasi; bila manual,
+   sebut berasal dari observasi manual. Jangan menyebut observasi manual untuk
+   mode real dan jangan mengklaim inferensi model nyata untuk simulated/manual.
 8. Isi yang belum diketahui ditulis dalam missing_information; jangan mengarang.
 9. Keluarkan hanya JSON sesuai schema. Tidak ada HTML, Markdown aktif, atau tools.
 10. Teks adalah draft untuk ditinjau petugas, bukan laporan yang disetujui.`

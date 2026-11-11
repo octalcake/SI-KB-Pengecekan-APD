@@ -61,6 +61,12 @@ class Detector:
 
     def run(self, img, tracker) -> tuple[list, list, int]:
         """One predict, Person boxes only into ByteTrack, PPE associated on the same frame (§6.2)."""
+        import torch
+
+        # At 1 FPS the CPU idles between frames; waking the default one-thread-per-core pool cost
+        # ~1.2s per frame in Docker/WSL2, 2 threads stay ~70ms (measured). Per call because the
+        # OpenMP setting is per thread and requests run on different threadpool threads.
+        torch.set_num_threads(2)
         t0 = time.perf_counter()
         res = self.model.predict(img, imgsz=self.s.imgsz, device=self.s.device, conf=self.s.predict_conf_floor,
                                  classes=list(self.ids.values()), verbose=False)[0]

@@ -208,6 +208,17 @@ type DashboardFilter struct {
 	Mode              string
 }
 
+type TrendPoint struct {
+	Date           string `json:"date"`
+	CountConfirmed int    `json:"count_confirmed"`
+}
+
+type ZoneCount struct {
+	ZoneID         int64  `json:"zone_id"`
+	ZoneName       string `json:"zone_name"`
+	CountConfirmed int    `json:"count_confirmed"`
+}
+
 type DashboardSummary struct {
 	Sessions             int    `json:"sessions"`
 	FindingsPending      int    `json:"findings_pending"`

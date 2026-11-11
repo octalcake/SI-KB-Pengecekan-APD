@@ -109,3 +109,18 @@ def test_association():
     assert both[0][0]["state"] == "unknown"
     assert normalize([-10, 0, 64, 48], 64, 48) == [0.0, 0.0, 1.0, 1.0]
     assert normalize([70, 0, 80, 48], 64, 48) is None
+
+
+def test_simulated_mode():
+    s = Settings(_env_file=None, ai_internal_token=TOKEN, ai_mode="simulated")
+    with TestClient(create_app(s)) as c:  # no detector injected: main picks SimulatedDetector
+        mi = c.get("/internal/v1/model-info", headers=H).json()
+        assert mi["ready"] is True and mi["mode"] == "simulated" and mi["model_version"] == "simulated-fixture-v1"
+        assert c.post("/internal/v1/sessions/start", json={"session_key": "k1", "mode": "simulated"}, headers=H).status_code == 200
+        img = jpeg()
+        states = []
+        for seq in (1, 2, 3):
+            body = infer(c, seq, img).json()
+            assert body["mode"] == "simulated"
+            states.append(body["persons"][0]["ppe"][0]["state"])
+        assert states == ["positive", "unknown", "positive"]

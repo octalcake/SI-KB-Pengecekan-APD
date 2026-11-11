@@ -53,6 +53,14 @@ func main() {
 	if err := mon.Reconcile(ctx); err != nil {
 		fatal("reconcile sessions", err)
 	}
+	// Orphan evidence from a crash between file write and DB insert (SRS §6.6); not fatal.
+	if known, err := store.Q().EvidencePaths(ctx); err != nil {
+		slog.Error("evidence scan", "err", err)
+	} else if n, err := evidence.Quarantine(known); err != nil {
+		slog.Error("evidence quarantine", "moved", n, "err", err)
+	} else {
+		slog.Info("evidence scan done", "quarantined", n)
+	}
 	go func() {
 		t := time.NewTicker(time.Second)
 		defer t.Stop()

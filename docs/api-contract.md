@@ -249,7 +249,7 @@ Generate:
     "id":8,"session_id":15,"status":"draft","title":"Draft inspeksi sesi 15",
     "content":"Pada inspeksi zona terpilih ditemukan indikasi tanpa helm yang telah dikonfirmasi petugas [#105].",
     "generated_by":"gemini","gemini_model":"gemini-3.5-flash-lite",
-    "prompt_version":"k3-report-v1","source_finding_ids":[105],
+    "prompt_version":"k3-report-v2","source_finding_ids":[105],
     "source_hash":"<sha256-canonical-snapshot>","is_stale":false,
     "snapshot":{"session_id":15,"mode":"real","project":{"id":1,"name":"Pembangunan Gedung A"},"zone":{"id":2,"name":"Lantai 2"},"findings":[{"id":105,"version":2,"violation_type":"NO_HELMET","captured_at":"2026-11-11T02:15:22Z","notes":"Kepala terlihat jelas tanpa helm pada foto.","action_status":"pending","action_notes":""}]},
     "approved_by":null,"approved_at":null,"version":1,
