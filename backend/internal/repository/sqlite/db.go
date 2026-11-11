@@ -10,7 +10,8 @@ import (
 // Open sets the pragmas on every connection (SRS §11.1); dbmate migrations
 // run in a transaction where these pragmas are no-ops, so they live here.
 func Open(path string) (*sql.DB, error) {
-	dsn := "file:" + path + "?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"
+	// _txlock=immediate: every BeginTx is BEGIN IMMEDIATE (SRS §9.7 writer lock).
+	dsn := "file:" + path + "?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_txlock=immediate"
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, err
