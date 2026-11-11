@@ -103,5 +103,34 @@
 	:global(textarea) {
 		font: inherit;
 		color: inherit;
+		max-width: 100%;
+	}
+
+	:global(img),
+	:global(video) {
+		max-width: 100%;
+		height: auto;
+	}
+
+	@media (max-width: 768px) {
+		:global(input:not([type='checkbox']):not([type='radio']):not([type='hidden'])),
+		:global(select),
+		:global(textarea) {
+			font-size: 1rem !important;
+			min-height: 2.75rem;
+		}
+
+		:global(button:not([disabled])) {
+			min-height: 2.75rem;
+		}
+
+		:global(.open-detail-link),
+		:global(.action-link),
+		:global(.secondary-link) {
+			min-height: 2.75rem;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+		}
 	}
 </style>

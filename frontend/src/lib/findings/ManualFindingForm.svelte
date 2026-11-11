@@ -516,7 +516,7 @@
 
 	.session-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 		gap: 0.75rem;
 		align-items: end;
 	}
@@ -529,7 +529,7 @@
 
 	.form-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
 		gap: 0.85rem;
 	}
 
@@ -537,6 +537,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.3rem;
+		min-width: 0;
 	}
 
 	.field-group label {
@@ -548,6 +549,8 @@
 	.field-group select,
 	.field-group input[type='file'],
 	.field-group textarea {
+		width: 100%;
+		min-width: 0;
 		padding: 0.5rem 0.65rem;
 		border-radius: 6px;
 		border: 1px solid var(--border-strong, #c9c3b6);
@@ -564,6 +567,7 @@
 	.file-hint {
 		font-size: 0.78rem;
 		color: var(--ink-secondary, #4a453d);
+		overflow-wrap: anywhere;
 	}
 
 	.form-footer {
@@ -621,6 +625,7 @@
 
 	.alert-header {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.5rem;
@@ -638,5 +643,14 @@
 		margin: 0.3rem 0 0 0;
 		font-size: 0.78rem;
 		font-style: italic;
+	}
+
+	@media (max-width: 640px) {
+		.toggle-btn,
+		.submit-btn,
+		.secondary-btn {
+			width: 100%;
+			min-height: 2.75rem;
+		}
 	}
 </style>
