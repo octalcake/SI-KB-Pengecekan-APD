@@ -19,7 +19,7 @@
 	const defaultNavItems: NavItem[] = [
 		{ label: 'Dashboard', href: '/' },
 		{ label: 'Proyek & Zona', disabledReason: 'Belum tersedia pada tahap ini' },
-		{ label: 'Monitoring', disabledReason: 'Belum tersedia pada tahap ini' },
+		{ label: 'Monitoring', href: '/monitoring' },
 		{ label: 'Temuan', disabledReason: 'Belum tersedia pada tahap ini' },
 		{ label: 'Laporan', disabledReason: 'Belum tersedia pada tahap ini' }
 	];
