@@ -345,7 +345,7 @@ func (m *Monitoring) Tick(now time.Time) {
 
 // Frame runs the §6.3/§6.5 pipeline for one sampled JPEG.
 func (m *Monitoring) Frame(ctx context.Context, userID, id int64, in FrameInput) (*FrameResult, error) {
-	w, h, err := m.checkJPEG(in.JPEG)
+	w, h, err := checkJPEG(in.JPEG, m.Cfg.FrameMaxPixels)
 	if err != nil {
 		return nil, err
 	}
@@ -453,7 +453,7 @@ func (m *Monitoring) Frame(ctx context.Context, userID, id int64, in FrameInput)
 	return out, nil
 }
 
-func (m *Monitoring) checkJPEG(b []byte) (int, int, error) {
+func checkJPEG(b []byte, maxPixels int) (int, int, error) {
 	if len(b) < 3 || b[0] != 0xFF || b[1] != 0xD8 || b[2] != 0xFF {
 		return 0, 0, domain.NewError(http.StatusUnsupportedMediaType, "UNSUPPORTED_MEDIA_TYPE", "Frame harus JPEG.")
 	}
@@ -461,7 +461,7 @@ func (m *Monitoring) checkJPEG(b []byte) (int, int, error) {
 	if err != nil {
 		return 0, 0, domain.NewError(http.StatusUnprocessableEntity, "INVALID_IMAGE", "JPEG rusak atau tidak dapat dibaca.")
 	}
-	if cfg.Width*cfg.Height > m.Cfg.FrameMaxPixels {
+	if cfg.Width*cfg.Height > maxPixels {
 		return 0, 0, domain.NewError(http.StatusRequestEntityTooLarge, "IMAGE_TOO_LARGE", "Resolusi frame melebihi batas.")
 	}
 	return cfg.Width, cfg.Height, nil

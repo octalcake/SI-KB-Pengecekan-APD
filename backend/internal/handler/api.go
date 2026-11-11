@@ -30,6 +30,8 @@ type API struct {
 	Auth       *service.Auth
 	Master     *service.Master
 	Monitoring *service.Monitoring
+	Findings   *service.Findings
+	Reports    *service.Reports
 }
 
 // Routes builds the /api/v1 mux with the §7.2 middleware chain.
@@ -62,6 +64,22 @@ func (a *API) Routes() http.Handler {
 	h("POST /api/v1/monitoring/sessions/{id}/frames", req(a.frame))
 	h("POST /api/v1/monitoring/sessions/{id}/stop", req(a.stopSession))
 	h("GET /api/v1/findings/{id}/evidence", req(a.evidence))
+	h("GET /api/v1/findings", req(a.listFindings))
+	h("POST /api/v1/findings", req(a.createManualFinding))
+	h("GET /api/v1/findings/{id}", req(a.getFinding))
+	h("PATCH /api/v1/findings/{id}", req(a.reviewFinding))
+	h("DELETE /api/v1/findings/{id}", req(a.deleteFinding))
+
+	h("POST /api/v1/reports/generate", req(a.generateReport))
+	h("POST /api/v1/reports", req(a.createReport))
+	h("GET /api/v1/reports", req(a.listReports))
+	h("GET /api/v1/reports/{id}", req(a.getReport))
+	h("PATCH /api/v1/reports/{id}", req(a.updateReport))
+	h("DELETE /api/v1/reports/{id}", req(a.deleteReport))
+	h("POST /api/v1/reports/{id}/regenerate", req(a.regenerateReport))
+	h("POST /api/v1/reports/{id}/approve", req(a.approveReport))
+
+	h("GET /api/v1/dashboard/summary", req(a.dashboardSummary))
 
 	h("/", func(w http.ResponseWriter, r *http.Request) { httpx.Error(w, r, domain.NotFound()) })
 

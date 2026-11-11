@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"image"
@@ -24,6 +25,7 @@ import (
 
 	"k3/backend/internal/aiclient"
 	"k3/backend/internal/config"
+	"k3/backend/internal/gemini"
 	"k3/backend/internal/repository/sqlite"
 	"k3/backend/internal/service"
 	"k3/backend/internal/storage"
@@ -139,38 +141,55 @@ func expect(t *testing.T, step string, got, want int, body map[string]any) {
 	}
 }
 
-func TestMonitoringFlow(t *testing.T) {
+type env struct {
+	c   *client
+	db  *sql.DB
+	ai  *fakeAI
+	api *API
+}
+
+// newEnv starts the full API over HTTP with SQLite in a temp dir and fake AI/Gemini.
+func newEnv(t *testing.T, gen gemini.Generator) *env {
 	dir := t.TempDir()
 	db, err := sqlite.Open(filepath.Join(dir, "k3.sqlite"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
+	t.Cleanup(func() { db.Close() })
 	store := &sqlite.Store{DB: db}
 	migrate(t, store)
 	ev, _ := storage.NewEvidence(filepath.Join(dir, "evidence"))
 
+	jakarta, _ := time.LoadLocation("Asia/Jakarta")
 	cfg := &config.Config{
 		AllowedOrigins: []string{"http://test"}, AuthCookieName: "k3_session", AuthTTL: time.Hour,
 		// High FPS keeps the anti-flood gap tiny so the test needs no sleeps.
 		FrameTargetFPS: 100, ConfirmHits: 2, ConfirmMaxFrames: 3, ConfirmWindow: 2 * time.Second,
 		TrackTimeout: 5 * time.Second, SessionIdleTimeout: time.Minute, FrameMaxBytes: 1 << 20, FrameMaxPixels: 1_000_000,
 		AITimeout: time.Second, FrameTotalDeadline: 2 * time.Second, AIMode: "real",
+		ReportPromptVersion: "k3-report-v1", DisplayTimezone: jakarta,
 	}
 	conf, box := 0.9, [4]float64{0.3, 0.1, 0.4, 0.3}
 	ai := &fakeAI{persons: []aiclient.Person{{TrackID: 17, Confidence: 0.9, BBox: [4]float64{0.2, 0.1, 0.6, 0.9},
 		PPE: []aiclient.PPE{{Type: "NO_HELMET", State: "positive", Confidence: &conf, BBox: &box}}}}}
 	mon := &service.Monitoring{Store: store, AI: ai, Evidence: ev, Cfg: cfg}
 	api := &API{Cfg: cfg, DB: db, Store: store, AI: ai, Monitoring: mon, Master: &service.Master{Store: store},
-		Auth: &service.Auth{Store: store, TTL: time.Hour, Limiter: service.NewLoginLimiter(5, time.Minute), OnLogout: mon.StopForUser}}
+		Auth:     &service.Auth{Store: store, TTL: time.Hour, Limiter: service.NewLoginLimiter(5, time.Minute), OnLogout: mon.StopForUser},
+		Findings: &service.Findings{Store: store, Evidence: ev, Cfg: cfg},
+		Reports:  &service.Reports{Store: store, Gemini: gen, Cfg: cfg}}
 
 	srv := httptest.NewUnstartedServer(nil)
 	cfg.AllowedHosts = []string{srv.Listener.Addr().String()}
 	srv.Config.Handler = api.Routes()
 	srv.Start()
-	defer srv.Close()
+	t.Cleanup(srv.Close)
 	jar, _ := cookiejar.New(nil)
-	c := &client{t: t, base: srv.URL + "/api/v1", hc: &http.Client{Jar: jar}}
+	return &env{c: &client{t: t, base: srv.URL + "/api/v1", hc: &http.Client{Jar: jar}}, db: db, ai: ai, api: api}
+}
+
+func TestMonitoringFlow(t *testing.T) {
+	e := newEnv(t, nil)
+	c, db, ai := e.c, e.db, e.ai
 
 	st, b := c.do("POST", "/auth/login", map[string]string{"username": "petugas", "password": "wrong"}, nil)
 	expect(t, "bad login", st, 401, b)
@@ -206,7 +225,9 @@ func TestMonitoringFlow(t *testing.T) {
 	if st != 503 || code(b) != "MODEL_NOT_READY" {
 		t.Fatalf("model not ready: %d %v", st, b)
 	}
+	ai.mu.Lock()
 	ai.ready = true
+	ai.mu.Unlock()
 	st, b = c.do("POST", "/monitoring/sessions", start, nil)
 	expect(t, "start session", st, 201, b)
 	sid := int64(data(b)["id"].(float64))

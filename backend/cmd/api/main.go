@@ -12,6 +12,7 @@ import (
 
 	"k3/backend/internal/aiclient"
 	"k3/backend/internal/config"
+	"k3/backend/internal/gemini"
 	"k3/backend/internal/handler"
 	"k3/backend/internal/repository/sqlite"
 	"k3/backend/internal/service"
@@ -37,7 +38,13 @@ func main() {
 	ai := aiclient.New(cfg.AIBaseURL, cfg.AIInternalToken)
 	mon := &service.Monitoring{Store: store, AI: ai, Evidence: evidence, Cfg: cfg}
 	auth := &service.Auth{Store: store, TTL: cfg.AuthTTL, Limiter: service.NewLoginLimiter(5, time.Minute), OnLogout: mon.StopForUser}
-	api := &handler.API{Cfg: cfg, DB: db, Store: store, AI: ai, Auth: auth, Master: &service.Master{Store: store}, Monitoring: mon}
+	reports := &service.Reports{Store: store, Cfg: cfg}
+	if cfg.GeminiEnabled {
+		reports.Gemini = &gemini.Client{BaseURL: gemini.BaseURL, APIKey: cfg.GeminiAPIKey, ModelName: cfg.GeminiModel,
+			APIVersion: cfg.GeminiAPIVersion, Timeout: cfg.GeminiTimeout, MaxAttempts: cfg.GeminiMaxAttempts, HC: &http.Client{}}
+	}
+	api := &handler.API{Cfg: cfg, DB: db, Store: store, AI: ai, Auth: auth, Master: &service.Master{Store: store}, Monitoring: mon,
+		Findings: &service.Findings{Store: store, Evidence: evidence, Cfg: cfg}, Reports: reports}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

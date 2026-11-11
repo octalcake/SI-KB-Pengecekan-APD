@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Source of truth
 
-`docs/requirements.md` (Indonesian SRS; `docs/api-contract.md` is a copy of §9–10, keep both in sync) defines everything: API contracts (§9, §10), DB schema (§11), env contract (§14), folder layout (§15), and the implementation order (§16.1). Read the relevant section before implementing a module. Backend is through step 6 of §16.1: auth, middleware, project/zone CRUD, monitoring sessions, the frame pipeline (temporal 2-of-3, dedupe, evidence, automatic pending findings), and `GET /findings/{id}/evidence`. Not implemented yet: finding list/review/delete/manual (step 7), reports and Gemini (step 8), dashboard (step 9), the frontend UI, and the Python `/internal/v1/*` endpoints. Until Python has those, starting a session returns 503 `AI_UNAVAILABLE`.
+`docs/requirements.md` (Indonesian SRS; `docs/api-contract.md` is a copy of §9–10, keep both in sync) defines everything: API contracts (§9, §10), DB schema (§11), env contract (§14), folder layout (§15), and the implementation order (§16.1). Read the relevant section before implementing a module. Backend covers steps 3–9 of §16.1, P0 only. That includes auth, middleware, project/zone CRUD, monitoring and the frame pipeline, finding review/follow-up/soft delete/manual fallback, reports (Gemini draft, manual/template draft, edit, regenerate, stale check, approval lock) and `GET /dashboard/summary`. Not implemented: P1 `/dashboard/trends` and `/dashboard/zones`, the frontend UI, and the Python `/internal/v1/*` endpoints. Until Python has those, starting a session returns 503 `AI_UNAVAILABLE`. The Gemini client has not been smoke-tested against the real API.
 
 ## Commands
 
@@ -16,7 +16,7 @@ Docker (full stack):
 
 Backend (`backend/`):
 - `go build ./...`, `go vet ./...`, `go test ./...`
-- Single test: `go test ./internal/service -run TestSRSTimeline` (the §6.4 timeline), `go test ./internal/handler -run TestMonitoringFlow` (end-to-end over HTTP with SQLite in a temp dir and a fake AI client)
+- Single test: `go test ./internal/service -run TestSRSTimeline` (the §6.4 timeline), `go test ./internal/handler -run 'TestMonitoringFlow|TestReportFlow'` (end-to-end over HTTP via `newEnv`: SQLite in a temp dir, fake AI and fake Gemini)
 - `go run ./cmd/api`, `go run ./cmd/seed` (needs `backend/.env`, copy from `.env.example`)
 
 Frontend (`frontend/`): `npm run dev`, `npm run check` (svelte-check, the type gate), `npm run build`.
@@ -34,7 +34,9 @@ Go layering (SRS §4.2): handler (parse/auth/HTTP) → service (business rules, 
 - `internal/httpx` holds the §9.1 JSON envelope. Return a `*domain.AppError` from any layer to get that status and code; any other error becomes a logged 500.
 - Middleware (`internal/middleware`): `Base` (request ID, recovery, logging) → `Origin` (Host allowlist on every request, Origin allowlist on mutating requests) → `Authenticator.Require` per route (session cookie, plus `X-CSRF-Token` on mutating requests).
 - `sqlite.Store.Tx` runs `BEGIN IMMEDIATE` (`_txlock=immediate` in the DSN). Run multi-step rules inside it.
-- `service.Monitoring` keeps the single active session in memory (`runtime`), with a per-session mutex that serialises frames, stop and the 1s `Tick` (idle timeout, track expiry). On startup `Reconcile` interrupts sessions that were left active. `service.Temporal` is the pure 2-of-3 engine. Call `MarkRecorded` only after the evidence file and the DB row are both saved. Only add interfaces at boundaries that tests need to swap: the AI client, Gemini client, clock, and storage.
+- `service.Monitoring` keeps the single active session in memory (`runtime`), with a per-session mutex that serialises frames, stop and the 1s `Tick` (idle timeout, track expiry). On startup `Reconcile` interrupts sessions that were left active. `service.Temporal` is the pure 2-of-3 engine. Call `MarkRecorded` only after the evidence file and the DB row are both saved.
+- Reports (`service/report.go`): `loadSource` builds the canonical snapshot (fixed struct field order, so `json.Marshal` is deterministic), and its sha256 is `source_hash`. `is_stale` is recomputed on every read; it is never stored. Gemini runs outside any transaction, under a per-session mutex. The commit transaction re-checks the hash and returns 409 `SOURCE_CHANGED` if it moved. Gemini only receives the §13.3 payload (`F-<id>` refs, notes with email and phone numbers redacted). Go renders the final content and the official totals.
+- `internal/gemini` wraps the Interactions API (`POST /{version}/interactions`, header `x-goog-api-key`). The output text is read from `steps[type=model_output].content[type=text]`. `Validate` enforces the exact `finding_ref` set, ≤20,000 chars and no HTML. Only add interfaces at boundaries that tests need to swap: the AI client, Gemini client, clock, and storage.
 
 ## Config and env
 
