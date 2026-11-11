@@ -17,7 +17,7 @@ const TEST_PASSWORD = process.env.TEST_SEED_PASSWORD ?? 'K3-Disp0sable-Test-Pass
 
 const DEFAULT_CAPTURE_DIR =
 	process.env.TEST_ACCEPTANCE_CAPTURE_DIR ??
-	'C:/Users/akmal/.t3/userdata/providers/antigravity/7be9b928ae8cba283f02640839db79b9ad29c4740201527659e873129d9e1991/antigravity-acp/brain/b7b57a87-0d15-42d1-9aaa-e46dea7526aa/captures';
+	path.join(frontendDir, 'test-results', 'acceptance');
 
 interface ReceivedAiFrame {
 	sessionKey: string;

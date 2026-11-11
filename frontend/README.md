@@ -100,6 +100,8 @@ $env:GOFLAGS='-p=2'
 npx playwright test --workers=1
 ```
 
+Tangkapan layar dan ringkasan hash perjalanan terintegrasi disimpan di `test-results/acceptance/` (diabaikan Git). Atur `TEST_ACCEPTANCE_CAPTURE_DIR` untuk menggunakan direktori lain.
+
 ```sh
 # Bash / POSIX
 cd frontend
