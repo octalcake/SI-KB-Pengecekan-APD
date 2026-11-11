@@ -77,7 +77,11 @@ function isBinaryOrFormBody(body: unknown): body is BodyInit {
 	);
 }
 
-export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+export async function apiRequest<T>(
+	path: string,
+	options: ApiRequestOptions = {},
+	responseType: 'json' | 'blob' = 'json'
+): Promise<T> {
 	const method = (options.method ?? 'GET').toUpperCase();
 	const normalizedPath = path.startsWith('/') ? path : `/${path}`;
 	const url = normalizedPath.startsWith(API_BASE) ? normalizedPath : `${API_BASE}${normalizedPath}`;
@@ -116,6 +120,13 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
 				'Layanan backend tidak dapat dihubungi. Pastikan server Go berjalan lalu coba lagi.',
 			isNetworkError: true
 		});
+	}
+
+	if (response.ok && responseType === 'blob') {
+		return {
+			blob: await response.blob(),
+			requestId: response.headers.get('X-Request-ID')
+		} as T;
 	}
 
 	if (response.status === 204) {
@@ -202,6 +213,18 @@ export async function apiList<T>(
 
 export async function apiNoContent(path: string, options: ApiRequestOptions = {}): Promise<void> {
 	await apiRequest<void>(path, options);
+}
+
+export interface ApiBlobResponse {
+	blob: Blob;
+	requestId: string | null;
+}
+
+export async function apiBlob(
+	path: string,
+	options: ApiRequestOptions = {}
+): Promise<ApiBlobResponse> {
+	return apiRequest<ApiBlobResponse>(path, options, 'blob');
 }
 
 export async function loginApi(username: string, password: string): Promise<AuthSessionPayload> {
