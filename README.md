@@ -3,6 +3,8 @@
 MVP lokal: webcam browser → indikasi helm/rompi (YOLO + ByteTrack) → konfirmasi temporal → foto bukti → verifikasi petugas → draft laporan (Gemini).
 Spesifikasi lengkap: [`docs/requirements.md`](docs/requirements.md); kontrak API: [`docs/api-contract.md`](docs/api-contract.md).
 
+Petunjuk frontend: [`frontend/README.md`](frontend/README.md). Hasil pengujian alur inspeksi dan batas validasi PPE/Gemini: [`docs/frontend-acceptance.md`](docs/frontend-acceptance.md); review dan perbaikannya: [`docs/frontend-review.md`](docs/frontend-review.md).
+
 | Service | Stack | Port (host) |
 |---|---|---|
 | `frontend` | SvelteKit 3 + TypeScript (Vite dev server) | `localhost:5173` |
