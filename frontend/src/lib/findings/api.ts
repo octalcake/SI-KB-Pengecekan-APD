@@ -1,5 +1,6 @@
 import {
 	ApiError,
+	apiBlob,
 	apiData,
 	apiList,
 	apiNoContent,
@@ -225,64 +226,11 @@ export async function fetchProtectedEvidenceBlob(
 	const targetUrl = evidenceUrl.startsWith('/')
 		? evidenceUrl
 		: `/api/v1/findings/${evidenceUrl}/evidence`;
-	let response: Response;
-	try {
-		response = await fetch(targetUrl, {
-			method: 'GET',
-			credentials: 'same-origin',
-			cache: 'no-store',
-			signal
-		});
-	} catch {
-		throw new ApiError({
-			status: 0,
-			code: 'BACKEND_UNREACHABLE',
-			message: 'Layanan backend tidak dapat dihubungi saat memuat foto bukti asli.',
-			isNetworkError: true
-		});
-	}
-
-	const requestId = response.headers.get('X-Request-ID');
-	if (!response.ok) {
-		let code = `HTTP_${response.status}`;
-		let message = `Gagal memuat foto bukti (HTTP ${response.status}).`;
-		let fields: Record<string, string> = {};
-		let bodyRequestId: string | null = null;
-
-		try {
-			const text = await response.text();
-			if (text) {
-				const parsed = JSON.parse(text) as {
-					error?: {
-						code?: string;
-						message?: string;
-						fields?: Record<string, string>;
-						request_id?: string;
-					};
-				};
-				if (parsed?.error) {
-					if (parsed.error.code) code = parsed.error.code;
-					if (parsed.error.message) message = parsed.error.message;
-					if (parsed.error.fields) fields = parsed.error.fields;
-					if (parsed.error.request_id) bodyRequestId = parsed.error.request_id;
-				}
-			}
-		} catch {
-			// ignore non-json error body
-		}
-
-		throw new ApiError({
-			status: response.status,
-			code,
-			message,
-			fields,
-			requestId: bodyRequestId ?? requestId,
-			isNetworkError: response.status >= 500 && !requestId && !bodyRequestId
-		});
-	}
-
-	const blob = await response.blob();
-	return { blob, requestId };
+	return apiBlob(targetUrl, {
+		method: 'GET',
+		cache: 'no-store',
+		signal
+	});
 }
 
 export type { SystemMode, ViolationType };

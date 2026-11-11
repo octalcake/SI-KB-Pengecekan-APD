@@ -204,6 +204,102 @@ export async function apiNoContent(path: string, options: ApiRequestOptions = {}
 	await apiRequest<void>(path, options);
 }
 
+export interface ApiBlobResponse {
+	blob: Blob;
+	requestId: string | null;
+}
+
+export async function apiBlob(
+	path: string,
+	options: ApiRequestOptions = {}
+): Promise<ApiBlobResponse> {
+	const method = (options.method ?? 'GET').toUpperCase();
+	const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+	const url = normalizedPath.startsWith(API_BASE) ? normalizedPath : `${API_BASE}${normalizedPath}`;
+
+	const headers = new Headers(options.headers);
+	if (MUTATING_METHODS.has(method) && !options.skipCsrf && currentCsrfToken) {
+		headers.set('X-CSRF-Token', currentCsrfToken);
+	}
+
+	let response: Response;
+	try {
+		response = await fetch(url, {
+			...options,
+			method,
+			headers,
+			body: undefined,
+			credentials: 'same-origin',
+			cache: options.cache ?? 'no-store'
+		});
+	} catch {
+		throw new ApiError({
+			status: 0,
+			code: 'BACKEND_UNREACHABLE',
+			message:
+				'Layanan backend tidak dapat dihubungi saat memuat foto bukti asli. Pastikan server Go berjalan lalu coba lagi.',
+			isNetworkError: true
+		});
+	}
+
+	const headerRequestId = response.headers.get('X-Request-ID');
+	const retryAfterHeader = response.headers.get('Retry-After');
+	const retryAfter = retryAfterHeader ? Number.parseInt(retryAfterHeader, 10) : null;
+
+	if (!response.ok) {
+		const rawText = await response.text();
+		let parsed: unknown = null;
+		if (rawText.length > 0) {
+			try {
+				parsed = JSON.parse(rawText);
+			} catch {
+				parsed = null;
+			}
+		}
+
+		const errEnvelope =
+			parsed && typeof parsed === 'object' && 'error' in parsed
+				? (parsed as ApiErrorEnvelope).error
+				: undefined;
+
+		if (
+			response.status === 401 &&
+			!options.skipAuthInvalidation &&
+			normalizedPath !== '/auth/login'
+		) {
+			setCsrfToken(null);
+			unauthorizedListener?.();
+		}
+
+		if (errEnvelope && typeof errEnvelope.code === 'string') {
+			throw new ApiError({
+				status: response.status,
+				code: errEnvelope.code,
+				message: errEnvelope.message || `Gagal memuat foto bukti (HTTP ${response.status}).`,
+				fields: errEnvelope.fields,
+				requestId: errEnvelope.request_id ?? headerRequestId,
+				retryAfter: Number.isFinite(retryAfter) ? retryAfter : null,
+				isNetworkError: false
+			});
+		}
+
+		const isProxyOrBackendDown = response.status >= 500 && !headerRequestId;
+		throw new ApiError({
+			status: response.status,
+			code: isProxyOrBackendDown ? 'BACKEND_UNREACHABLE' : `HTTP_${response.status}`,
+			message: isProxyOrBackendDown
+				? 'Layanan backend tidak dapat dihubungi saat memuat foto bukti asli.'
+				: `Gagal memuat foto bukti (HTTP ${response.status}).`,
+			requestId: headerRequestId,
+			retryAfter: Number.isFinite(retryAfter) ? retryAfter : null,
+			isNetworkError: isProxyOrBackendDown
+		});
+	}
+
+	const blob = await response.blob();
+	return { blob, requestId: headerRequestId };
+}
+
 export async function loginApi(username: string, password: string): Promise<AuthSessionPayload> {
 	return apiData<AuthSessionPayload>('/auth/login', {
 		method: 'POST',

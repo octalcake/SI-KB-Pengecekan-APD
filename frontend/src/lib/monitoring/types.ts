@@ -140,8 +140,6 @@ export interface CapturedEventItem {
 	evidenceUrl: string;
 	verificationStatus: 'pending' | 'confirmed' | 'rejected';
 	mode: SystemMode;
-	trackKey: string | null;
-	detectedViolation: ViolationType | null;
 }
 
 export interface MonitoringErrorState {

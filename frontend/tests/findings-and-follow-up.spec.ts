@@ -601,6 +601,25 @@ test.describe('P0-04: Galeri temuan, verifikasi bukti, tindak lanjut, dan fallba
 		await expect(page.getByLabel(/Catatan Verifikasi/i)).toHaveValue(unsavedNetworkNote);
 		await page.unroute('**/api/v1/findings/2');
 
+		// 10b. Uji 401 pada endpoint bukti terlindungi (/api/v1/findings/1/evidence) saat frontend masih merasa autentik -> apiBlob bersama memicu invalidasi sesi bersama & redirect ke /login!
+		await page.route('**/api/v1/findings/1/evidence', async (route) => {
+			await route.fulfill({
+				status: 401,
+				contentType: 'application/json',
+				body: JSON.stringify({
+					error: {
+						code: 'UNAUTHORIZED',
+						message: 'Sesi Anda telah berakhir.',
+						request_id: 'req-ev-401'
+					}
+				})
+			});
+		});
+		await page.goto(`${stack.baseUrl}/findings/1`);
+		await expect(page).toHaveURL(/\/login$/);
+		await expect(page.getByText(/Sesi Anda telah berakhir/i)).toBeVisible();
+		await page.unroute('**/api/v1/findings/1/evidence');
+
 		// 11. Uji 403 MANUAL_FALLBACK_DISABLED pada stack default (playwright webServer di baseURL yang memiliki ALLOW_MANUAL_FALLBACK=false)
 		await page.goto('/');
 		await expect(page).toHaveURL(/\/login$/);

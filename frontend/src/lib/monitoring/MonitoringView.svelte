@@ -1,7 +1,16 @@
 <script lang="ts">
 	import { beforeNavigate } from '$app/navigation';
 	import { onDestroy, onMount } from 'svelte';
-	import { apiData, apiList, authSession, type SystemMode, type SystemStatus, type ViolationType } from '#lib';
+	import {
+		apiBlob,
+		apiData,
+		apiList,
+		authSession,
+		isApiError,
+		type SystemMode,
+		type SystemStatus,
+		type ViolationType
+	} from '#lib';
 	import SnapshotOverlay from './SnapshotOverlay.svelte';
 	import {
 		classifyMonitoringError,
@@ -58,6 +67,7 @@
 	let loadingSessions = $state(false);
 	let startingSession = $state(false);
 	let stoppingSession = $state(false);
+	let startSequenceToken = 0;
 
 	let mediaStream = $state<MediaStream | null>(null);
 	let videoElement = $state<HTMLVideoElement | null>(null);
@@ -70,6 +80,83 @@
 	let capturedEvents = $state<CapturedEventItem[]>([]);
 	let errorState = $state<MonitoringErrorState | null>(null);
 	let statusBannerMessage = $state<string | null>(null);
+
+	// Protected evidence thumbnail state per captured finding
+	type CaptureThumbState =
+		| { state: 'loading' }
+		| { state: 'ready'; objectUrl: string }
+		| {
+				state: 'error';
+				code: string;
+				message: string;
+				isMissingEvidence: boolean;
+				isUnauthorized: boolean;
+				isForbidden: boolean;
+				isNetworkError: boolean;
+		  };
+
+	let thumbStates = $state<Record<number, CaptureThumbState>>({});
+	const thumbControllers = new Map<number, AbortController>();
+	const thumbObjectUrls = new Map<number, string>();
+
+	function revokeAllThumbUrls() {
+		for (const ctrl of thumbControllers.values()) {
+			ctrl.abort();
+		}
+		thumbControllers.clear();
+		for (const objUrl of thumbObjectUrls.values()) {
+			try {
+				URL.revokeObjectURL(objUrl);
+			} catch {
+				// ignore revoke errors
+			}
+		}
+		thumbObjectUrls.clear();
+		thumbStates = {};
+	}
+
+	async function loadCaptureThumb(item: CapturedEventItem) {
+		const id = item.findingId;
+		if (thumbStates[id] || thumbControllers.has(id)) return;
+
+		const ctrl = new AbortController();
+		thumbControllers.set(id, ctrl);
+		thumbStates[id] = { state: 'loading' };
+
+		try {
+			const targetUrl = item.evidenceUrl || `/api/v1/findings/${id}/evidence`;
+			const { blob } = await apiBlob(targetUrl, {
+				method: 'GET',
+				cache: 'no-store',
+				signal: ctrl.signal
+			});
+			if (ctrl.signal.aborted) return;
+			const objUrl = URL.createObjectURL(blob);
+			thumbObjectUrls.set(id, objUrl);
+			thumbStates[id] = {
+				state: 'ready',
+				objectUrl: objUrl
+			};
+		} catch (err) {
+			if (ctrl.signal.aborted) return;
+			const code = isApiError(err) ? err.code || `HTTP_${err.status}` : 'UNKNOWN_ERROR';
+			const status = isApiError(err) ? err.status : 0;
+			const message = isApiError(err) ? err.message : 'Gagal memuat foto bukti.';
+			thumbStates[id] = {
+				state: 'error',
+				code,
+				message,
+				isMissingEvidence: status === 410 || code === 'EVIDENCE_MISSING',
+				isUnauthorized: status === 401,
+				isForbidden: status === 403,
+				isNetworkError: Boolean(isApiError(err) && (err.isNetworkError || status === 0))
+			};
+		} finally {
+			if (thumbControllers.get(id) === ctrl) {
+				thumbControllers.delete(id);
+			}
+		}
+	}
 
 	let nowMonotonicMs = $state(0);
 	let ageTicker: ReturnType<typeof setInterval> | null = null;
@@ -171,6 +258,7 @@
 	}
 
 	async function loadRecentSessions() {
+		if (authSession.status !== 'authenticated') return;
 		loadingSessions = true;
 		try {
 			const res = await monitoringApi.listSessions({
@@ -222,6 +310,7 @@
 
 	async function handleStartMonitoring() {
 		if (!canStartMonitoring) return;
+		const myStartToken = ++startSequenceToken;
 		startingSession = true;
 		errorState = null;
 		statusBannerMessage = null;
@@ -236,13 +325,17 @@
 					zone_id: selectedZoneId,
 					source: 'manual_entry'
 				});
+				if (myStartToken !== startSequenceToken) return;
 				activeSession = session;
 				statusBannerMessage = `Sesi pencatatan manual #${session.id} berhasil dibuat (status: ${session.status}). Gunakan halaman Temuan untuk mengunggah foto bukti manual.`;
 				await loadRecentSessions();
 			} catch (err) {
+				if (myStartToken !== startSequenceToken) return;
 				errorState = classifyMonitoringError(err);
 			} finally {
-				startingSession = false;
+				if (myStartToken === startSequenceToken) {
+					startingSession = false;
+				}
 			}
 			return;
 		}
@@ -251,6 +344,10 @@
 		try {
 			// 1. User-initiated getUserMedia (video-only, no audio) BEFORE creating active server session (SRS §5.4)
 			stream = await requestUserCameraStream();
+			if (myStartToken !== startSequenceToken) {
+				releaseMediaStream(stream, videoElement);
+				return;
+			}
 			mediaStream = stream;
 
 			if (videoElement) {
@@ -269,7 +366,21 @@
 				source: 'browser_webcam'
 			});
 
+			if (myStartToken !== startSequenceToken) {
+				releaseMediaStream(stream, videoElement);
+				mediaStream = null;
+				if (session.status === 'active') {
+					try {
+						await monitoringApi.stopSession(session.id, 'user_stop');
+					} catch {
+						// ignore best-effort stop
+					}
+				}
+				return;
+			}
+
 			activeSession = session;
+			revokeAllThumbUrls();
 			capturedEvents = [];
 			latestSnapshot = null;
 			attachTrackEndedListeners(stream);
@@ -304,9 +415,12 @@
 				onSnapshot: (snapshot) => {
 					latestSnapshot = snapshot;
 				},
-				onEvents: () => {
+				onEvents: (newItems) => {
 					if (captureController) {
 						capturedEvents = captureController.getState().capturedEvents;
+					}
+					for (const item of newItems) {
+						void loadCaptureThumb(item);
 					}
 				},
 				onTerminalStop: (_code, terminalErr) => {
@@ -330,17 +444,26 @@
 			// Release camera immediately if backend rejected start (e.g. 503 MODEL_NOT_READY or 409 CAMERA_BUSY)
 			releaseMediaStream(stream, videoElement);
 			mediaStream = null;
-			errorState = classifyMonitoringError(err);
-			await loadSystemReadiness();
+			if (myStartToken === startSequenceToken) {
+				errorState = classifyMonitoringError(err);
+				await loadSystemReadiness();
+			}
 		} finally {
-			startingSession = false;
+			if (myStartToken === startSequenceToken) {
+				startingSession = false;
+			}
 		}
 	}
 
 	async function stopMonitoringSession(
 		reason: 'user_stop' | 'page_hidden' = 'user_stop',
-		keepError = false
+		keepError = false,
+		skipRefresh = false
 	) {
+		// Invalidate any pending start sequence
+		startSequenceToken += 1;
+		startingSession = false;
+
 		if (!captureController && (!activeSession || activeSession.status !== 'active')) {
 			releaseMediaStream(mediaStream, videoElement);
 			mediaStream = null;
@@ -374,9 +497,12 @@
 				errorState = classifyMonitoringError(err);
 			}
 		} finally {
+			releaseMediaStream(mediaStream, videoElement);
 			mediaStream = null;
 			stoppingSession = false;
-			await loadRecentSessions();
+			if (!skipRefresh && authSession.status === 'authenticated') {
+				await loadRecentSessions();
+			}
 		}
 	}
 
@@ -398,23 +524,24 @@
 		);
 	}
 
-	function formatViolationName(v: ViolationType | null): string {
-		if (v === 'NO_HELMET') return 'Indikasi Tanpa Helm (NO_HELMET)';
-		if (v === 'NO_VEST') return 'Indikasi Tanpa Rompi (NO_VEST)';
-		return 'Indikasi APD';
-	}
-
-	// React to central session logout or unauthenticated transition
+	// React to unexpected unauthenticated transition (e.g. 401 session expiry during capture)
 	$effect(() => {
 		const authStatus = authSession.status;
 		if (authStatus === 'unauthenticated' && (captureController?.getState().active || mediaStream)) {
-			void stopMonitoringSession('user_stop', true);
+			startSequenceToken += 1;
+			startingSession = false;
+			if (captureController) {
+				void captureController.stop('user_stop', false);
+			} else {
+				releaseMediaStream(mediaStream, videoElement);
+			}
+			mediaStream = null;
 		}
 	});
 
 	beforeNavigate(() => {
-		if (captureController?.getState().active || mediaStream) {
-			void stopMonitoringSession('page_hidden', true);
+		if (captureController?.getState().active || mediaStream || startingSession) {
+			void stopMonitoringSession('page_hidden', true, true);
 		}
 	});
 
@@ -428,17 +555,28 @@
 		void loadProjects();
 		void loadRecentSessions();
 
+		const unregisterBeforeLogout = authSession.registerBeforeLogout(async () => {
+			if (
+				captureController?.getState().active ||
+				(activeSession && activeSession.status === 'active') ||
+				mediaStream ||
+				startingSession
+			) {
+				await stopMonitoringSession('user_stop', true, true);
+			}
+		});
+
 		const handleVisibilityChange = () => {
 			if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
-				if (captureController?.getState().active || mediaStream) {
+				if (captureController?.getState().active || mediaStream || startingSession) {
 					void stopMonitoringSession('page_hidden', false);
 				}
 			}
 		};
 
 		const handlePageHide = () => {
-			if (captureController?.getState().active || mediaStream) {
-				void stopMonitoringSession('page_hidden', true);
+			if (captureController?.getState().active || mediaStream || startingSession) {
+				void stopMonitoringSession('page_hidden', true, true);
 			}
 		};
 
@@ -450,6 +588,7 @@
 		}
 
 		return () => {
+			unregisterBeforeLogout();
 			if (typeof document !== 'undefined') {
 				document.removeEventListener('visibilitychange', handleVisibilityChange);
 			}
@@ -460,10 +599,12 @@
 	});
 
 	onDestroy(() => {
+		startSequenceToken += 1;
 		if (ageTicker) {
 			clearInterval(ageTicker);
 			ageTicker = null;
 		}
+		revokeAllThumbUrls();
 		if (captureController) {
 			void captureController.stop('page_hidden', true);
 			captureController.destroy();
@@ -803,27 +944,52 @@
 				{:else}
 					<ul class="capture-list" data-testid="captured-events-list">
 						{#each capturedEvents as item (item.findingId)}
+							{@const thumb = thumbStates[item.findingId]}
 							<li class="capture-item" data-testid={`captured-finding-${item.findingId}`}>
-								<div class="capture-thumb-wrap">
-									<img
-										src={item.evidenceUrl}
-										alt={`Bukti JPEG temuan #${item.findingId}`}
-										class="capture-thumb"
-										loading="lazy"
-									/>
+								<div class="capture-thumb-wrap" data-testid={`capture-thumb-wrap-${item.findingId}`}>
+									{#if !thumb || thumb.state === 'loading'}
+										<div
+											class="capture-thumb-status"
+											data-testid={`capture-thumb-loading-${item.findingId}`}
+										>
+											Memuat bukti...
+										</div>
+									{:else if thumb.state === 'error'}
+										<div
+											class="capture-thumb-status capture-thumb-status--error"
+											data-testid={`capture-thumb-error-${item.findingId}`}
+											data-error-code={thumb.code}
+										>
+											{#if thumb.isMissingEvidence}
+												Bukti hilang (410 EVIDENCE_MISSING)
+											{:else if thumb.isUnauthorized}
+												Sesi berakhir (401)
+											{:else if thumb.isForbidden}
+												Akses ditolak (403)
+											{:else}
+												{thumb.message}
+											{/if}
+										</div>
+									{:else}
+										<img
+											src={thumb.objectUrl}
+											alt={`Bukti JPEG temuan #${item.findingId}`}
+											class="capture-thumb"
+											data-testid={`capture-thumb-img-${item.findingId}`}
+											loading="lazy"
+										/>
+									{/if}
 								</div>
 								<div class="capture-details">
 									<div class="capture-top-row">
-										<strong>#{item.findingId} {formatViolationName(item.detectedViolation)}</strong>
+										<strong>Temuan #{item.findingId}</strong>
 										<span class="verif-badge" data-status={item.verificationStatus}>
 											Menunggu Verifikasi ({item.verificationStatus})
 										</span>
 									</div>
 									<p class="capture-meta">
-										{#if item.trackKey}
-											Track sementara <code>{item.trackKey}</code> •
-										{/if}
-										Seq #{item.sequence} • Mode: <strong>{item.mode.toUpperCase()}</strong>
+										Seq #{item.sequence} • Mode: <strong>{item.mode.toUpperCase()}</strong> • Detail
+										kategori &amp; track tersedia pada halaman temuan
 									</p>
 									<p class="capture-time">
 										Waktu capture: {formatJakartaTime(item.capturedAtUtc)}
@@ -1386,6 +1552,27 @@
 		height: 100%;
 		object-fit: cover;
 		display: block;
+	}
+
+	.capture-thumb-status {
+		width: 100%;
+		height: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		text-align: center;
+		padding: 0.35rem;
+		font-size: 0.68rem;
+		line-height: 1.25;
+		color: #e5e0d8;
+		background: #1f1d1a;
+		box-sizing: border-box;
+	}
+
+	.capture-thumb-status--error {
+		color: #fecaca;
+		background: #451a1a;
+		font-weight: 600;
 	}
 
 	.capture-top-row {

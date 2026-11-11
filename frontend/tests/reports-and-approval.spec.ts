@@ -536,6 +536,12 @@ test.describe('P0-05: Penyusunan laporan inspeksi, snapshot sumber, staleness, d
 		await page.getByTestId('save-report-narrative-btn').click();
 		await expect(page.getByTestId('report-version-badge')).toContainText('Versi #3');
 
+		// Ketika sumber fresh, sebelum centang review_acknowledged, tombol Setujui Laporan harus disabled dengan alasan terlihat!
+		await expect(page.getByTestId('approve-report-btn')).toBeDisabled();
+		await expect(page.getByTestId('approve-disabled-reason')).toContainText(
+			/Centang pernyataan peninjauan petugas/i
+		);
+
 		// 7. Ubah temuan sumber F-1 sehingga laporan menjadi STALE (is_stale=true)
 		const findingUpdateStatus = await page.evaluate(async () => {
 			const meRes = await fetch('/api/v1/auth/me', { credentials: 'same-origin' });
@@ -561,6 +567,8 @@ test.describe('P0-05: Penyusunan laporan inspeksi, snapshot sumber, staleness, d
 		await page.reload();
 		await expect(page.getByTestId('report-stale-badge')).toBeVisible();
 		await expect(page.getByTestId('report-stale-warning-banner')).toBeVisible();
+		await expect(page.getByTestId('non-gemini-stale-refresh-note')).toBeVisible();
+		await expect(page.getByTestId('open-recreate-template-btn')).toHaveCount(0);
 
 		// Menyimpan suntingan teks narasi TIDAK menyegarkan status stale!
 		const noteWhileStale = `${editedNarrative}\nCatatan tambahan saat sumber stale.`;
@@ -569,22 +577,51 @@ test.describe('P0-05: Penyusunan laporan inspeksi, snapshot sumber, staleness, d
 		await expect(page.getByTestId('report-version-badge')).toContainText('Versi #4');
 		await expect(page.getByTestId('report-stale-badge')).toBeVisible();
 
-		// Mencoba menyetujui laporan tanpa centang review_acknowledged -> 422 VALIDATION_ERROR
-		await page.getByTestId('approve-report-btn').click();
-		await expect(page.getByTestId('report-mutation-error')).toHaveAttribute(
-			'data-error-code',
-			'VALIDATION_ERROR'
-		);
-
-		// Mencoba menyetujui laporan saat STALE (dengan centang) -> 409 STALE_REPORT
+		// Saat laporan STALE, tombol Setujui Laporan wajib tetap DISABLED baik sebelum maupun sesudah centang review_acknowledged!
+		await expect(page.getByTestId('approve-report-btn')).toBeDisabled();
+		await expect(page.getByTestId('approve-disabled-reason')).toContainText(/STALE/i);
 		await page.getByTestId('review-acknowledged-checkbox').check();
-		await page.getByTestId('approve-report-btn').click();
-		await expect(page.getByTestId('report-mutation-error')).toHaveAttribute(
-			'data-error-code',
-			'STALE_REPORT'
-		);
+		await expect(page.getByTestId('approve-report-btn')).toBeDisabled();
+		await expect(page.getByTestId('approve-disabled-reason')).toContainText(/STALE/i);
 
-		// 8. Uji konfirmasi eksplisit Regenerate Gemini: ketika Gemini 503 gagal, suntingan yang belum disimpan di layar TIDAK hilang!
+		// Buktikan pula kontrak API publik Go menolak unacknowledged (422 VALIDATION_ERROR) dan stale (409 STALE_REPORT)
+		const approveApiChecks = await page.evaluate(async () => {
+			const meRes = await fetch('/api/v1/auth/me', { credentials: 'same-origin' });
+			const meJson = await meRes.json();
+			const csrf = meJson.data.csrf_token;
+			const headers = {
+				'Content-Type': 'application/json',
+				'X-CSRF-Token': csrf
+			};
+			const unackRes = await fetch('/api/v1/reports/2/approve', {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers,
+				body: JSON.stringify({ version: 4, review_acknowledged: false })
+			});
+			const staleRes = await fetch('/api/v1/reports/2/approve', {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers,
+				body: JSON.stringify({ version: 4, review_acknowledged: true })
+			});
+			return {
+				unack: { status: unackRes.status, code: (await unackRes.json())?.error?.code },
+				stale: { status: staleRes.status, code: (await staleRes.json())?.error?.code }
+			};
+		});
+		expect(approveApiChecks.unack).toEqual({ status: 422, code: 'VALIDATION_ERROR' });
+		expect(approveApiChecks.stale).toEqual({ status: 409, code: 'STALE_REPORT' });
+
+		// 8. Uji konfirmasi eksplisit Regenerate Gemini: ketika Gemini 503 gagal, tidak ada DELETE otomatis, laporan #2 tetap ada di server, dan suntingan yang belum disimpan di layar TIDAK hilang!
+		let deleteCallsDuringRegen = 0;
+		const onReq = (req: { method: () => string; url: () => string }) => {
+			if (req.method() === 'DELETE' && req.url().includes('/api/v1/reports/')) {
+				deleteCallsDuringRegen += 1;
+			}
+		};
+		page.on('request', onReq);
+
 		const unsavedBeforeRegen = `${noteWhileStale}\nBaris belum disimpan sebelum klik regenerate.`;
 		await page.getByLabel(/^Isi Narasi Laporan/i).fill(unsavedBeforeRegen);
 		await expect(page.getByTestId('unsaved-edits-indicator')).toBeVisible();
@@ -598,11 +635,24 @@ test.describe('P0-05: Penyusunan laporan inspeksi, snapshot sumber, staleness, d
 			'GEMINI_UNAVAILABLE'
 		);
 		await expect(page.getByLabel(/^Isi Narasi Laporan/i)).toHaveValue(unsavedBeforeRegen);
+		expect(deleteCallsDuringRegen).toBe(0);
+		page.off('request', onReq);
 
-		// 9. Segarkan sumber tanpa Gemini dengan "Buat Ulang Draft Template dari Sumber Terbaru" -> membuat Laporan #3 dengan is_stale=false dan snapshot F-1 versi terbaru
-		await page.getByTestId('open-recreate-template-btn').click();
-		await expect(page.getByTestId('recreate-template-confirm-dialog')).toBeVisible();
-		await page.getByTestId('confirm-recreate-template-btn').click();
+		// Pastikan draft #2 masih utuh di backend (GET /api/v1/reports/2 -> 200)
+		const report2StillExists = await page.evaluate(async () => {
+			const res = await fetch('/api/v1/reports/2', { credentials: 'same-origin' });
+			return res.status;
+		});
+		expect(report2StillExists).toBe(200);
+
+		// 9. Karena penyegaran snapshot di tempat tanpa Gemini tidak didukung, petugas secara eksplisit menghapus draft #2 lalu membuat Draft Template baru (#3) pada halaman /reports
+		await page.getByTestId('open-delete-report-btn').click();
+		await page.getByTestId('confirm-delete-report-btn').click();
+		await expect(page).toHaveURL(/\/reports$/);
+
+		await page.getByTestId('create-session-select').selectOption('1');
+		await page.getByRole('radio', { name: /Draft Template Terstruktur/i }).check();
+		await page.getByTestId('submit-create-template').click();
 
 		await expect(page).toHaveURL(/\/reports\/3$/);
 		await expect(page.getByTestId('report-fresh-badge')).toBeVisible();
