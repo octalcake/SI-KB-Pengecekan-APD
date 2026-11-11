@@ -7,6 +7,8 @@
 	let username = $state('');
 	let password = $state('');
 	let submitting = $state(false);
+	let ready = $state(false);
+	const controlsDisabled = $derived(!ready || submitting || authSession.status === 'checking');
 	let fieldErrors = $state<{ username?: string; password?: string }>({});
 	let submitError = $state<{
 		kind: 'credentials' | 'rate_limit' | 'backend' | 'general';
@@ -15,6 +17,7 @@
 	} | null>(null);
 
 	onMount(async () => {
+		ready = true;
 		if (authSession.status === 'idle') {
 			const status = await authSession.bootstrap();
 			if (status === 'authenticated') {
@@ -27,7 +30,7 @@
 
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
-		if (submitting) return;
+		if (controlsDisabled) return;
 
 		const trimmedUser = username.trim();
 		const nextFieldErrors: { username?: string; password?: string } = {};
@@ -114,7 +117,7 @@
 			</p>
 		</header>
 
-		{#if authSession.status === 'checking' && !submitting}
+		{#if (!ready || authSession.status === 'checking') && !submitting}
 			<div class="status-banner checking" role="status" aria-live="polite">
 				Memeriksa sesi aktif petugas K3...
 			</div>
@@ -147,7 +150,7 @@
 			</div>
 		{/if}
 
-		<form class="login-form" onsubmit={handleSubmit} novalidate>
+		<form class="login-form" method="POST" onsubmit={handleSubmit} novalidate>
 			<div class="field-group">
 				<label for="login-username">Username</label>
 				<input
@@ -158,7 +161,7 @@
 					bind:value={username}
 					aria-invalid={fieldErrors.username ? 'true' : undefined}
 					aria-describedby={fieldErrors.username ? 'login-username-error' : undefined}
-					disabled={submitting}
+					disabled={controlsDisabled}
 					required
 				/>
 				{#if fieldErrors.username}
@@ -176,7 +179,7 @@
 					bind:value={password}
 					aria-invalid={fieldErrors.password ? 'true' : undefined}
 					aria-describedby={fieldErrors.password ? 'login-password-error' : undefined}
-					disabled={submitting}
+					disabled={controlsDisabled}
 					required
 				/>
 				{#if fieldErrors.password}
@@ -184,7 +187,7 @@
 				{/if}
 			</div>
 
-			<button type="submit" class="primary-button" disabled={submitting}>
+			<button type="submit" class="primary-button" disabled={controlsDisabled}>
 				{submitting ? 'Memverifikasi...' : 'Masuk'}
 			</button>
 		</form>
@@ -354,5 +357,27 @@
 		background: var(--bg-subtle);
 		padding: 0.1rem 0.35rem;
 		border-radius: 4px;
+	}
+
+	@media (max-width: 640px) {
+		.login-page {
+			padding: max(1rem, env(safe-area-inset-top)) max(0.875rem, env(safe-area-inset-right))
+				max(1.25rem, env(safe-area-inset-bottom)) max(0.875rem, env(safe-area-inset-left));
+		}
+
+		.login-panel {
+			padding: 1.35rem 1.15rem;
+		}
+
+		.field-group input {
+			min-height: 2.75rem;
+			font-size: 1rem;
+		}
+
+		.primary-button,
+		.secondary-button {
+			min-height: 2.75rem;
+			width: 100%;
+		}
 	}
 </style>

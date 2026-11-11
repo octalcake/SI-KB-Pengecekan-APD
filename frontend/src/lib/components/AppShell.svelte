@@ -373,11 +373,12 @@
 		padding: 1.5rem 1.75rem;
 		max-width: 1200px;
 		width: 100%;
+		min-width: 0;
 	}
 
 	@media (max-width: 900px) {
 		.shell-body {
-			grid-template-columns: 1fr;
+			grid-template-columns: minmax(0, 1fr);
 		}
 
 		.sidebar {
@@ -398,6 +399,70 @@
 
 		.workspace-main {
 			padding: 1.25rem 1rem;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.topbar {
+			padding: max(0.65rem, env(safe-area-inset-top)) max(0.875rem, env(safe-area-inset-right))
+				0.65rem max(0.875rem, env(safe-area-inset-left));
+			gap: 0.625rem;
+		}
+
+		.brand-group {
+			width: 100%;
+			gap: 0.45rem;
+		}
+
+		.officer-group {
+			width: 100%;
+			justify-content: space-between;
+			gap: 0.5rem;
+			padding-top: 0.45rem;
+			border-top: 1px solid var(--border-default);
+		}
+
+		.logout-button {
+			min-height: 2.75rem;
+			padding: 0.5rem 0.95rem;
+		}
+
+		.provenance-banner,
+		.logout-alert {
+			padding: 0.65rem max(0.875rem, env(safe-area-inset-right)) 0.65rem
+				max(0.875rem, env(safe-area-inset-left));
+		}
+
+		.sidebar {
+			padding: 0.65rem max(0.875rem, env(safe-area-inset-right)) 0.65rem
+				max(0.875rem, env(safe-area-inset-left));
+		}
+
+		.nav-list {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 0.45rem;
+		}
+
+		.nav-item:last-child:nth-child(odd) {
+			grid-column: 1 / -1;
+		}
+
+		.nav-link {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			min-height: 2.75rem;
+			padding: 0.55rem 0.65rem;
+			text-align: center;
+			font-size: 0.875rem;
+			border-color: var(--border-default);
+			background: var(--bg-canvas);
+		}
+
+		.workspace-main {
+			padding: 1rem max(0.875rem, env(safe-area-inset-right))
+				max(1.5rem, env(safe-area-inset-bottom)) max(0.875rem, env(safe-area-inset-left));
 		}
 	}
 </style>

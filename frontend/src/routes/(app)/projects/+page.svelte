@@ -866,7 +866,7 @@
 
 	.form-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
 		gap: 0.875rem;
 	}
 
@@ -874,6 +874,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.3rem;
+		min-width: 0;
 	}
 
 	.field-group label {
@@ -889,6 +890,8 @@
 	.field-group input,
 	.field-group select,
 	.field-group textarea {
+		width: 100%;
+		min-width: 0;
 		padding: 0.5rem 0.75rem;
 		border-radius: 8px;
 		border: 1px solid var(--border-strong);
@@ -952,6 +955,11 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.875rem;
+		min-width: 0;
+	}
+
+	.project-card-main {
+		min-width: 0;
 	}
 
 	.project-card[data-status='archived'] {
@@ -970,6 +978,7 @@
 		font-weight: 700;
 		color: var(--ink-primary);
 		text-decoration: none;
+		overflow-wrap: anywhere;
 	}
 
 	.project-title-link:hover {
@@ -1011,12 +1020,14 @@
 		font-size: 0.8125rem;
 		color: var(--ink-secondary);
 		font-variant-numeric: tabular-nums;
+		overflow-wrap: anywhere;
 	}
 
 	.project-desc {
 		margin: 0.5rem 0 0 0;
 		font-size: 0.875rem;
 		color: var(--ink-primary);
+		overflow-wrap: anywhere;
 	}
 
 	.project-card-actions {
@@ -1052,6 +1063,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
+		min-width: 0;
 	}
 
 	.inline-edit-panel h3 {
@@ -1162,6 +1174,7 @@
 
 	.pagination-controls {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 0.5rem;
 	}
 
@@ -1173,6 +1186,46 @@
 		.filter-bar {
 			flex-direction: column;
 			align-items: stretch;
+		}
+
+		.filter-search {
+			flex: 1 1 auto;
+		}
+
+		.filter-buttons {
+			width: 100%;
+		}
+
+		.filter-buttons > button {
+			flex: 1 1 120px;
+		}
+
+		.project-card {
+			padding: 0.9rem;
+		}
+
+		.project-card-actions > .action-link {
+			width: 100%;
+		}
+
+		.project-card-actions > button {
+			flex: 1 1 auto;
+		}
+
+		.inline-edit-panel {
+			padding: 0.85rem;
+		}
+
+		.form-actions > button {
+			flex: 1 1 140px;
+		}
+
+		.pagination-controls {
+			width: 100%;
+		}
+
+		.pagination-controls > button {
+			flex: 1 1 120px;
 		}
 	}
 </style>

@@ -341,6 +341,7 @@
 		position: absolute;
 		inset: 0;
 		pointer-events: none;
+		overflow: hidden;
 	}
 
 	.bbox {
@@ -368,6 +369,9 @@
 		padding: 0.15rem 0.35rem;
 		border-radius: 3px;
 		white-space: nowrap;
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.person-tag {
@@ -507,13 +511,14 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		padding: 1.25rem;
+		padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right))
+			max(0.75rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
 	}
 
 	.modal-panel {
 		width: 100%;
 		max-width: 1040px;
-		max-height: 92vh;
+		max-height: calc(100dvh - 1.5rem);
 		background: var(--bg-surface, #ffffff);
 		border: 1px solid var(--border-strong, #c9c3b6);
 		border-radius: 12px;
@@ -523,13 +528,14 @@
 	}
 
 	.modal-header {
-		padding: 0.9rem 1.25rem;
+		flex-shrink: 0;
+		padding: 0.85rem 1rem;
 		border-bottom: 1px solid var(--border-default, #dcd7cb);
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.75rem;
+		gap: 0.65rem;
 	}
 
 	.modal-title {
@@ -541,24 +547,55 @@
 		margin: 0.2rem 0 0 0;
 		font-size: 0.8125rem;
 		color: var(--ink-secondary, #4a453d);
+		overflow-wrap: anywhere;
 	}
 
 	.modal-controls {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 0.5rem;
 	}
 
 	.modal-stage-wrap {
-		padding: 1rem;
+		padding: 0.75rem;
 		background: #141210;
 		overflow: auto;
-		display: flex;
-		align-items: center;
-		justify-content: center;
+		display: block;
+		flex: 1;
+		min-height: 0;
 	}
 
 	.enlarged-stage {
 		max-width: 920px;
-		max-height: 75vh;
+		margin-inline: auto;
+	}
+
+	.enlarged-stage > .evidence-img {
+		position: absolute;
+		inset: 0;
+	}
+
+	@media (max-width: 640px) {
+		.toolbar-actions,
+		.modal-controls {
+			width: 100%;
+		}
+
+		.toolbar-actions > button,
+		.modal-controls > button {
+			flex: 1 1 130px;
+			min-height: 2.75rem;
+		}
+	}
+
+	@media (max-height: 500px) {
+		.modal-header {
+			padding: 0.5rem 0.85rem;
+		}
+
+		.modal-stage-wrap {
+			padding: 0.5rem;
+		}
+
 	}
 </style>

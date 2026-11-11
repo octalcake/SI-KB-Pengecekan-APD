@@ -537,6 +537,7 @@ async function assertNoHorizontalOverflow(page: Page, contextLabel: string) {
 }
 
 test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQLite, bukti JPEG asli, dan batas AI eksternal', () => {
+	test.describe.configure({ mode: 'serial' });
 	let stack: DisposableJourneyStack;
 
 	test.beforeAll(async () => {
@@ -1017,5 +1018,449 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 				2
 			)
 		);
+	});
+
+	test('phone responsive adaptation across 320, 375, 390, 430, landscape 844x390, and desktop 1280 with touch emulation and long populated content', async ({
+		browser
+	}) => {
+		test.setTimeout(120_000);
+		const capturePhase = process.env.TEST_PHONE_CAPTURE_PHASE ?? 'after';
+		const phoneCaptureDir = path.join(frontendDir, 'test-results', 'phone-responsive', capturePhase);
+		fs.mkdirSync(phoneCaptureDir, { recursive: true });
+
+		const context = await browser.newContext({
+			viewport: { width: 390, height: 844 },
+			hasTouch: true,
+			isMobile: true
+		});
+		const page = await context.newPage();
+		await installFakeCamera(page);
+
+		const auditResults: Array<{
+			route: string;
+			viewport: string;
+			scrollWidth: number;
+			clientWidth: number;
+			overflowPx: number;
+			smallTouchTargets: string[];
+			smallFormFonts: string[];
+			outOfBoundsControls: string[];
+		}> = [];
+
+		async function auditViewport(
+			routeLabel: string,
+			width: number,
+			height: number,
+			screenshotSlug?: string
+		) {
+			await page.setViewportSize({ width, height });
+			const vpLabel = `${width}x${height}`;
+			if (routeLabel.endsWith('#modal')) {
+				const imageSize = await page.getByRole('dialog').locator('img').evaluate((image) => {
+					const rect = image.getBoundingClientRect();
+					return {
+						renderedRatio: rect.width / rect.height,
+						originalRatio: image.naturalWidth / image.naturalHeight
+					};
+				});
+				expect(Math.abs(imageSize.renderedRatio - imageSize.originalRatio)).toBeLessThan(0.02);
+			}
+			const res = await page.evaluate(() => {
+				const vw = document.documentElement.clientWidth;
+				const sw = document.documentElement.scrollWidth;
+				const isTouchLayout = vw <= 480 || window.matchMedia('(pointer: coarse)').matches;
+
+				const smallTouchTargets: string[] = [];
+				const smallFormFonts: string[] = [];
+				const outOfBoundsControls: string[] = [];
+
+				const controls = Array.from(
+					document.querySelectorAll<HTMLElement>(
+						'button:not([disabled]), nav[aria-label="Navigasi utama"] a, input:not([type="hidden"]), select, textarea, .open-detail-link, .action-link, .secondary-link'
+					)
+				);
+
+				for (const el of controls) {
+					const style = window.getComputedStyle(el);
+					if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+						continue;
+					}
+					const rect = el.getBoundingClientRect();
+					if (rect.width === 0 || rect.height === 0) continue;
+
+					const label = (
+						el.getAttribute('aria-label') ||
+						el.getAttribute('data-testid') ||
+						el.id ||
+						el.textContent?.trim().slice(0, 32) ||
+						el.tagName
+					).replace(/\s+/g, ' ');
+
+					if (rect.left < -1 || rect.right > vw + 1) {
+						outOfBoundsControls.push(
+							`${el.tagName.toLowerCase()}[${label}](left=${Math.round(rect.left)},right=${Math.round(rect.right)},vw=${vw})`
+						);
+					}
+
+					const tag = el.tagName.toLowerCase();
+					const type = (el as HTMLInputElement).type?.toLowerCase();
+					const isCheckboxOrRadio =
+						tag === 'input' && (type === 'checkbox' || type === 'radio');
+
+					if (isTouchLayout && !isCheckboxOrRadio && rect.height < 43.5) {
+						smallTouchTargets.push(
+							`${tag}[${label}](h=${Math.round(rect.height * 10) / 10}px,w=${Math.round(rect.width)}px)`
+						);
+					}
+
+					if (
+						isTouchLayout &&
+						(tag === 'input' || tag === 'select' || tag === 'textarea') &&
+						!isCheckboxOrRadio
+					) {
+						const fontSize = parseFloat(style.fontSize);
+						if (fontSize < 15.9) {
+							smallFormFonts.push(`${tag}[${label}](font=${fontSize}px)`);
+						}
+					}
+				}
+
+				return {
+					scrollWidth: sw,
+					clientWidth: vw,
+					overflowPx: Math.max(0, sw - vw),
+					smallTouchTargets,
+					smallFormFonts,
+					outOfBoundsControls
+				};
+			});
+
+			auditResults.push({
+				route: routeLabel,
+				viewport: vpLabel,
+				...res
+			});
+
+			if (screenshotSlug) {
+				await page.screenshot({
+					path: path.join(phoneCaptureDir, `${screenshotSlug}-${vpLabel}.png`),
+					fullPage: false
+				});
+			}
+
+			return res;
+		}
+
+		try {
+			// 1. Login page at 320, 375, 390, 430
+			await page.goto(`${stack.baseUrl}/login`);
+			await expect(page.getByRole('heading', { name: /Masuk Petugas K3/i })).toBeVisible();
+			for (const w of [320, 375, 390, 430]) {
+				await auditViewport('/login', w, 844, w === 320 || w === 390 ? 'login' : undefined);
+			}
+
+			// Real touch tap login at 320x568
+			await page.setViewportSize({ width: 320, height: 568 });
+			await page.getByLabel(/Username/i).tap();
+			await page.getByLabel(/Username/i).fill(TEST_USERNAME);
+			await page.getByLabel(/Password/i).tap();
+			await page.getByLabel(/Password/i).fill(TEST_PASSWORD);
+			await page.getByRole('button', { name: /Masuk/i }).tap();
+
+			await expect(page).toHaveURL(/\/$/);
+			await expect(page.getByTestId('officer-identity')).toContainText('Petugas: Anisa');
+
+			// 2. Dashboard at 320, 375, 390, 430, 844x390 landscape, 1280x800 desktop
+			await page.getByLabel(/Mode Data/i).selectOption('simulated');
+			await expect(page.getByTestId('metric-sessions')).toHaveText('1');
+			for (const [w, h] of [
+				[320, 568],
+				[375, 812],
+				[390, 844],
+				[430, 932],
+				[844, 390],
+				[1280, 800]
+			] as const) {
+				await auditViewport(
+					'/',
+					w,
+					h,
+					w === 320 || w === 390 || w === 844 || w === 1280 ? 'dashboard' : undefined
+				);
+			}
+
+			// 3. Tap primary nav to /projects, create a project with a long valid name & location, test inline edit
+			await page.setViewportSize({ width: 320, height: 568 });
+			const primaryNav = page.getByRole('navigation', { name: /Navigasi utama/i });
+			await primaryNav.getByRole('link', { name: /Proyek & Zona/i }).tap();
+			await expect(page).toHaveURL(/\/projects$/);
+
+			const longProjectName =
+				'Proyek Pembangunan Struktur Menara Terpadu Sektor Timur Blok K3-konstruksi-panjang-sekali-2026';
+			const longLocation =
+				'Kawasan Industri Terpadu Koridor SelatanKavling108B-TanpaSpasiPanjangSekali, Malang, Jawa Timur';
+			await page.getByLabel(/^Nama Proyek/i).fill(longProjectName);
+			await page.getByLabel(/Lokasi/i).fill(longLocation);
+			await page
+				.getByLabel(/Deskripsi Proyek/i)
+				.fill(
+					'Deskripsi panjang untuk pengujian pembungkusan teks pada kartu proyek di layar ponsel sempit 320px beserta token_identitas_panjang_tanpa_spasi_1234567890abcdef.'
+				);
+			await page.getByRole('button', { name: /Tambah Proyek/i }).tap();
+
+			const longProjCard = page.locator('[data-testid="project-item"]', {
+				hasText: longProjectName
+			});
+			await expect(longProjCard).toBeVisible();
+
+			// Open inline edit on the project card to audit the edit form on phone widths
+			await longProjCard.getByRole('button', { name: /^Edit$/i }).tap();
+			await expect(
+				longProjCard.getByRole('button', { name: /Simpan Perubahan Proyek/i })
+			).toBeVisible();
+
+			for (const [w, h] of [
+				[320, 568],
+				[375, 812],
+				[390, 844],
+				[430, 932]
+			] as const) {
+				await auditViewport('/projects', w, h, w === 320 || w === 390 ? 'projects' : undefined);
+			}
+			await page.setViewportSize({ width: 320, height: 568 });
+			await longProjCard.getByRole('button', { name: /^Batal$/i }).click();
+
+			// 4. Open /projects/[id] detail & zone forms with long zone name
+			const firstProjCard = page.locator('[data-testid="project-item"]').first();
+			await firstProjCard.getByRole('link', { name: /Kelola Zona & Detail/i }).click();
+			await expect(page).toHaveURL(/\/projects\/\d+$/);
+
+			const longZoneName =
+				'Zona Perancah Eksterior Sisi Utara Koridor-Utama-Lantai-04-Sektor-Inspeksi-APD';
+			await page.getByLabel(/^Nama Zona/i).fill(longZoneName);
+			await page
+				.getByLabel(/Deskripsi Zona/i)
+				.fill(
+					'Area pengamatan perancah dengan jalur akses sempit dan pemeriksaan helm/rompi berkala.'
+				);
+			await page.getByRole('button', { name: /Tambah Zona/i }).click();
+			const longZoneCard = page.locator('[data-testid="zone-item"]', { hasText: longZoneName });
+			await expect(longZoneCard).toBeVisible();
+
+			await longZoneCard.getByRole('button', { name: /Edit Zona/i }).click();
+			await expect(
+				longZoneCard.getByRole('button', { name: /Simpan Perubahan Zona/i })
+			).toBeVisible();
+			for (const [w, h] of [
+				[320, 568],
+				[375, 812],
+				[390, 844],
+				[430, 932]
+			] as const) {
+				await auditViewport(
+					'/projects/[id]',
+					w,
+					h,
+					w === 320 || w === 390 ? 'project-detail' : undefined
+				);
+			}
+			await page.setViewportSize({ width: 320, height: 568 });
+			await longZoneCard.getByRole('button', { name: /^Batal$/i }).click();
+
+			// 5. Navigate via touch to /monitoring, verify selectors, live video, snapshot overlay, capture cards, and session history on phone
+			await page.setViewportSize({ width: 320, height: 568 });
+			await page.evaluate(() => window.scrollTo(0, 0));
+			await primaryNav.getByRole('link', { name: /Monitoring/i }).tap();
+			await expect(page).toHaveURL(/\/monitoring$/);
+			// Select Project #1 and Zone #1 so session history is visible and we can start a live session on phone
+			await page.getByLabel(/Proyek Aktif/i).selectOption('1');
+			await expect(page.getByTestId('session-history-list')).toBeVisible();
+			await page.getByLabel(/Zona Inspeksi Aktif/i).selectOption('1');
+
+			// Start live monitoring session on phone to audit live video + SnapshotOverlay + captured finding cards
+			await page.getByTestId('start-monitoring-btn').tap();
+			await expect(page.getByTestId('active-session-badge')).toContainText('active', {
+				timeout: 15_000
+			});
+			await expect(page.getByTestId('captured-events-list')).toBeVisible({ timeout: 25_000 });
+
+			for (const [w, h] of [
+				[320, 568],
+				[375, 812],
+				[390, 844],
+				[430, 932],
+				[844, 390]
+			] as const) {
+				await auditViewport(
+					'/monitoring',
+					w,
+					h,
+					w === 320 || w === 390 || w === 844 ? 'monitoring-active' : undefined
+				);
+			}
+
+			await page.setViewportSize({ width: 320, height: 568 });
+			await page.getByTestId('stop-monitoring-btn').tap();
+			await expect(page.getByTestId('monitoring-status-banner')).toContainText('dihentikan', {
+				timeout: 10_000
+			});
+
+			// 6. Navigate via touch to /findings gallery + expand manual form
+			await page.setViewportSize({ width: 320, height: 568 });
+			await page.evaluate(() => window.scrollTo(0, 0));
+			await primaryNav.getByRole('link', { name: /Temuan/i }).tap();
+			await expect(page).toHaveURL(/\/findings$/);
+			await expect(page.getByTestId('finding-card-1')).toBeVisible();
+			await expect(page.getByTestId('finding-card-2')).toBeVisible();
+
+			// Expand ManualFindingForm to verify manual form responsiveness too
+			await page.getByRole('button', { name: /Tambah Temuan Manual/i }).tap();
+			await expect(page.getByLabel(/Jenis Indikasi APD/i)).toBeVisible();
+
+			for (const [w, h] of [
+				[320, 568],
+				[375, 812],
+				[390, 844],
+				[430, 932],
+				[844, 390],
+				[1280, 800]
+			] as const) {
+				await auditViewport(
+					'/findings',
+					w,
+					h,
+					w === 320 || w === 390 || w === 1280 ? 'findings-gallery' : undefined
+				);
+			}
+
+			// 7. Open /findings/1 detail & test full-image modal on phone 320px and 390px, and confirm the new session #2 finding for draft report testing
+			await page.setViewportSize({ width: 320, height: 568 });
+			await page.getByRole('link', { name: /Buka Temuan #1/i }).tap();
+			await expect(page).toHaveURL(/\/findings\/1$/);
+			await expect(page.getByTestId('finding-evidence-img')).toBeVisible();
+
+			for (const [w, h] of [
+				[320, 568],
+				[375, 812],
+				[390, 844],
+				[430, 932]
+			] as const) {
+				await auditViewport(
+					'/findings/1',
+					w,
+					h,
+					w === 320 || w === 390 ? 'finding-detail' : undefined
+				);
+			}
+
+			// Open full-image modal on 320x568, verify dialog bounds and close button
+			await page.setViewportSize({ width: 320, height: 568 });
+			await page.getByRole('button', { name: /Perbesar Bukti/i }).tap();
+			const modalDialog = page.getByRole('dialog', { name: /Pratinjau Penuh Foto Bukti/i });
+			await expect(modalDialog).toBeVisible();
+			await auditViewport('/findings/1#modal', 320, 568, 'finding-modal');
+			await auditViewport('/findings/1#modal', 844, 390, 'finding-modal-landscape');
+			await page.setViewportSize({ width: 320, height: 568 });
+			await modalDialog.getByRole('button', { name: /Tutup Pratinjau/i }).tap();
+			await expect(modalDialog).toBeHidden();
+
+			// Also confirm finding #3 (from session #2) via touch so session #2 is eligible for a draft report
+			await page.goto(`${stack.baseUrl}/findings/3`);
+			await expect(page.getByTestId('finding-evidence-img')).toBeVisible();
+			await page
+				.getByLabel(/Catatan Verifikasi/i)
+				.fill('Dikonfirmasi melalui layar ponsel 320px untuk pembuatan draft laporan sesi ke-2.');
+			await page.getByRole('button', { name: /Konfirmasi Temuan/i }).tap();
+			await expect(page.getByTestId('verification-status-badge')).toContainText('Terkonfirmasi');
+
+			// 8. Navigate via touch to /reports list + create form (including manual report inputs & gemini info)
+			await page.evaluate(() => window.scrollTo(0, 0));
+			await primaryNav.getByRole('link', { name: /Laporan/i }).tap();
+			await expect(page).toHaveURL(/\/reports$/);
+			await expect(page.getByTestId('report-card-1')).toBeVisible();
+
+			// Switch to manual mode to expose manual title/content inputs
+			await page.getByRole('radio', { name: /Draft Tulis Manual Petugas/i }).check();
+			await expect(page.getByTestId('manual-report-inputs')).toBeVisible();
+
+			for (const [w, h] of [
+				[320, 568],
+				[375, 812],
+				[390, 844],
+				[430, 932]
+			] as const) {
+				await auditViewport('/reports', w, h, w === 320 || w === 390 ? 'reports-list' : undefined);
+			}
+
+			// Switch to gemini mode to audit long request_key / info box
+			await page.getByRole('radio', { name: /Generasi Narasi Gemini Backend/i }).check();
+			await auditViewport('/reports#gemini', 320, 568);
+
+			// Create a draft report on phone for Session #2 to also audit /reports/[id] draft editor + regenerate dialog + approval form
+			await page.getByRole('radio', { name: /Draft Template Terstruktur/i }).check();
+			await page.getByTestId('create-session-select').selectOption('2');
+			await page.getByTestId('submit-create-template').tap();
+			await expect(page).toHaveURL(/\/reports\/\d+$/);
+			await expect(page.getByTestId('save-report-narrative-btn')).toBeVisible();
+			// Open regenerate confirmation dialog on phone to audit its bounds too
+			await page.getByTestId('open-regenerate-confirm-btn').tap();
+			await expect(page.getByTestId('regenerate-confirm-dialog')).toBeVisible();
+			await auditViewport('/reports/draft', 320, 568, 'report-draft');
+			await auditViewport('/reports/draft', 390, 844, 'report-draft');
+
+			// Go back to /reports and open /reports/1 (approved state with SHA-256 source_hash and snapshot findings)
+			await page.evaluate(() => window.scrollTo(0, 0));
+			await primaryNav.getByRole('link', { name: /Laporan/i }).tap();
+			await expect(page).toHaveURL(/\/reports$/);
+			await page.getByTestId('open-report-link-1').tap();
+			await expect(page).toHaveURL(/\/reports\/1$/);
+			await expect(page.getByTestId('detail-source-hash')).toBeVisible();
+
+			for (const [w, h] of [
+				[320, 568],
+				[375, 812],
+				[390, 844],
+				[430, 932],
+				[844, 390],
+				[1280, 800]
+			] as const) {
+				await auditViewport(
+					'/reports/1',
+					w,
+					h,
+					w === 320 || w === 390 || w === 1280 ? 'report-detail' : undefined
+				);
+			}
+
+			// Assertions: every audited route/viewport must have zero horizontal overflow,
+			// no out-of-bounds controls, >=44px touch targets on phone, and >=16px form inputs on phone
+			const overflows = auditResults.filter((r) => r.overflowPx > 0);
+			const outOfBounds = auditResults.filter((r) => r.outOfBoundsControls.length > 0);
+			const smallTouches = auditResults.filter((r) => r.smallTouchTargets.length > 0);
+			const smallFonts = auditResults.filter((r) => r.smallFormFonts.length > 0);
+
+			expect(overflows, `Horizontal overflows found: ${JSON.stringify(overflows)}`).toEqual([]);
+			expect(outOfBounds, `Out-of-bounds controls found: ${JSON.stringify(outOfBounds)}`).toEqual(
+				[]
+			);
+			expect(
+				smallTouches,
+				`Touch targets < 44px on phone: ${JSON.stringify(smallTouches.map((s) => ({ route: s.route, vp: s.viewport, items: s.smallTouchTargets })))}`
+			).toEqual([]);
+			expect(
+				smallFonts,
+				`Form inputs < 16px on phone: ${JSON.stringify(smallFonts.map((s) => ({ route: s.route, vp: s.viewport, items: s.smallFormFonts })))}`
+			).toEqual([]);
+		} finally {
+			fs.writeFileSync(
+				path.join(phoneCaptureDir, 'responsive-audit.json'),
+				JSON.stringify(auditResults, null, 2)
+			);
+			try {
+				await context.close();
+			} catch {
+				// ignore if already closed on timeout
+			}
+		}
 	});
 });
