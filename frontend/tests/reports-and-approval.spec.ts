@@ -406,7 +406,7 @@ test.describe('P0-05: Penyusunan laporan inspeksi, snapshot sumber, staleness, d
 		);
 
 		// Uji pemulihan respons hilang (network abort): klik lagi pada sesi yang sama memakai request_key yang sama!
-		let observedGenerateKeys: string[] = [];
+		const observedGenerateKeys: string[] = [];
 		await page.route('**/api/v1/reports/generate', async (route) => {
 			const postData = route.request().postDataJSON() as { request_key: string };
 			observedGenerateKeys.push(postData.request_key);

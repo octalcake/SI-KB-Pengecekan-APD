@@ -61,8 +61,18 @@ go run ./cmd/api
 
 # Frontend
 cd frontend
-npm ci
-npm run dev -- --host localhost
+bun install --frozen-lockfile
+bun run dev --host localhost
 ```
+
+## Continuous integration
+
+GitHub Actions menjalankan [CI](.github/workflows/ci.yml) pada setiap pull request dan push ke `main`; workflow juga dapat dijalankan manual. Tiga job berjalan paralel:
+
+- **Frontend**: Bun `1.4.4` (versi di `frontend/package.json`), instalasi dari `bun.lock` dengan `--frozen-lockfile`, ESLint, pemeriksaan tipe Svelte, build, audit dependensi tingkat high/critical, dan seluruh suite Playwright Chromium. Node.js 24 tetap digunakan oleh harness `node:sqlite`; Go mengikuti `backend/go.mod`. Laporan HTML, trace kegagalan, dan bukti pengujian disimpan sebagai artifact selama 7 hari.
+- **Backend**: `go vet`, seluruh pengujian unit/HTTP dengan race detector, dan `go build`.
+- **AI service**: Python 3.12, dependensi API yang dibatasi `requirements.lock`, pemeriksaan dependensi, kompilasi modul, dan `pytest tests`. Pengujian memakai fake detector/simulasi; akurasi model YOLO dan API Gemini nyata tidak diuji.
+
+Pengujian memakai SQLite dan direktori bukti sementara, tanpa kredensial produksi atau GitHub Secrets. Tidak ada deployment otomatis. Agar kegagalan CI memblokir merge, administrator repositori perlu mewajibkan status **Frontend**, **Backend**, dan **AI service** pada branch protection/ruleset `main` setelah workflow pertama berjalan.
 
 dbmate: https://github.com/amacneil/dbmate#installation (atau pakai `docker compose run --rm migrate`).
