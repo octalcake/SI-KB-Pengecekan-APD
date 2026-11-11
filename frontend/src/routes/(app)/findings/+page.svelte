@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { FindingsGalleryPage } from '#lib/findings';
+	import FindingsGalleryPage from '#lib/features/findings/presentation/FindingsGalleryPage.svelte';
 </script>
 
 <svelte:head>

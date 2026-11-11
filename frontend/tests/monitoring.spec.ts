@@ -1,15 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
-import {
-	classifyMonitoringError,
-	computeAspectPreservingSize,
-	createMonitoringApi,
-	scaleNormalizedBBox,
-	shouldStopSamplingOnError
-} from '../src/lib/monitoring/api';
-import {
-	createCaptureLoop,
-	DEFAULT_CAMERA_CONSTRAINTS
-} from '../src/lib/monitoring/capture';
+import { classifyMonitoringError, shouldStopSamplingOnError } from '../src/lib/features/monitoring/presentation/errors';
+import { computeAspectPreservingSize, scaleNormalizedBBox } from '../src/lib/features/monitoring/domain/geometry';
+import { createMonitoringApi } from '../src/lib/features/monitoring/infrastructure/http-adapter';
+import { createCaptureLoop, DEFAULT_CAMERA_CONSTRAINTS } from '../src/lib/app/monitoring';
 
 const TEST_USERNAME = process.env.TEST_SEED_USERNAME ?? 'petugas';
 const TEST_PASSWORD = process.env.TEST_SEED_PASSWORD ?? 'K3-Disp0sable-Test-Pass!2026';
