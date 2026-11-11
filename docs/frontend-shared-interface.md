@@ -1,16 +1,12 @@
 # Frontend integration interface
 
-Owner: Antigravity 1's preserved P0-01 frontend work. Reuse this interface when composing monitoring, findings and reports; do not create a second login/session stack. This is an interface snapshot for concurrent feature preparation, not a claim that P0-01 has landed or passed tests.
+The frontend uses feature-first clean architecture. See [frontend-architecture.md](frontend-architecture.md) for the tree, rules and commands. This replaces the older concurrent-preparation snapshot and its broad `#lib` exports.
 
-The existing P0-01 work exports through `#lib`:
+- `shared/http/client.ts` is the single generic transport: relative `/api/v1`, same-origin cookies, CSRF, JSON/binary/multipart bodies, JSON/list/blob responses, request IDs, retry metadata and central 401 notification. Feature infrastructure uses it; screens do not.
+- `shared/errors.ts` exports `ApiError` and `isApiError` without a transport/framework dependency. `shared/envelopes.ts` holds envelopes/pagination; `shared/domain/types.ts` holds `SystemMode` and `ViolationType`.
+- `app/auth.ts` composes the only `authSession`: bootstrap, login/logout, readiness, current user/CSRF, notices and `registerBeforeLogout`. Reactive state lives in auth presentation; sequencing lives in application. Monitoring cleanup stops capture/releases camera before logout. Failed non-401 logout retains authentication.
+- `app/{projects,dashboard,findings,monitoring,reports}.ts` composes typed feature operations/workflows. `app/lookups.ts` adapts project/zone and monitoring-session lookups for findings/reports; those features no longer maintain duplicate endpoint consumers.
+- Projects owns project/zone models and CRUD; monitoring owns sessions. Cross-feature model imports use explicit `features/projects/domain.ts`, `features/monitoring/domain.ts`, or `features/auth/domain.ts`. Dashboard uses the type-only `features/projects/application.ts` lookup contract. Public contracts export no Svelte or adapters.
+- Resource fields still match the existing Go contracts. Mutations preserve optimistic versions. Reports retain request keys after lost responses and require review acknowledgement before approval. There are no automatic mutation retries or delete/recreate report workflows.
 
-- `apiData<T>(path, options?)` resolves one unwrapped resource; `apiList<T>(path, options?)` resolves the list envelope including data/meta; `apiNoContent(path, options?)` resolves a 204 operation.
-- Paths are relative to the API base, such as `/projects`. Options carry method, headers, body and normal fetch options. An object body is JSON; Blob/FormData/binary bodies are preserved rather than stringified. Do not set a multipart boundary yourself.
-- `ApiError` and `isApiError` expose status, code, message, field errors, request ID, retry-after and network-error state. Handle versions/locks/readiness explicitly, without automatic mutation retries.
-- `authSession` owns bootstrap, login/logout, authenticated user, CSRF, and system readiness. Its state includes status, user, csrfToken, systemStatus, loading/error/notice fields; methods include bootstrap, refreshSystemStatus, login and logout.
-- `getCsrfToken`, `systemStatusApi`, `setCsrfToken`, and auth API helpers are also exported, but feature pages should consume the central session rather than implement another bootstrap.
-- Existing API/type definitions and the SRS are the resource contract. Feature-specific resource types/API calls belong with that feature.
-
-Feature preparation may define components and API consumers against this agreed interface before its implementation lands. Do not stub or replace the shared client in production code just to turn a missing-foundation check green. Before final feature acceptance, merge the integration tip containing P0-01, connect its actual exports, and run frontend/browser checks. Report any dependency gap honestly.
-
-Disjoint ownership: 1 owns shared auth/API/UI styles and project/dashboard routes; 2 owns finding/report modules and routes; 3 owns monitoring modules and route. Package/lockfile/test-runner changes are serialized through the integration coordinator. Do not modify another agent's frontend worktree or any backend/AI source.
+All paths above are relative to `frontend/src/lib/`. The authoritative scope remains [frontend-only-scope.md](frontend-only-scope.md). Backend/AI code, schema, server configuration and dependencies are outside this migration.

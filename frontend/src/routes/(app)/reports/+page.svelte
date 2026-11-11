@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ReportsListPage } from '#lib/reports';
+	import ReportsListPage from '#lib/features/reports/presentation/ReportsListPage.svelte';
 </script>
 
 <svelte:head>

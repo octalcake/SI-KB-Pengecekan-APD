@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import AppShell from '#lib/components/AppShell.svelte';
-	import { authSession } from '#lib/auth/session.svelte';
+	import AppShell from '#lib/app/AppShell.svelte';
+	import { authSession } from '#lib/app/auth';
 	import type { LayoutProps } from './$types';
 
 	let { children }: LayoutProps = $props();

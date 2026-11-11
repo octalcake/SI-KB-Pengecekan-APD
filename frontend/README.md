@@ -5,6 +5,7 @@ Antarmuka web operasional berbahasa Indonesia untuk petugas K3 pada Sistem Infor
 Dokumen acuan:
 - Spesifikasi kebutuhan sistem (SRS): [`../docs/requirements.md`](../docs/requirements.md)
 - Kontrak API publik & internal: [`../docs/api-contract.md`](../docs/api-contract.md)
+- Arsitektur feature-first dan aturan dependensi: [`../docs/frontend-architecture.md`](../docs/frontend-architecture.md)
 - Batas lingkup frontend-only: [`../docs/frontend-only-scope.md`](../docs/frontend-only-scope.md)
 - Laporan penerimaan & bukti verifikasi P0-07: [`../docs/frontend-acceptance.md`](../docs/frontend-acceptance.md)
 
@@ -82,7 +83,7 @@ Buka **`http://localhost:5173`** di browser dan masuk menggunakan akun petugas y
 ```sh
 cd frontend
 bun run lint
-bun run check
+bun run check # architecture guard + fixture tests + application tests + svelte-check
 bun run build
 bun audit --audit-level=high
 ```
@@ -96,8 +97,8 @@ Jalankan seluruh suite secara serial (`--workers=1`) dengan batas konkurensi Go 
 ```powershell
 # PowerShell (Windows)
 cd frontend
-$env:TEST_WEB_PORT='62173'
-$env:TEST_API_PORT='62080'
+$env:TEST_WEB_PORT='46173'
+$env:TEST_API_PORT='46080'
 $env:GOMAXPROCS='2'
 $env:GOFLAGS='-p=2'
 bun run test:e2e --workers=1
@@ -108,7 +109,7 @@ Tangkapan layar dan ringkasan hash perjalanan terintegrasi disimpan di `test-res
 ```sh
 # Bash / POSIX
 cd frontend
-TEST_WEB_PORT=62173 TEST_API_PORT=62080 GOMAXPROCS=2 GOFLAGS=-p=2 bun run test:e2e --workers=1
+TEST_WEB_PORT=46173 TEST_API_PORT=46080 GOMAXPROCS=2 GOFLAGS=-p=2 bun run test:e2e --workers=1
 ```
 
 Cakupan spesifikasi pengujian di `frontend/tests/`:

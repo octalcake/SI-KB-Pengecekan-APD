@@ -1,5 +1,5 @@
 <script lang="ts">
-	import MonitoringView from '#lib/monitoring/MonitoringView.svelte';
+	import MonitoringView from '#lib/features/monitoring/presentation/MonitoringView.svelte';
 </script>
 
 <svelte:head>
