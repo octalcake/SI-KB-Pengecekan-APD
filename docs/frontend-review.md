@@ -1,8 +1,8 @@
 # P0 frontend review
 
-Independent standards and specification reviews compared `a9ddb6db5941716ca851937f2312551378506a24` (upstream `main`) with `11fdf4f91e59f5772c65ede3161407d193c00b2f`. This records the reviewed baseline; remediation and final verification are pending below.
+Independent standards and specification reviews compared `a9ddb6db5941716ca851937f2312551378506a24` (upstream `main`) with baseline `11fdf4f91e59f5772c65ede3161407d193c00b2f`. Remediation was implemented in `e2b6011d7df5765ba0993257e2e51a5e0cba9c6e` (`t3/frontend-review-fixes`) and `cd7dfc1dc43dada5d079f345b42eb166351855da` (shared binary transport in `client.ts`), then merged and verified at `14b064ee9e653a0eecd548f93e4a4b41c6f6eebc`.
 
-Authoritative scope: [frontend only](frontend-only-scope.md). Backend, AI runtime, schema, and model changes are excluded. [Acceptance evidence](frontend-acceptance.md) separates deterministic fixtures from real PPE and live Gemini, which remain **NOT RUN**.
+Authoritative scope: [frontend only](frontend-only-scope.md). Backend, AI runtime, schema, and model changes are excluded. [Acceptance evidence](frontend-acceptance.md) separates deterministic fixtures from real PPE and live Gemini, which remain **NOT RUN** (external system dependencies unverified in this frontend-only scope despite upstream code availability).
 
 ## Standards
 
@@ -26,7 +26,26 @@ Four material findings:
 
 ## Resolution
 
-- Seven distinct material issues (four per axis, with one overlap).
-- A single isolated implementation task is addressing the findings.
-- Baseline acceptance: **7 passed** through real Go/SQLite/evidence and a labeled external inference fixture, including evidence hash equality and restart persistence.
-- Final review-fix inspection, regression results, and PR readiness: **pending**.
+### Dispositions of the Seven Material Findings
+
+1. **Binary evidence requests share common auth/CSRF/error pipeline (Standards #1)**: **Resolved (`cd7dfc1` + `e2b6011`, merged at `14b064e`)**. `apiRequest` in [`frontend/src/lib/api/client.ts`](../frontend/src/lib/api/client.ts) accepts `responseType: 'json' | 'blob' = 'json'` and [`apiBlob`](../frontend/src/lib/api/client.ts) wraps `apiRequest<ApiBlobResponse>(path, options, 'blob')` over the single `fetch` pipeline. [`fetchFindingEvidenceBlob`](../frontend/src/lib/findings/api.ts) now delegates to `apiBlob`, so `401` responses on binary evidence endpoints clear CSRF and invoke `unauthorizedListener` (`authSession.invalidateFromUnauthorized()`).
+2. **Explicit missing/forbidden/auth/error states & object-URL cleanup for monitoring thumbnails (Standards #2 / Spec #1)**: **Resolved (`e2b6011`)**. [`MonitoringView.svelte`](../frontend/src/lib/monitoring/MonitoringView.svelte) loads capture thumbnails through `fetchFindingEvidenceBlob`, tracks per-finding thumbnail states (`loading`, `ready`, `missing` on `410 EVIDENCE_MISSING`, `forbidden` on `403`, `error` with retry button), and revokes created `blob:` URLs on replacement and unmount without substituting fake images.
+3. **Stale asynchronous response guards on dashboard and project detail (Standards #3)**: **Resolved (`e2b6011`)**. [`frontend/src/routes/(app)/+page.svelte`](../frontend/src/routes/(app)/+page.svelte) guards `loadZonesForFilter` and `loadSummary` with incrementing request counters and selected-project checks, and [`frontend/src/routes/(app)/projects/[id]/+page.svelte`](../frontend/src/routes/(app)/projects/[id]/+page.svelte) guards `loadAll` with `loadGeneration` and `projectId` identity so out-of-order responses never overwrite newer selections or loading/error states.
+4. **Disable approval button when report source is stale or unacknowledged (Standards #4)**: **Resolved (`e2b6011`)**. [`ReportDetailPage.svelte`](../frontend/src/lib/reports/ReportDetailPage.svelte) disables the approve button whenever `submittingApprove || !reviewAcknowledged || report.source_is_stale`, while retaining server error handling (`409 REPORT_SOURCE_STALE`, `422 VALIDATION_ERROR`) for concurrent changes.
+5. **Remove non-atomic automatic delete + template recreate action (Spec #2)**: **Resolved (`e2b6011`)**. Removed `handleRecreateFreshTemplateDraft` from [`ReportDetailPage.svelte`](../frontend/src/lib/reports/ReportDetailPage.svelte) and updated [`docs/tickets/p0-frontend/05-reports-and-approval.md`](tickets/p0-frontend/05-reports-and-approval.md). In-place Gemini regeneration (`POST /api/v1/reports/{id}/regenerate`) and separately confirmed draft deletion (`DELETE /api/v1/reports/{id}`) + new template draft creation (`POST /api/v1/reports`) remain intact and independently confirmed.
+6. **Actual finding metadata on capture cards without guessed track/category associations (Spec #3)**: **Resolved (`e2b6011`)**. [`capture.ts`](../frontend/src/lib/monitoring/capture.ts) and [`types.ts`](../frontend/src/lib/monitoring/types.ts) no longer guess `firstPositiveTrack` for `FrameEvent` entries; [`MonitoringView.svelte`](../frontend/src/lib/monitoring/MonitoringView.svelte) retrieves actual finding details via `getFinding(ev.findingId)` and renders verified server metadata (`violation_type`, `source_track_id`) only when present.
+7. **Pre-logout monitoring/camera stop and auth retention on failed logout (Spec #4)**: **Resolved (`e2b6011`)**. [`authSession.registerBeforeLogout`](../frontend/src/lib/auth/session.svelte.ts) runs [`MonitoringView.svelte`](../frontend/src/lib/monitoring/MonitoringView.svelte) cleanup (releasing the media stream and sending an authenticated best-effort `POST /api/v1/monitoring/sessions/{id}/stop`) *before* calling `POST /api/v1/auth/logout`, and retains local session state if `/auth/logout` fails with a non-`401` error so the officer can retry.
+
+### Optional Smells Disposition
+
+- Feature-specific lookup/date formatting helpers remain intentionally localized per module (`projects`, `findings`, `reports`, `monitoring`) to avoid broad cross-module refactoring unrelated to material defects.
+
+### Final Verification at Merged Code SHA `14b064ee9e653a0eecd548f93e4a4b41c6f6eebc`
+
+- **Type & Svelte Check (`npm run check`)**: Exit code `0` (`svelte-check found 0 errors and 0 warnings`).
+- **Production Build (`npm run build`)**: Exit code `0` (SSR and client bundles built cleanly).
+- **Full Serial Playwright Acceptance Suite**:
+  - Command: `$env:TEST_WEB_PORT='62173'; $env:TEST_API_PORT='62080'; $env:GOMAXPROCS='2'; $env:GOFLAGS='-p=2'; npx playwright test --workers=1 --reporter=list`
+  - Result: **7 passed (47.6s)** across all 6 spec files (`auth-shell.spec.ts`, `findings-and-follow-up.spec.ts`, `inspection-journey.spec.ts`, `monitoring.spec.ts`, `projects-dashboard.spec.ts`, `reports-and-approval.spec.ts`), exit code `0`.
+  - Evidence SHA-256 receipt (`frontend/test-results/acceptance/journey-evidence-summary.json`): triggering JPEG, stored evidence, and post-restart evidence all match `e6ebbebf3676c7fb953e0b1389ca0d73f36536d92448994f1e6041270ca0f146` (`640×480`, `6500` bytes, frame sequence `#2`), distinct from UI screenshot `bf9ce7e6a43061787413c058f10013e57e1b6176c100c1ec36aa07a8b5455bc6`.
+  - Process cleanup: `0` leftover `api`, `seed`, or test port listeners after run.

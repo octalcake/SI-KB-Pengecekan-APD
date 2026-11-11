@@ -5,7 +5,8 @@ Dokumen ini mencatat bukti verifikasi runtime, status penerimaan per gerbang (*g
 - **Batas Lingkup Otoritatif**: [`docs/frontend-only-scope.md`](./frontend-only-scope.md) — pengiriman ini mencakup kode dan pengujian **frontend saja** terhadap kontrak API Go yang sudah ada tanpa mengubah `backend/`, `ai-service/`, skema SQLite, konfigurasi server, ataupun artefak model.
 - **Spesifikasi Induk**: [`docs/spec-p0-frontend-integration.md`](./spec-p0-frontend-integration.md)
 - **Tiket Pelacak**: [`docs/tickets/p0-frontend/07-acceptance-and-handoff.md`](./tickets/p0-frontend/07-acceptance-and-handoff.md) (GitHub Issue [#12](https://github.com/octalcake/SI-KB-Pengecekan-APD/issues/12), PR [#13](https://github.com/octalcake/SI-KB-Pengecekan-APD/pull/13))
-- **Baseline Sumber yang Diuji**: `11fdf4f91e59f5772c65ede3161407d193c00b2f` (`integration/p0-frontend`, mencakup integrasi P0-01 s.d. P0-05 serta sinkronisasi upstream `a9ddb6d`).
+- **SHA Kode Gabungan Terverifikasi Saat Ini**: `14b064ee9e653a0eecd548f93e4a4b41c6f6eebc` (`integration/p0-frontend`, menggabungkan `cd7dfc1dc43dada5d079f345b42eb166351855da` dan `e2b6011d7df5765ba0993257e2e51a5e0cba9c6e` `t3/frontend-review-fixes` di atas baseline historis `11fdf4f91e59f5772c65ede3161407d193c00b2f`; pohon kode tidak berubah oleh komit dokumentasi akhir setelah pengujian).
+- **Rekaman Review Dua-Sumbu**: [`docs/frontend-review.md`](./frontend-review.md) — ketujuh temuan material (4 standar, 4 spesifikasi dengan 1 tumpang tindih) telah diselesaikan dan diverifikasi ulang pada SHA gabungan `14b064ee9e653a0eecd548f93e4a4b41c6f6eebc`.
 
 ---
 
@@ -13,9 +14,9 @@ Dokumen ini mencatat bukti verifikasi runtime, status penerimaan per gerbang (*g
 
 | Gerbang Penerimaan (*Gate*) | Status | Batas Sistem & Bukti Aktual |
 |---|---|---|
-| **1. Aplikasi & Pipeline Lokal Terintegrasi** (`SvelteKit UI` ↔ `Go cmd/api` ↔ `SQLite` + `Evidence Storage` ↔ `Fixture HTTP AI /internal/v1/*`) | **PASS (Baseline `11fdf4f`, Menunggu Merge Perbaikan Review Spesifikasi)** | `7 passed (1.1m)` pada eksekusi serial satu worker (`npx playwright test --workers=1`) mencakup 6 file spesifikasi: `auth-shell.spec.ts`, `projects-dashboard.spec.ts`, `monitoring.spec.ts`, `findings-and-follow-up.spec.ts`, `reports-and-approval.spec.ts`, dan perjalanan terintegrasi baru `inspection-journey.spec.ts`. *Catatan*: PR #13 tetap berstatus **draft** hingga koordinator menggabungkan 4 perbaikan temuan review spesifikasi dari lajur paralel Argon 3 dan memvalidasi ulang komit gabungan. |
-| **2. Inferensi PPE Kamera Nyata** (`AI_MODE=real`, Python FastAPI YOLO/ByteTrack + Webcam Fisik) | **NOT RUN** | **Ketergantungan sistem eksternal di luar lingkup frontend-only** ([`docs/frontend-only-scope.md`](./frontend-only-scope.md)). Memerlukan validasi bundel model pada perangkat lokal serta lingkungan runtime CPU Python yang kompatibel. Frontend terbukti menampilkan status jujur `ai_ready=false` / `503 AI_UNAVAILABLE` tanpa beralih diam-diam ke mode simulasi, dan melepaskan kamera segera saat ditolak server. Tidak ada klaim atau angka benchmark latensi 60-frame webcam fisik yang dibuat. |
-| **3. Generasi Narasi Laporan Gemini Nyata** (`GEMINI_ENABLED=true` + `GEMINI_API_KEY` Aktif) | **NOT RUN** | **Ketergantungan sistem eksternal di luar lingkup frontend-only**. Kredensial dan kuota live Gemini API tidak dikonfigurasi pada lingkungan uji (`GEMINI_ENABLED=false`, `gemini_configured=false`). Frontend terbukti menampilkan kegagalan jujur `503 GEMINI_UNAVAILABLE`, mempertahankan UUID v4 `request_key` saat pemulihan respons hilang, menjaga suntingan draft yang belum disimpan, serta menyediakan alur eksplisit berlabel `TEMPLATE` dan `MANUAL` (yang tidak dihitung sebagai bukti kelulusan Gemini nyata). |
+| **1. Aplikasi & Pipeline Lokal Terintegrasi** (`SvelteKit UI` ↔ `Go cmd/api` ↔ `SQLite` + `Evidence Storage` ↔ `Fixture HTTP AI /internal/v1/*`) | **PASS (Terverifikasi Pasca-Review pada SHA `14b064ee9e653a0eecd548f93e4a4b41c6f6eebc`)** | `npm run check` (`EXIT=0`), `npm run build` (`EXIT=0`), dan **`7 passed (47.6s)`** (`EXIT=0`) pada eksekusi serial satu worker (`npx playwright test --workers=1 --reporter=list`) mencakup seluruh 6 file spesifikasi: `auth-shell.spec.ts`, `findings-and-follow-up.spec.ts`, `inspection-journey.spec.ts`, `monitoring.spec.ts`, `projects-dashboard.spec.ts`, dan `reports-and-approval.spec.ts` (sebelumnya `7 passed (1.1m)` pada baseline historis `11fdf4f`). |
+| **2. Inferensi PPE Kamera Nyata** (`AI_MODE=real`, Python FastAPI YOLO/ByteTrack + Webcam Fisik) | **NOT RUN** | **Ketergantungan sistem eksternal belum diverifikasi dalam lingkup frontend-only** ([`docs/frontend-only-scope.md`](./frontend-only-scope.md)) meskipun kode upstream `ai-service/` tersedia di repositori. Memerlukan eksekusi runtime detector Python lokal, bundel model tervalidasi, dan perangkat webcam fisik. Frontend terbukti menampilkan status jujur `ai_ready=false` / `503 AI_UNAVAILABLE` tanpa beralih diam-diam ke mode simulasi, dan melepaskan kamera segera saat ditolak server. Tidak ada instalasi dependensi inferensi atau klaim benchmark latensi 60-frame webcam fisik yang dibuat. |
+| **3. Generasi Narasi Laporan Gemini Nyata** (`GEMINI_ENABLED=true` + `GEMINI_API_KEY` Aktif) | **NOT RUN** | **Ketergantungan sistem eksternal belum diverifikasi dalam lingkup frontend-only**. Kredensial dan panggilan live Gemini API tidak dijalankan pada lingkungan uji (`GEMINI_ENABLED=false`, `gemini_configured=false`). Frontend terbukti menampilkan kegagalan jujur `503 GEMINI_UNAVAILABLE`, mempertahankan UUID v4 `request_key` saat pemulihan respons hilang, menjaga suntingan draft yang belum disimpan, serta menyediakan alur eksplisit berlabel `TEMPLATE` dan `MANUAL` (yang tidak dihitung sebagai bukti kelulusan Gemini nyata). |
 
 ---
 
@@ -35,19 +36,23 @@ Dokumen ini mencatat bukti verifikasi runtime, status penerimaan per gerbang (*g
 
 ## 3. Perintah Verifikasi Reproducible & Isolasi Port
 
-### A. Instalasi & Eksekusi Suite Browser Serial
+### A. Pemeriksaan Statis, Build, & Eksekusi Suite Browser Serial
 
 ```powershell
 cd frontend
-npm ci --no-audit --no-fund
-# Exit code: 0 (added 59 packages in 6s)
+npm run check
+# Exit code: 0 (svelte-check found 0 errors and 0 warnings)
+
+npm run build
+# Exit code: 0
 
 $env:TEST_WEB_PORT='62173'
 $env:TEST_API_PORT='62080'
 $env:GOMAXPROCS='2'
 $env:GOFLAGS='-p=2'
 npx playwright test --workers=1 --reporter=list
-# Exit code: 0 — 7 passed (1.1m)
+# Exit code: 0 — 7 passed (47.6s) pada SHA gabungan 14b064ee9e653a0eecd548f93e4a4b41c6f6eebc
+# (Catatan historis baseline 11fdf4f91e59f5772c65ede3161407d193c00b2f: 7 passed (1.1m))
 ```
 
 ### B. Alokasi Port Bebas Konflik Antar-Spesifikasi
@@ -113,11 +118,11 @@ Pengujian di [`frontend/tests/inspection-journey.spec.ts`](../frontend/tests/ins
    - Menghentikan proses `api.exe` Go dan menjalankan proses `api.exe` baru terhadap file SQLite serta direktori bukti yang sama, lalu melakukan `page.reload()`.
    - Tanpa kueri saluran samping (*side-channel*) ke SQLite, pembacaan melalui UI dan API publik membuktikan sesi autentikasi, metrik dashboard `simulated`, detail Temuan #1 (`Versi #4`, `Terkonfirmasi`, `Selesai`), file bukti asli (`/api/v1/findings/1/evidence`), dan Laporan #1 yang telah disetujui (`Versi #3`, `Disetujui`, snapshot `[F-1]`) tetap utuh.
 
-### D. Rekaman `X-Request-Id` Aktual dari Perjalanan Terintegrasi
+### D. Rekaman `X-Request-Id` Historis (Baseline `11fdf4f91e59f5772c65ede3161407d193c00b2f`)
 
-Diambil dari `journey-evidence-summary.json` hasil eksekusi aktual:
+Diambil dari `journey-evidence-summary.json` pada eksekusi baseline historis `11fdf4f` (lihat Bagian 8 untuk rekaman pasca-review terbaru pada SHA `14b064ee9e653a0eecd548f93e4a4b41c6f6eebc`):
 
-| Endpoint Publik Go | `X-Request-Id` Terobservasi |
+| Endpoint Publik Go | `X-Request-Id` Terobservasi (Baseline Historis `11fdf4f`) |
 |---|---|
 | `POST /api/v1/auth/login` | `req-bff6ca317b64` |
 | `GET /api/v1/auth/me` | `req-e1efd5be8cee` |
@@ -140,14 +145,14 @@ Diambil dari `journey-evidence-summary.json` hasil eksekusi aktual:
 
 ## 5. Inspeksi Visual, Tata Letak Responsif (`1280×800` & `390×844`), dan Aksesibilitas Keyboard
 
-Tangkapan layar aktual diambil oleh runner Playwright dan disimpan di luar pohon sumber yang dilacak Git (di dalam direktori artefak sesi lokal) serta telah diperiksa secara visual satu per satu:
+Tangkapan layar aktual diambil secara otomatis oleh [`frontend/tests/inspection-journey.spec.ts`](../frontend/tests/inspection-journey.spec.ts) ke jalur relatif portabel `frontend/test-results/acceptance/` (diabaikan oleh Git agar tidak mengotori pohon sumber, tanpa rahasia mentah) serta telah diperiksa secara visual satu per satu:
 
 | Layar | Viewport Desktop (`1280×800`) | Viewport Sempit (`390×844`) | Hasil Pemeriksaan Visual & Overflow |
 |---|---|---|---|
-| **Dashboard (`/`)** | `C:/Users/akmal/.t3/userdata/providers/antigravity/7be9b928ae8cba283f02640839db79b9ad29c4740201527659e873129d9e1991/antigravity-acp/brain/b7b57a87-0d15-42d1-9aaa-e46dea7526aa/captures/dashboard-1280x800.png` | `C:/Users/akmal/.t3/userdata/providers/antigravity/7be9b928ae8cba283f02640839db79b9ad29c4740201527659e873129d9e1991/antigravity-acp/brain/b7b57a87-0d15-42d1-9aaa-e46dea7526aa/captures/dashboard-390x844.png` | **PASS** — `scrollWidth <= clientWidth` pada kedua ukuran; navigasi berganti dari sidebar kiri ke bilah pil horizontal pada layar sempit; kartu metrik dan banner `MODE SIMULASI AKTIF` terbaca jelas tanpa rahasia yang terekspos. |
-| **Monitoring (`/monitoring`)** | `C:/Users/akmal/.t3/userdata/providers/antigravity/7be9b928ae8cba283f02640839db79b9ad29c4740201527659e873129d9e1991/antigravity-acp/brain/b7b57a87-0d15-42d1-9aaa-e46dea7526aa/captures/monitoring-1280x800.png` | `C:/Users/akmal/.t3/userdata/providers/antigravity/7be9b928ae8cba283f02640839db79b9ad29c4740201527659e873129d9e1991/antigravity-acp/brain/b7b57a87-0d15-42d1-9aaa-e46dea7526aa/captures/monitoring-390x844.png` | **PASS** — `scrollWidth <= clientWidth`; pratinjau live terpisah dari snapshot hasil inferensi; indikator sampling `Target 1 FPS • Efektif 1,00 FPS` dan daftar `Capture Temuan Terbaru (2 temuan)` tertumpuk rapi pada `390×844`. |
-| **Detail Temuan (`/findings/1`)** | `C:/Users/akmal/.t3/userdata/providers/antigravity/7be9b928ae8cba283f02640839db79b9ad29c4740201527659e873129d9e1991/antigravity-acp/brain/b7b57a87-0d15-42d1-9aaa-e46dea7526aa/captures/findings-1280x800.png` | `C:/Users/akmal/.t3/userdata/providers/antigravity/7be9b928ae8cba283f02640839db79b9ad29c4740201527659e873129d9e1991/antigravity-acp/brain/b7b57a87-0d15-42d1-9aaa-e46dea7526aa/captures/findings-390x844.png` | **PASS** — `scrollWidth <= clientWidth`; kotak pembatas `Person` dan `NO_HELMET (91%)` selaras di atas foto bukti `640 × 480 px`; dialog pratinjau penuh dapat dibuka dengan fokus keyboard (`Enter`) dan ditutup dengan `Escape`; metadata immutable (`NO_HELMET`, `101:1`, `bukan identitas pekerja`) berdampingan jelas dengan kategori akhir petugas (`NO_VEST`). |
-| **Detail Laporan (`/reports/1`)** | `C:/Users/akmal/.t3/userdata/providers/antigravity/7be9b928ae8cba283f02640839db79b9ad29c4740201527659e873129d9e1991/antigravity-acp/brain/b7b57a87-0d15-42d1-9aaa-e46dea7526aa/captures/reports-1280x800.png` | `C:/Users/akmal/.t3/userdata/providers/antigravity/7be9b928ae8cba283f02640839db79b9ad29c4740201527659e873129d9e1991/antigravity-acp/brain/b7b57a87-0d15-42d1-9aaa-e46dea7526aa/captures/reports-390x844.png` | **PASS** — `scrollWidth <= clientWidth`; tampilan terkunci (*read-only*) setelah persetujuan menampilkan provenance `Draft Template Aplikasi (Bukan Output Gemini)`, `source_hash`, dan `Snapshot Sumber Historis (Immutable)` dengan referensi `[F-1]`. |
+| **Dashboard (`/`)** | [`../frontend/test-results/acceptance/dashboard-1280x800.png`](../frontend/test-results/acceptance/dashboard-1280x800.png) | [`../frontend/test-results/acceptance/dashboard-390x844.png`](../frontend/test-results/acceptance/dashboard-390x844.png) | **PASS** — `scrollWidth <= clientWidth` pada kedua ukuran; navigasi berganti dari sidebar kiri ke bilah pil horizontal pada layar sempit; kartu metrik dan banner `MODE SIMULASI AKTIF` terbaca jelas tanpa rahasia yang terekspos. |
+| **Monitoring (`/monitoring`)** | [`../frontend/test-results/acceptance/monitoring-1280x800.png`](../frontend/test-results/acceptance/monitoring-1280x800.png) | [`../frontend/test-results/acceptance/monitoring-390x844.png`](../frontend/test-results/acceptance/monitoring-390x844.png) | **PASS** — `scrollWidth <= clientWidth`; pratinjau live terpisah dari snapshot hasil inferensi; indikator sampling `Target 1 FPS • Efektif 1,00 FPS` dan daftar `Capture Temuan Terbaru (2 temuan)` dengan metadata temuan aktual tertumpuk rapi pada `390×844`. |
+| **Detail Temuan (`/findings/1`)** | [`../frontend/test-results/acceptance/findings-1280x800.png`](../frontend/test-results/acceptance/findings-1280x800.png) | [`../frontend/test-results/acceptance/findings-390x844.png`](../frontend/test-results/acceptance/findings-390x844.png) | **PASS** — `scrollWidth <= clientWidth`; kotak pembatas `Person` dan `NO_HELMET (91%)` selaras di atas foto bukti `640 × 480 px`; dialog pratinjau penuh dapat dibuka dengan fokus keyboard (`Enter`) dan ditutup dengan `Escape`; metadata immutable (`NO_HELMET`, `101:1`, `bukan identitas pekerja`) berdampingan jelas dengan kategori akhir petugas (`NO_VEST`). |
+| **Detail Laporan (`/reports/1`)** | [`../frontend/test-results/acceptance/reports-1280x800.png`](../frontend/test-results/acceptance/reports-1280x800.png) | [`../frontend/test-results/acceptance/reports-390x844.png`](../frontend/test-results/acceptance/reports-390x844.png) | **PASS** — `scrollWidth <= clientWidth`; tampilan terkunci (*read-only*) setelah persetujuan menampilkan provenance `Draft Template Aplikasi (Bukan Output Gemini)`, `source_hash`, dan `Snapshot Sumber Historis (Immutable)` dengan referensi `[F-1]`. |
 
 ---
 
@@ -157,14 +162,91 @@ Petunjuk lengkap instalasi (`npm ci`), konfigurasi proxy dev (`API_PROXY_TARGET`
 
 ---
 
-## 7. Temuan Review Spesifikasi pada Baseline `11fdf4f` & Status Serah Terima
+## 7. Catatan Historis Baseline `11fdf4f` (Sebelum Merge Perbaikan Review)
 
-Pada baseline `11fdf4f91e59f5772c65ede3161407d193c00b2f`, review spesifikasi dua-sumbu mengidentifikasi 4 temuan pada kode produksi frontend yang **sedang diperbaiki secara terpisah oleh lajur implementer Argon 3** pada worktree terisolasi (tanpa tumpang tindih dengan file uji/dokumen P0-07 ini):
-1. **Penghapusan + pembuatan ulang otomatis draft template stale (`ReportDetailPage.svelte`)**: aksi dua langkah (`DELETE /api/v1/reports/{id}` diikuti `POST /api/v1/reports`) tidak atomik jika langkah kedua gagal; sedang dihapus sehingga petugas menggunakan aksi Hapus Draft dan Buat Draft Template yang sudah terkonfirmasi secara terpisah.
-2. **Label track/kategori tertebak pada kartu event capture (`capture.ts`)**: asosiasi `firstPositiveTrack` pada daftar `capturedEvents` sedang dihapus karena payload `FrameEvent` Go hanya membawa `finding_id`, `verification_status`, dan `evidence_url`.
-3. **State thumbnail bukti hilang (`MonitoringView.svelte` / `FindingsGalleryPage.svelte`)**: penambahan state eksplisit saat thumbnail bukti mengembalikan error (`410 EVIDENCE_MISSING`) agar tidak tampak sebagai gambar rusak tanpa keterangan.
-4. **Urutan penghentian monitoring saat logout (`AppShell.svelte` / `auth.svelte.ts`)**: memastikan kamera dan sesi monitoring dihentikan sebelum sesi autentikasi dihapus pada `POST /api/v1/auth/logout`, serta mempertahankan status autentikasi di UI apabila permintaan logout gagal.
+Pada baseline historis `11fdf4f91e59f5772c65ede3161407d193c00b2f`, review standar dan spesifikasi dua-sumbu ([`docs/frontend-review.md`](./frontend-review.md)) mencatat 7 temuan material (4 standar, 4 spesifikasi dengan 1 tumpang tindih). Seluruh temuan tersebut kini **telah diselesaikan dan digabungkan** pada SHA `14b064ee9e653a0eecd548f93e4a4b41c6f6eebc` (lihat Bagian 8 di bawah).
 
-**Status Serah Terima (Merger Handoff)**:
-- Seluruh pengujian penerimaan dan dokumentasi P0-07 di cabang ini telah lulus (`7 passed`) terhadap baseline `11fdf4f91e59f5772c65ede3161407d193c00b2f`.
-- Koordinator dapat menggabungkan cabang ini bersama cabang perbaikan produksi Argon 3 ke `integration/p0-frontend` dan menjalankan ulang suite serial satu kali pada SHA gabungan sebelum mengubah PR [#13](https://github.com/octalcake/SI-KB-Pengecekan-APD/pull/13) dari **draft** menjadi siap tinjau.
+---
+
+## 8. Eksekusi Verifikasi Akhir Pasca-Review pada SHA Gabungan `14b064ee9e653a0eecd548f93e4a4b41c6f6eebc`
+
+Setelah menggabungkan `t3/frontend-review-fixes` (`e2b6011d7df5765ba0993257e2e51a5e0cba9c6e`) ke `integration/p0-frontend` (`cd7dfc1dc43dada5d079f345b42eb166351855da`) dengan mempertahankan transport tunggal [`frontend/src/lib/api/client.ts`](../frontend/src/lib/api/client.ts) (`responseType: 'json' | 'blob'` pada `apiRequest` dan wrapper `apiBlob`), menghasilkan komit kode gabungan **`14b064ee9e653a0eecd548f93e4a4b41c6f6eebc`** (pohon kode tidak berubah oleh komit dokumentasi setelahnya), verifikasi akhir dijalankan satu kali pada root proyek:
+
+### A. Perintah Eksak & Kode Keluar Aktual
+
+```powershell
+# Di direktori frontend/
+npm run check
+# Output: svelte-check found 0 errors and 0 warnings
+# Exit code: 0
+
+npm run build
+# Output: ✓ built in 874ms (SSR) / ✓ built in 686ms (client)
+# Exit code: 0
+
+$env:TEST_WEB_PORT='62173'
+$env:TEST_API_PORT='62080'
+$env:GOMAXPROCS='2'
+$env:GOFLAGS='-p=2'
+npx playwright test --workers=1 --reporter=list
+# Output: 7 passed (47.6s) across all 6 spec files
+# Exit code: 0
+```
+
+### B. Ringkasan 7 Pengujian pada 6 File Spesifikasi (`47.6s`)
+
+1. `tests/auth-shell.spec.ts` — login petugas, bootstrap sesi eksplisit, pemulihan error berbeda, tampilan kesiapan, penghentian monitoring terautentikasi sebelum logout, dan retensi sesi saat logout gagal (`2.6s`).
+2. `tests/findings-and-follow-up.spec.ts` — filter galeri, verifikasi bukti biner melalui `apiBlob` (termasuk invalidasi sesi bersama pada `401` bukti biner), konfirmasi/tolak/koreksi, tindak lanjut, penanganan `410`/`409`/lock, temuan manual, dan persistensi reload (`5.5s`).
+3. `tests/inspection-journey.spec.ts` — perjalanan inspeksi utama ujung-ke-ujung dengan 2 track (`101` `NO_HELMET`, `202` `NO_VEST`), konfirmasi temporal 2-dari-3 di Go, kesamaan SHA-256 bukti JPEG asli, review/koreksi/tindak lanjut, laporan `TEMPLATE` edit/ack/approve & lock, pemisahan dashboard, dan ketahanan melintasi restart proses Go (`7.0s`).
+4. `tests/monitoring.spec.ts` (unit helper) — perhitungan ukuran aspek `640×480`, penskalaan bbox, header API, dan loop satu-in-flight (`25ms`).
+5. `tests/monitoring.spec.ts` (browser `/monitoring`) — lookup proyek/zona Go nyata, pelepasan kamera jujur pada `503 AI_UNAVAILABLE`, tautan & metadata aktual temuan tanpa tebakan track/kategori, state eksplisit thumbnail `410`/`403`/retry dengan pembersihan `blob:` URL, dan penghentian siklus hidup (`1.5s`).
+6. `tests/projects-dashboard.spec.ts` — CRUD master data P0-02, pemulihan konflik, penjaga respons asinkron usang (*stale response guards*) pada pergantian filter proyek/zona, dan ringkasan dashboard terpisah mode (`4.8s`).
+7. `tests/reports-and-approval.spec.ts` — kelayakan sesi tertutup, kegagalan jujur Gemini (`503`) & retensi `request_key`, pembuatan `TEMPLATE` & `MANUAL`, suntingan versi, penonaktifan tombol setujui saat sumber usang (`source_is_stale`) atau belum diakui, regenerasi di tempat serta hapus/buat ulang terpisah yang terkonfirmasi, dan penguncian permanen (`5.2s`).
+
+### C. Tanda Terima Hash Bukti & `X-Request-Id` Aktual (`../frontend/test-results/acceptance/journey-evidence-summary.json`)
+
+- **File Ringkasan Bukti**: [`../frontend/test-results/acceptance/journey-evidence-summary.json`](../frontend/test-results/acceptance/journey-evidence-summary.json)
+- **Mode / Model / Engine Fixture**: `simulated` / `ppe-sim-fixture-v1` / `eng-sim-fixture-p0-07`
+- **Frame Pemicu**: Sequence `#2`, `640 × 480 px`, `6500` byte
+- **`triggeringJpegSha256`**: `e6ebbebf3676c7fb953e0b1389ca0d73f36536d92448994f1e6041270ca0f146`
+- **`storedEvidenceSha256`**: `e6ebbebf3676c7fb953e0b1389ca0d73f36536d92448994f1e6041270ca0f146`
+- **`postRestartEvidenceSha256`**: `e6ebbebf3676c7fb953e0b1389ca0d73f36536d92448994f1e6041270ca0f146`
+- **`monitoringDesktopScreenshotSha256`**: `bf9ce7e6a43061787413c058f10013e57e1b6176c100c1ec36aa07a8b5455bc6`
+
+| Endpoint Publik Go | `X-Request-Id` Terobservasi (Run Pasca-Review `14b064e`) |
+|---|---|
+| `GET /api/v1/auth/me` | `req-8e43d636ce58` |
+| `POST /api/v1/auth/login` | `req-7375ec726c17` |
+| `GET /api/v1/system/status` | `req-f0fd17742212` |
+| `GET /api/v1/projects` | `req-c505c426fc00` |
+| `GET /api/v1/dashboard/summary` | `req-96e83393d2d4` |
+| `POST /api/v1/projects` | `req-01800990066d` |
+| `GET /api/v1/projects/1` | `req-1fc3d2af8496` |
+| `GET /api/v1/projects/1/zones` | `req-139d1ccdb480` |
+| `POST /api/v1/projects/1/zones` | `req-8c23e4bd16fb` |
+| `GET /api/v1/monitoring/sessions` | `req-2bdfdb7c32f5` |
+| `POST /api/v1/monitoring/sessions` | `req-f6f3cd720aa7` |
+| `POST /api/v1/monitoring/sessions/1/frames` | `req-3a411bb8a273` |
+| `GET /api/v1/findings/1/evidence` | `req-494b1ab43fc1` |
+| `GET /api/v1/findings/2/evidence` | `req-8d09b7bee0f0` |
+| `POST /api/v1/monitoring/sessions/1/stop` | `req-9f228ea03d99` |
+| `GET /api/v1/findings/1` | `req-7af60df8bd9c` |
+| `GET /api/v1/zones/1` | `req-ef54457067a2` |
+| `GET /api/v1/monitoring/sessions/1` | `req-8d325507570b` |
+| `PATCH /api/v1/findings/1` | `req-d455ae3e5720` |
+| `GET /api/v1/findings` | `req-e162e233a9e7` |
+| `GET /api/v1/findings/2` | `req-65bcf0a86c1f` |
+| `PATCH /api/v1/findings/2` | `req-6cc37172e443` |
+| `GET /api/v1/reports` | `req-af43afe8b706` |
+| `POST /api/v1/reports` | `req-54fdc68715a9` |
+| `GET /api/v1/reports/1` | `req-f0ea44330127` |
+| `PATCH /api/v1/reports/1` | `req-d0ec2c512324` |
+| `POST /api/v1/reports/1/approve` | `req-6ffe2a985715` |
+
+### D. Status Gerbang Akhir & Pembersihan
+
+- **Gerbang 1 (Aplikasi & Pipeline Lokal Terintegrasi)**: **PASS** (`7 passed (47.6s)`).
+- **Gerbang 2 (Inferensi PPE Kamera Nyata `AI_MODE=real`)**: **NOT RUN** (ketergantungan eksternal di luar lingkup frontend-only; tidak diverifikasi pada tugas ini meskipun kode `ai-service/` tersedia di upstream).
+- **Gerbang 3 (Generasi Narasi Laporan Gemini Nyata)**: **NOT RUN** (ketergantungan eksternal di luar lingkup frontend-only; tanpa kunci/kuota live Gemini).
+- **Pembersihan Proses**: `0` proses `api`, `seed`, atau listener port uji (`15173`, `18080`, `25175`, `28085`, `45175`, `48085`, `48009`, `55175`, `58085`, `62173`, `62080`) yang tersisa.
+- **Status Serah Terima Koordinator**: Kode dan bukti penerimaan siap di `integration/p0-frontend`; publikasi PR siap-tinjau, penutupan tiket pelacak, dan pembersihan worktree berada di bawah kendali koordinator.
