@@ -1,0 +1,58 @@
+# Local dev stack. Secrets come from ./.env (copy .env.example); service .env files are for native runs only.
+name: k3-inspection
+
+services:
+  migrate:
+    image: ghcr.io/amacneil/dbmate:2.29.5
+    command: ["--no-dump-schema", "up"]
+    environment:
+      DATABASE_URL: sqlite:/data/k3.sqlite
+      DBMATE_MIGRATIONS_DIR: /db/migrations
+    volumes:
+      - storage:/data
+      - ./backend/migrations:/db/migrations:ro
+
+  ai-service:
+    build: ./ai-service
+    env_file: ai-service/.env.example
+    environment:
+      AI_HOST: 0.0.0.0
+      AI_INTERNAL_TOKEN: ${AI_INTERNAL_TOKEN:-dev-internal-token-local-only}
+      AI_MODE: ${AI_MODE:-real}
+    volumes:
+      - ./ai-service/models:/app/models:ro
+
+  backend:
+    build: ./backend
+    env_file: backend/.env.example
+    environment:
+      HTTP_ADDR: 0.0.0.0:8080
+      DB_PATH: /app/storage/k3.sqlite
+      EVIDENCE_DIR: /app/storage/evidence
+      AI_BASE_URL: http://ai-service:8000
+      AI_INTERNAL_TOKEN: ${AI_INTERNAL_TOKEN:-dev-internal-token-local-only}
+      AI_MODE: ${AI_MODE:-real}
+      SEED_PASSWORD: ${SEED_PASSWORD:-}
+      GEMINI_ENABLED: ${GEMINI_ENABLED:-false}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - storage:/app/storage
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      ai-service:
+        condition: service_started
+
+  frontend:
+    build: ./frontend
+    environment:
+      API_PROXY_TARGET: http://backend:8080
+    ports:
+      - "127.0.0.1:5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  storage:

@@ -1,0 +1,10 @@
+.env
+!.env.example
+backend/storage/
+ai-service/.venv/
+ai-service/models/*
+!ai-service/models/.gitkeep
+ai-service/datasets/
+ai-service/runs/
+__pycache__/
+*.pyc
