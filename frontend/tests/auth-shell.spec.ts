@@ -51,11 +51,24 @@ test('officer login, explicit session bootstrap, distinct error recovery, readin
 	await expect(page.getByText(/Indikasi Tanpa Helm \(NO_HELMET\)/i)).toBeVisible();
 	await expect(page.getByText(/Indikasi Tanpa Rompi \(NO_VEST\)/i)).toBeVisible();
 
-	// Integrated Monitoring module is an active link; unintegrated modules remain explicitly disabled with a reason
-	const monitoringNav = page.getByRole('link', { name: /Monitoring/i });
-	await expect(monitoringNav).toHaveAttribute('href', '/monitoring');
-	const reportsNav = page.getByRole('button', { name: /Laporan/i });
-	await expect(reportsNav).toBeDisabled();
+	// Integrated workspace modules are active navigation links in the primary sidebar
+	const primaryNav = page.getByRole('navigation', { name: /Navigasi utama/i });
+	await expect(primaryNav.getByRole('link', { name: /Proyek & Zona/i })).toHaveAttribute(
+		'href',
+		'/projects'
+	);
+	await expect(primaryNav.getByRole('link', { name: /Monitoring/i })).toHaveAttribute(
+		'href',
+		'/monitoring'
+	);
+	await expect(primaryNav.getByRole('link', { name: /Temuan/i })).toHaveAttribute(
+		'href',
+		'/findings'
+	);
+	await expect(primaryNav.getByRole('link', { name: /Laporan/i })).toHaveAttribute(
+		'href',
+		'/reports'
+	);
 
 	// 4. Responsive layout on narrow viewport
 	await page.setViewportSize({ width: 390, height: 844 });

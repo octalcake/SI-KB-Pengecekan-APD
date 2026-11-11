@@ -20,8 +20,8 @@
 		{ label: 'Dashboard', href: '/' },
 		{ label: 'Proyek & Zona', href: '/projects' },
 		{ label: 'Monitoring', href: '/monitoring' },
-		{ label: 'Temuan', disabledReason: 'Belum tersedia pada tahap ini' },
-		{ label: 'Laporan', disabledReason: 'Belum tersedia pada tahap ini' }
+		{ label: 'Temuan', href: '/findings' },
+		{ label: 'Laporan', href: '/reports' }
 	];
 
 	let { children, navItems = defaultNavItems }: Props = $props();
