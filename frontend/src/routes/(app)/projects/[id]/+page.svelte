@@ -1176,6 +1176,9 @@
 	}
 
 	.breadcrumb a {
+		display: inline-flex;
+		align-items: center;
+		min-height: 2.75rem;
 		font-size: 0.875rem;
 		font-weight: 600;
 		color: var(--accent-primary);
@@ -1194,6 +1197,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
+		min-width: 0;
 	}
 
 	.project-header,
@@ -1203,6 +1207,12 @@
 		align-items: flex-start;
 		justify-content: space-between;
 		gap: 1rem;
+		min-width: 0;
+	}
+
+	.project-header > div,
+	.zone-list-header > div {
+		min-width: 0;
 	}
 
 	.title-row {
@@ -1210,22 +1220,26 @@
 		flex-wrap: wrap;
 		align-items: center;
 		gap: 0.5rem;
+		min-width: 0;
 	}
 
 	.title-row h1 {
 		margin: 0;
 		font-size: 1.4rem;
+		overflow-wrap: anywhere;
 	}
 
 	.panel h2 {
 		margin: 0;
 		font-size: 1.125rem;
+		overflow-wrap: anywhere;
 	}
 
 	.panel-desc {
 		margin: 0.2rem 0 0 0;
 		font-size: 0.875rem;
 		color: var(--ink-secondary);
+		overflow-wrap: anywhere;
 	}
 
 	.meta-row {
@@ -1236,12 +1250,14 @@
 		font-size: 0.8125rem;
 		color: var(--ink-secondary);
 		font-variant-numeric: tabular-nums;
+		overflow-wrap: anywhere;
 	}
 
 	.project-desc {
 		margin: 0.5rem 0 0 0;
 		font-size: 0.9375rem;
 		color: var(--ink-primary);
+		overflow-wrap: anywhere;
 	}
 
 	.header-actions,
@@ -1325,6 +1341,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
+		min-width: 0;
 	}
 
 	.edit-box h2,
@@ -1341,7 +1358,7 @@
 
 	.form-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
 		gap: 0.875rem;
 	}
 
@@ -1349,6 +1366,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.3rem;
+		min-width: 0;
 	}
 
 	.field-group label {
@@ -1364,6 +1382,8 @@
 	.field-group input,
 	.field-group select,
 	.field-group textarea {
+		width: 100%;
+		min-width: 0;
 		padding: 0.5rem 0.75rem;
 		border-radius: 8px;
 		border: 1px solid var(--border-strong);
@@ -1401,6 +1421,11 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.875rem;
+		min-width: 0;
+	}
+
+	.zone-main {
+		min-width: 0;
 	}
 
 	.zone-card[data-status='archived'] {
@@ -1410,6 +1435,7 @@
 	.zone-name {
 		font-size: 1rem;
 		color: var(--ink-primary);
+		overflow-wrap: anywhere;
 	}
 
 	.zone-actions {
@@ -1517,12 +1543,47 @@
 
 	.pagination-controls {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 0.5rem;
 	}
 
 	@media (max-width: 720px) {
 		.panel {
 			padding: 1rem;
+		}
+
+		.zone-card {
+			padding: 0.9rem;
+		}
+
+		.edit-box {
+			padding: 0.85rem;
+		}
+
+		.header-actions,
+		.zone-actions {
+			width: 100%;
+		}
+
+		.header-actions > button,
+		.zone-actions > button {
+			flex: 1 1 auto;
+		}
+
+		.zone-list-header .field-group {
+			width: 100%;
+		}
+
+		.form-actions > button {
+			flex: 1 1 140px;
+		}
+
+		.pagination-controls {
+			width: 100%;
+		}
+
+		.pagination-controls > button {
+			flex: 1 1 120px;
 		}
 	}
 </style>

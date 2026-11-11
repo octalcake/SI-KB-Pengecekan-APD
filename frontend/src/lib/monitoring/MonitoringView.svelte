@@ -1205,7 +1205,7 @@
 
 	.readiness-strip {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
 		gap: 0.75rem;
 	}
 
@@ -1217,6 +1217,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.25rem;
+		min-width: 0;
 	}
 
 	.stat-label {
@@ -1230,6 +1231,7 @@
 	.stat-value {
 		font-size: 0.95rem;
 		color: var(--ink-primary, #1c1a17);
+		overflow-wrap: anywhere;
 	}
 
 	.stat-value[data-ready='true'] {
@@ -1243,6 +1245,7 @@
 	.stat-note {
 		font-size: 0.75rem;
 		color: var(--ink-secondary, #4a453d);
+		overflow-wrap: anywhere;
 	}
 
 	.category-pills {
@@ -1271,6 +1274,7 @@
 		border: 1px solid var(--border-strong, #c9c3b6);
 		border-radius: 10px;
 		padding: 1rem 1.125rem;
+		min-width: 0;
 	}
 
 	.lookup-error {
@@ -1282,7 +1286,7 @@
 
 	.control-form {
 		display: grid;
-		grid-template-columns: 1fr 1fr auto;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
 		gap: 0.875rem;
 		align-items: end;
 	}
@@ -1291,6 +1295,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.35rem;
+		min-width: 0;
 	}
 
 	.field-group label {
@@ -1300,6 +1305,8 @@
 	}
 
 	.field-group select {
+		width: 100%;
+		min-width: 0;
 		padding: 0.55rem 0.7rem;
 		border-radius: 7px;
 		border: 1px solid var(--border-strong, #c9c3b6);
@@ -1373,6 +1380,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1.125rem;
+		min-width: 0;
 	}
 
 	.preview-card,
@@ -1382,6 +1390,7 @@
 		border: 1px solid var(--border-default, #dcd7cb);
 		border-radius: 10px;
 		padding: 1.125rem;
+		min-width: 0;
 	}
 
 	.preview-header {
@@ -1410,10 +1419,11 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 0.4rem;
+		min-height: 2.75rem;
 		font-size: 0.78rem;
 		font-weight: 600;
 		cursor: pointer;
-		padding: 0.3rem 0.6rem;
+		padding: 0.35rem 0.65rem;
 		border-radius: 6px;
 		background: var(--bg-subtle, #ece9e1);
 		border: 1px solid var(--border-strong, #c9c3b6);
@@ -1492,6 +1502,7 @@
 
 	.captures-header {
 		display: flex;
+		flex-wrap: wrap;
 		justify-content: space-between;
 		align-items: center;
 		gap: 0.5rem;
@@ -1530,12 +1541,17 @@
 
 	.capture-item {
 		display: grid;
-		grid-template-columns: 112px 1fr;
+		grid-template-columns: 112px minmax(0, 1fr);
 		gap: 0.75rem;
 		padding: 0.65rem;
 		border-radius: 8px;
 		background: var(--bg-canvas, #f5f3ee);
 		border: 1px solid var(--border-default, #dcd7cb);
+		min-width: 0;
+	}
+
+	.capture-details {
+		min-width: 0;
 	}
 
 	.capture-thumb-wrap {
@@ -1599,15 +1615,28 @@
 		margin: 0.2rem 0 0 0;
 		font-size: 0.76rem;
 		color: var(--ink-secondary, #4a453d);
+		overflow-wrap: anywhere;
 	}
 
 	.capture-links {
 		margin-top: 0.45rem;
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.65rem;
+		gap: 0.5rem 0.75rem;
 		font-size: 0.78rem;
 		font-weight: 700;
+	}
+
+	.finding-link,
+	.evidence-link {
+		display: inline-flex;
+		align-items: center;
+		min-height: 2.75rem;
+		padding: 0.35rem 0.65rem;
+		border-radius: 6px;
+		border: 1px solid var(--border-strong, #c9c3b6);
+		background: var(--bg-surface, #ffffff);
+		text-decoration: none;
 	}
 
 	.session-history-item {
@@ -1615,12 +1644,15 @@
 		border-radius: 7px;
 		background: var(--bg-canvas, #f5f3ee);
 		border: 1px solid var(--border-default, #dcd7cb);
+		min-width: 0;
 	}
 
 	.sess-row {
 		display: flex;
+		flex-wrap: wrap;
 		justify-content: space-between;
 		align-items: center;
+		gap: 0.35rem;
 		font-size: 0.85rem;
 	}
 
@@ -1647,15 +1679,59 @@
 		margin: 0.2rem 0 0 0;
 		font-size: 0.76rem;
 		color: var(--ink-secondary, #4a453d);
+		overflow-wrap: anywhere;
 	}
 
 	@media (max-width: 980px) {
 		.control-form {
-			grid-template-columns: 1fr;
+			grid-template-columns: minmax(0, 1fr);
 		}
 
 		.monitoring-grid {
-			grid-template-columns: 1fr;
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+
+	@media (max-width: 640px) {
+		.control-card,
+		.preview-card,
+		.captures-card,
+		.sessions-card {
+			padding: 0.9rem;
+		}
+
+		.action-group {
+			width: 100%;
+		}
+
+		.action-group > button {
+			width: 100%;
+			min-height: 2.75rem;
+		}
+
+		.mirror-toggle {
+			width: 100%;
+		}
+
+		.video-placeholder {
+			padding: 0.85rem;
+		}
+
+		.capture-item {
+			grid-template-columns: minmax(0, 1fr);
+		}
+
+		.capture-thumb-wrap {
+			width: 100%;
+			height: auto;
+			aspect-ratio: 4 / 3;
+			max-height: 180px;
+		}
+
+		.capture-links > a {
+			flex: 1 1 140px;
+			justify-content: center;
+			text-align: center;
 		}
 	}
 </style>

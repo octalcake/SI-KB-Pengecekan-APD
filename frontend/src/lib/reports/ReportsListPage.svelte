@@ -1020,6 +1020,7 @@
 		border: 1px solid var(--border-default, #d0d7de);
 		border-radius: 10px;
 		padding: 1.15rem 1.25rem;
+		min-width: 0;
 	}
 
 	.panel-header h2 {
@@ -1037,6 +1038,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
+		min-width: 0;
 	}
 
 	.form-field,
@@ -1044,6 +1046,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.35rem;
+		min-width: 0;
 	}
 
 	label,
@@ -1057,6 +1060,7 @@
 	input[type='text'],
 	textarea {
 		width: 100%;
+		min-width: 0;
 		padding: 0.55rem 0.75rem;
 		border-radius: 6px;
 		border: 1px solid var(--border-strong, #8c959f);
@@ -1077,6 +1081,7 @@
 		border: 1px solid var(--border-default, #d0d7de);
 		background: var(--bg-subtle, #f6f8fa);
 		font-size: 0.875rem;
+		overflow-wrap: anywhere;
 	}
 
 	.eligibility-card[data-eligible='true'] {
@@ -1112,11 +1117,12 @@
 		border-radius: 8px;
 		padding: 0.85rem 1rem;
 		margin: 0;
+		min-width: 0;
 	}
 
 	.method-tabs {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
 		gap: 0.75rem;
 		margin-top: 0.5rem;
 	}
@@ -1131,6 +1137,8 @@
 		background: var(--bg-subtle, #f6f8fa);
 		cursor: pointer;
 		font-weight: 400;
+		min-width: 0;
+		overflow-wrap: anywhere;
 	}
 
 	.method-option.selected {
@@ -1162,6 +1170,7 @@
 		border: 1px solid var(--border-default, #d0d7de);
 		background: var(--bg-subtle, #f6f8fa);
 		font-size: 0.85rem;
+		overflow-wrap: anywhere;
 	}
 
 	.gemini-info-box p {
@@ -1224,7 +1233,7 @@
 
 	.filter-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
 		gap: 0.85rem;
 	}
 
@@ -1303,13 +1312,15 @@
 		margin: 0;
 		font-size: 1.15rem;
 		color: var(--ink-primary, #1f2328);
+		overflow-wrap: anywhere;
 	}
 
 	.card-meta-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
 		gap: 0.5rem 1rem;
 		font-size: 0.875rem;
+		overflow-wrap: anywhere;
 	}
 
 	.meta-label {
@@ -1341,9 +1352,12 @@
 	}
 
 	.finding-ref-chip {
-		display: inline-block;
-		padding: 0.15rem 0.5rem;
-		border-radius: 4px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 2.75rem;
+		padding: 0.25rem 0.65rem;
+		border-radius: 6px;
 		font-size: 0.8125rem;
 		font-weight: 600;
 		background: var(--bg-subtle, #f6f8fa);
@@ -1397,6 +1411,7 @@
 
 	.pagination-bar {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		justify-content: center;
 		gap: 1rem;
@@ -1406,6 +1421,26 @@
 	@media (max-width: 768px) {
 		.header-badges {
 			align-items: flex-start;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.create-panel,
+		.filter-bar,
+		.report-card,
+		.state-box {
+			padding: 0.95rem 1rem;
+		}
+
+		.method-fieldset {
+			padding: 0.75rem;
+		}
+
+		.create-actions > button,
+		.filter-actions > button,
+		.card-footer > .btn-primary {
+			width: 100%;
+			min-height: 2.75rem;
 		}
 	}
 </style>

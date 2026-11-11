@@ -355,4 +355,26 @@
 		padding: 0.1rem 0.35rem;
 		border-radius: 4px;
 	}
+
+	@media (max-width: 640px) {
+		.login-page {
+			padding: max(1rem, env(safe-area-inset-top)) max(0.875rem, env(safe-area-inset-right))
+				max(1.25rem, env(safe-area-inset-bottom)) max(0.875rem, env(safe-area-inset-left));
+		}
+
+		.login-panel {
+			padding: 1.35rem 1.15rem;
+		}
+
+		.field-group input {
+			min-height: 2.75rem;
+			font-size: 1rem;
+		}
+
+		.primary-button,
+		.secondary-button {
+			min-height: 2.75rem;
+			width: 100%;
+		}
+	}
 </style>

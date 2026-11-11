@@ -207,6 +207,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.875rem;
+		min-width: 0;
 	}
 
 	.snapshot-header {
@@ -232,6 +233,7 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 0.45rem;
+		min-height: 2.75rem;
 		font-size: 0.8125rem;
 		font-weight: 600;
 		cursor: pointer;
@@ -274,6 +276,7 @@
 		background: var(--bg-subtle, #ece9e1);
 		border: 1px solid var(--border-default, #dcd7cb);
 		color: var(--ink-primary, #1c1a17);
+		overflow-wrap: anywhere;
 	}
 
 	.meta-chip[data-stale='true'] {
@@ -320,6 +323,7 @@
 		position: absolute;
 		inset: 0;
 		pointer-events: none;
+		overflow: hidden;
 	}
 
 	.bbox {
@@ -359,6 +363,9 @@
 		line-height: 1.2;
 		padding: 0.15rem 0.35rem;
 		white-space: nowrap;
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
 		color: #ffffff;
 		background: #0369a1;
 		border-radius: 3px 3px 0 0;
@@ -434,11 +441,22 @@
 		margin: 0;
 		font-size: 0.8125rem;
 		font-weight: 600;
+		overflow-wrap: anywhere;
 	}
 
 	.disclaimer-note {
 		margin: 0.6rem 0 0 0;
 		font-size: 0.75rem;
 		color: var(--ink-muted, #655e53);
+	}
+
+	@media (max-width: 640px) {
+		.snapshot-card {
+			padding: 0.9rem;
+		}
+
+		.toggle-label {
+			width: 100%;
+		}
 	}
 </style>
