@@ -51,9 +51,11 @@ test('officer login, explicit session bootstrap, distinct error recovery, readin
 	await expect(page.getByText(/Indikasi Tanpa Helm \(NO_HELMET\)/i)).toBeVisible();
 	await expect(page.getByText(/Indikasi Tanpa Rompi \(NO_VEST\)/i)).toBeVisible();
 
-	// Upcoming modules are explicitly disabled with a reason rather than broken links
-	const monitoringNav = page.getByRole('button', { name: /Monitoring/i });
-	await expect(monitoringNav).toBeDisabled();
+	// Integrated Monitoring module is an active link; unintegrated modules remain explicitly disabled with a reason
+	const monitoringNav = page.getByRole('link', { name: /Monitoring/i });
+	await expect(monitoringNav).toHaveAttribute('href', '/monitoring');
+	const reportsNav = page.getByRole('button', { name: /Laporan/i });
+	await expect(reportsNav).toBeDisabled();
 
 	// 4. Responsive layout on narrow viewport
 	await page.setViewportSize({ width: 390, height: 844 });
