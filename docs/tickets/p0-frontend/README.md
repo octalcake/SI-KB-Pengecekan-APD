@@ -4,7 +4,7 @@ Spec: [Complete the P0 frontend](../../spec-p0-frontend-integration.md).
 Authoritative scope: [frontend only, existing APIs unchanged](../../frontend-only-scope.md).
 Integration branch: `integration/p0-frontend`.
 Base: `cbfcf803c78061d0de79b9368197c6447614d1d1` from upstream `main`.
-Tracker: GitHub Issues in octalcake/SI-KB-Pengecekan-APD. Publication is pending authentication; these committed local records mirror the work and do not replace tracker closure.
+Tracker: [spec #4](https://github.com/octalcake/SI-KB-Pengecekan-APD/issues/4), with active frontend tickets #6, #7, #8, #9, #10 and #12. Publication and native dependency relationships have been verified against the current frontend-only scope. Backend tickets #5 and #11 are closed as not planned. See tracker-publication.json for the live-verified mapping.
 
 | Ticket | End-to-end result | Blocked by | Planned agent |
 |---|---|---|---|
@@ -22,8 +22,8 @@ P0-00 (Python pipeline) and P0-06 (model/runtime) are cancelled/out of scope for
 - Work only on the ready frontier. Each implementer uses a delegation-tool worktree based on the integration branch, reads its ticket and confirmed spec, uses the TDD skill at already-confirmed seams, commits its changes, and merges the current integration tip before reporting.
 - A separate merger agent integrates each completed ticket; open and link a draft PR after the first functional merge, with real spec/ticket closing references once publication is available.
 - The user requested Antigravity 1–3 all be assigned and clarified FRONTEND ONLY. Preserve/resume Antigravity 1's existing login work, assign Antigravity 2 findings/report frontend, and Antigravity 3 monitoring frontend. No backend edits or inference installs. Frontend feature components may be prepared concurrently; final shared-auth integration/browser acceptance waits for P0-01. Bound test/build concurrency and use nonconflicting ports. The linked Mac has no runnable requested provider yet.
-- Antigravity 2's later run succeeded but tracker publication was blocked by signed-out GitHub browser/CLI. Defer publication; do not let that block frontend coding. Antigravity 3's backend task failed before edits with account verification and was explicitly stopped from resuming. Preserve requested provider/model choices.
+- Tracker publication later succeeded after authentication became available. The coordinator corrected its older scope, closed backend-only tickets as not planned, and verified frontend-only issue bodies and native dependency links. Antigravity 3's backend task failed before edits and was explicitly stopped from resuming. Preserve requested provider/model choices and frontend assignments.
 - Tests use the user-confirmed browser -> real Go/SQLite/evidence/FastAPI seam, existing Go HTTP tests and Python contract tests, with separate real webcam/Gemini proof. No new user confirmation is required for those seams.
 - Do not mark a ticket or spec closed from implementation or fixtures alone when required runtime or external acceptance remains unproved.
 
-Current priority: finish/resume P0-01 from its preserved frontend worktree; prepare P0-03/P0-04 frontend components independently, integrate them once the shared foundation lands. GitHub publication is pending authentication. No backend changes have been made in either implementation worktree.
+Current priority: finish/resume P0-01 (#6) from its preserved frontend worktree; prepare P0-03 (#8)/P0-04 (#9) frontend components independently and integrate them once the shared foundation lands. The eventual integration PR should close #4, #6, #7, #8, #9, #10 and #12 after frontend acceptance. No backend changes have been made in either implementation worktree.

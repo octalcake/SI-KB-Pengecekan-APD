@@ -1,7 +1,7 @@
 # P0-01: Sign in and enter the inspection workspace
 
 Parent spec: [P0 frontend integration](../../spec-p0-frontend-integration.md).
-Tracker: GitHub publication pending; this local record is an implementation mirror, not a closed tracker issue.
+Tracker: https://github.com/octalcake/SI-KB-Pengecekan-APD/issues/6 — open frontend implementation ticket.
 Blocked by: None.
 Assigned lane: Antigravity 1, Gemini 4 Argon, high.
 Status: in progress in the existing Antigravity 1 worktree; do not cancel or duplicate this implementation.

@@ -1,7 +1,7 @@
 # P0-07: Verify and hand off the integrated local inspection workflow
 
 Parent spec: [P0 frontend integration](../../spec-p0-frontend-integration.md).
-Tracker: GitHub publication pending.
+Tracker: https://github.com/octalcake/SI-KB-Pengecekan-APD/issues/12 — open frontend acceptance ticket.
 Blocked by: P0-02, P0-03, P0-04, P0-05. Backend/model readiness is an external dependency; do not implement it as part of acceptance.
 Assigned lane: Antigravity 3 for runtime evidence; Antigravity 1 for final UI corrections, sequentially.
 Status: blocked.

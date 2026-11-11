@@ -1,7 +1,7 @@
 # P0-06: Load the exported PPE model in the local runtime
 
 Parent spec: [P0 frontend integration](../../spec-p0-frontend-integration.md).
-Tracker: GitHub publication pending.
+Tracker: https://github.com/octalcake/SI-KB-Pengecekan-APD/issues/11 — closed as not planned; outside frontend scope.
 Blocked by: P0-03; actual Colab export/checkpoint and compatible CPU dependencies.
 Assigned lane: Antigravity 3, Gemini 4 Argon, high.
 Status: outside the user's frontend-only scope. Do not implement backend/model/runtime work. Treat real model readiness as an external dependency exposed through existing API responses.

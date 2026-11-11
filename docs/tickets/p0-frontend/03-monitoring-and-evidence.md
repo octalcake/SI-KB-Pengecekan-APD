@@ -1,7 +1,7 @@
 # P0-03: Integrate the browser monitoring frontend with existing APIs
 
 Parent spec: [P0 frontend integration](../../spec-p0-frontend-integration.md).
-Tracker: GitHub publication pending.
+Tracker: https://github.com/octalcake/SI-KB-Pengecekan-APD/issues/8 — open frontend implementation ticket.
 Blocked by: P0-01 for final shared-auth integration and browser acceptance. Frontend monitoring components and contract-driven capture logic can be prepared independently. P0-00 is cancelled/out of scope.
 Assigned lane: Antigravity 3, Gemini 4 Argon, high.
 Status: blocked.
