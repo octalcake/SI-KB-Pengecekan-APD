@@ -167,7 +167,7 @@ func newEnv(t *testing.T, gen gemini.Generator) *env {
 		FrameTargetFPS: 100, ConfirmHits: 2, ConfirmMaxFrames: 3, ConfirmWindow: 2 * time.Second,
 		TrackTimeout: 5 * time.Second, SessionIdleTimeout: time.Minute, FrameMaxBytes: 1 << 20, FrameMaxPixels: 1_000_000,
 		AITimeout: time.Second, FrameTotalDeadline: 2 * time.Second, AIMode: "real",
-		ReportPromptVersion: "k3-report-v1", DisplayTimezone: jakarta,
+		ReportPromptVersion: "k3-report-v2", DisplayTimezone: jakarta,
 	}
 	conf, box := 0.9, [4]float64{0.3, 0.1, 0.4, 0.3}
 	ai := &fakeAI{persons: []aiclient.Person{{TrackID: 17, Confidence: 0.9, BBox: [4]float64{0.2, 0.1, 0.6, 0.9},

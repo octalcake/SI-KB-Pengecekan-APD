@@ -39,6 +39,8 @@ Model YOLO: `best.pt` dan `model_manifest.json` ada di `ai-service/models/` (di-
 
 Gemini: isi `GEMINI_ENABLED=true` dan `GEMINI_API_KEY` di `.env` root, lalu `docker compose up -d backend`.
 
+Mode simulasi (fallback bila model belum siap): set `AI_MODE=simulated` di `.env` root lalu `docker compose up -d backend ai-service`. ai-service memakai fixture deterministik (gambar diabaikan, bukan inferensi): satu Person, NO_HELMET `+, unknown, +, +, -, -` berulang. Semua sesi, temuan, dan laporan tercatat permanen sebagai `simulated`; dashboard default hanya menghitung `real`. Kembalikan ke `AI_MODE=real` untuk demo model nyata.
+
 ## Jalankan native (tanpa Docker)
 
 ```sh

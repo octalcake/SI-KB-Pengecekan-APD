@@ -41,6 +41,7 @@ func TestLoad(t *testing.T) {
 		"gemini needs real key": {map[string]string{"GEMINI_ENABLED": "true"}, "GEMINI_API_KEY"},
 		"loosened window":       {map[string]string{"CONFIRM_WINDOW_MS": "3000"}, "baseline"},
 		"bad mode":              {map[string]string{"AI_MODE": "fake"}, "AI_MODE"},
+		"old prompt version":    {map[string]string{"REPORT_PROMPT_VERSION": "k3-report-v1"}, "REPORT_PROMPT_VERSION"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {

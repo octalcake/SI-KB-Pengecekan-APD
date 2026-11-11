@@ -44,7 +44,9 @@ func TestReportFlow(t *testing.T) {
 	gem := &fakeGemini{}
 	e := newEnv(t, gem)
 	c := e.c
+	e.ai.mu.Lock()
 	e.ai.ready = true
+	e.ai.mu.Unlock()
 
 	st, b := c.do("POST", "/auth/login", map[string]string{"username": "petugas", "password": "correct-password"}, nil)
 	expect(t, "login", st, 200, b)
@@ -110,6 +112,12 @@ func TestReportFlow(t *testing.T) {
 	}
 	if strings.Contains(gem.inputs[0], "0812") || strings.Contains(gem.inputs[0], "track") {
 		t.Fatalf("payload leaked phone or track data: %s", gem.inputs[0])
+	}
+	if !strings.Contains(gem.inputs[0], `"detection_method":"deteksi_otomatis_model_lalu_diverifikasi_petugas"`) {
+		t.Fatalf("payload must say findings came from automatic detection: %s", gem.inputs[0])
+	}
+	if rep["prompt_version"] != "k3-report-v2" {
+		t.Fatalf("prompt_version: %v", rep["prompt_version"])
 	}
 	st, b = c.do("POST", "/reports/generate", map[string]any{"session_id": sid, "request_key": k1}, nil)
 	if st != 201 || num(data(b), "id") != rid || gem.calls != 1 {
@@ -177,6 +185,21 @@ func TestReportFlow(t *testing.T) {
 	d := data(b)
 	if num(d, "sessions") != 1 || num(d, "findings_confirmed") != 1 || num(d, "findings_pending") != 0 || num(d, "confirmed_actions_open") != 1 {
 		t.Fatalf("dashboard counts: %v", d)
+	}
+	st, b = c.do("GET", "/dashboard/trends?from=2000-01-01T00:00:00Z", nil, nil)
+	expect(t, "trends", st, 200, b)
+	today := time.Now().In(e.api.Cfg.DisplayTimezone).Format("2006-01-02")
+	if tr := b["data"].([]any); len(tr) != 1 || tr[0].(map[string]any)["date"] != today || num(tr[0].(map[string]any), "count_confirmed") != 1 {
+		t.Fatalf("trends: %v (want %s)", b, today)
+	}
+	st, b = c.do("GET", "/dashboard/zones", nil, nil)
+	expect(t, "zones", st, 200, b)
+	if zs := b["data"].([]any); len(zs) != 1 || zs[0].(map[string]any)["zone_name"] != "Lantai 2" || num(zs[0].(map[string]any), "count_confirmed") != 1 {
+		t.Fatalf("zones: %v", b)
+	}
+	_, b = c.do("GET", "/dashboard/zones?mode=simulated", nil, nil)
+	if len(b["data"].([]any)) != 0 {
+		t.Fatalf("simulated must not include real findings: %v", b)
 	}
 	st, b = c.do("GET", "/dashboard/summary?from=2000-01-01", nil, nil)
 	expect(t, "from without offset", st, 400, b)

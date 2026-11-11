@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"strings"
@@ -173,6 +174,14 @@ func sanitize(s string) string {
 	return phoneRe.ReplaceAllString(emailRe.ReplaceAllString(s, "[disamarkan]"), "[disamarkan]")
 }
 
+// detectionMethod tells Gemini how findings arose; the DB allows manual findings only in
+// manual sessions, so the session mode decides it for every finding.
+var detectionMethod = map[string]string{
+	domain.ModeReal:      "deteksi_otomatis_model_lalu_diverifikasi_petugas",
+	domain.ModeSimulated: "simulasi_lalu_diverifikasi_petugas",
+	domain.ModeManual:    "observasi_manual_petugas",
+}
+
 // payload is the minimum data sent to Gemini (SRS §13.3): no photo, track ID, names or locations.
 func (s *Reports) payload(src *source) ([]byte, string, error) {
 	type item struct {
@@ -184,12 +193,13 @@ func (s *Reports) payload(src *source) ([]byte, string, error) {
 		ActionNote   string `json:"action_note"`
 	}
 	p := struct {
-		SessionRef     string `json:"session_ref"`
-		Mode           string `json:"mode"`
-		Timezone       string `json:"timezone"`
-		ConfirmedCount int    `json:"confirmed_count"`
-		Findings       []item `json:"findings"`
-	}{SessionRef: fmt.Sprintf("S-%d", src.snap.SessionID), Mode: src.snap.Mode,
+		SessionRef      string `json:"session_ref"`
+		Mode            string `json:"mode"`
+		DetectionMethod string `json:"detection_method"`
+		Timezone        string `json:"timezone"`
+		ConfirmedCount  int    `json:"confirmed_count"`
+		Findings        []item `json:"findings"`
+	}{SessionRef: fmt.Sprintf("S-%d", src.snap.SessionID), Mode: src.snap.Mode, DetectionMethod: detectionMethod[src.snap.Mode],
 		Timezone: s.Cfg.DisplayTimezone.String(), ConfirmedCount: len(src.snap.Findings)}
 	for _, f := range src.snap.Findings {
 		p.Findings = append(p.Findings, item{FindingRef: fmt.Sprintf("F-%d", f.ID), Category: f.ViolationType,
@@ -224,8 +234,10 @@ func (s *Reports) generate(ctx context.Context, src *source) (*gemini.Narrative,
 	case err == nil:
 		return n, payloadHash, nil
 	case errors.As(err, &ie):
+		slog.Warn("gemini output rejected", "session_id", src.snap.SessionID, "err", err)
 		return nil, "", domain.NewError(http.StatusBadGateway, "INVALID_GEMINI_OUTPUT", "Output Gemini tidak valid; coba lagi atau buat draft manual.")
 	default:
+		slog.Warn("gemini unavailable", "session_id", src.snap.SessionID, "err", err)
 		return nil, "", errGeminiUnavailable()
 	}
 }

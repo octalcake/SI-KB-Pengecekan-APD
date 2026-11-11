@@ -151,3 +151,21 @@ func (q Q) FindingEvidence(ctx context.Context, id int64) (string, error) {
 	err := q.q.QueryRowContext(ctx, `SELECT evidence_path FROM findings WHERE id = ? AND deleted_at IS NULL`, id).Scan(&path)
 	return path, notFound(err)
 }
+
+// EvidencePaths returns every stored evidence path, soft-deleted findings included.
+func (q Q) EvidencePaths(ctx context.Context) (map[string]bool, error) {
+	rows, err := q.q.QueryContext(ctx, `SELECT evidence_path FROM findings`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]bool{}
+	for rows.Next() {
+		var p string
+		if err := rows.Scan(&p); err != nil {
+			return nil, err
+		}
+		out[p] = true
+	}
+	return out, rows.Err()
+}

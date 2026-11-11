@@ -147,33 +147,3 @@ func (a *API) deleteReport(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.Error(w, r, err)
 }
-
-func (a *API) dashboardSummary(w http.ResponseWriter, r *http.Request) {
-	var f domain.DashboardFilter
-	var err error
-	f.ProjectID, err = queryInt(r, "project_id")
-	if err == nil {
-		f.ZoneID, err = queryInt(r, "zone_id")
-	}
-	if err == nil {
-		f.From, err = timeParam(r, "from")
-	}
-	if err == nil {
-		f.To, err = timeParam(r, "to")
-	}
-	if err == nil {
-		f.Mode, err = oneOf(r, "mode", "real", "simulated", "manual")
-	}
-	if err == nil {
-		if f.Mode == "" {
-			f.Mode = "real" // never mix simulated with real by default (§9.8)
-		}
-		var out *domain.DashboardSummary
-		if out, err = a.Store.Q().DashboardSummary(r.Context(), f); err == nil {
-			out.Timezone = a.Cfg.DisplayTimezone.String()
-			httpx.Data(w, http.StatusOK, out)
-			return
-		}
-	}
-	httpx.Error(w, r, err)
-}

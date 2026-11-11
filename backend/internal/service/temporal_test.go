@@ -93,3 +93,21 @@ func TestUnsupportedViolationIgnored(t *testing.T) {
 		t.Fatal("unsupported violation must not confirm")
 	}
 }
+
+// TEMP-05: absent 4.9s keeps the episode; absent >= 5s starts a new one.
+func TestEpisodeBoundary(t *testing.T) {
+	e := newEngine()
+	key := func(sec float64) string {
+		keys, _ := e.Observe(at(sec), []aiclient.Person{person(7, "negative")}, both)
+		return keys[0]
+	}
+	if k := key(0); k != "7:1" {
+		t.Fatalf("first = %s", k)
+	}
+	if k := key(4.9); k != "7:1" {
+		t.Fatalf("after 4.9s = %s, want same episode", k)
+	}
+	if k := key(9.9); k != "7:2" {
+		t.Fatalf("after 5.0s = %s, want new episode", k)
+	}
+}
