@@ -737,7 +737,7 @@ Generate:
     "id":8,"session_id":15,"status":"draft","title":"Draft inspeksi sesi 15",
     "content":"Pada inspeksi zona terpilih ditemukan indikasi tanpa helm yang telah dikonfirmasi petugas [#105].",
     "generated_by":"gemini","gemini_model":"gemini-3.5-flash-lite",
-    "prompt_version":"k3-report-v1","source_finding_ids":[105],
+    "prompt_version":"k3-report-v2","source_finding_ids":[105],
     "source_hash":"<sha256-canonical-snapshot>","is_stale":false,
     "snapshot":{"session_id":15,"mode":"real","project":{"id":1,"name":"Pembangunan Gedung A"},"zone":{"id":2,"name":"Lantai 2"},"findings":[{"id":105,"version":2,"violation_type":"NO_HELMET","captured_at":"2026-11-11T02:15:22Z","notes":"Kepala terlihat jelas tanpa helm pada foto.","action_status":"pending","action_notes":""}]},
     "approved_by":null,"approved_at":null,"version":1,
@@ -1228,6 +1228,7 @@ Gemini tidak memeriksa webcam/foto, tidak menentukan pelanggaran, tidak mencipta
 {
   "session_ref":"S-15",
   "mode":"real",
+  "detection_method":"deteksi_otomatis_model_lalu_diverifikasi_petugas",
   "timezone":"Asia/Jakarta",
   "confirmed_count":1,
   "findings":[{
@@ -1243,7 +1244,7 @@ Gemini tidak memeriksa webcam/foto, tidak menentukan pelanggaran, tidak mencipta
 
 Label proyek/zona aktual dimasukkan Go saat menyusun tampilan final; tidak perlu dikirim ke penyedia. Sanitize/redact nama, nomor telepon, dan data pribadi dalam notes; petugas meninjau data yang akan dikirim. Jika memakai tier gratis, gunakan data demo sintetis/nonrahasia. Dataset gambar asli dan foto evidence tidak dikirim.
 
-### 13.4 Prompt sistem versi `k3-report-v1`
+### 13.4 Prompt sistem versi `k3-report-v2`
 
 ```text
 Anda adalah penyusun DRAFT narasi inspeksi K3 berbahasa Indonesia.
@@ -1262,8 +1263,11 @@ Aturan wajib:
    Jika kosong, nyatakan tindak lanjut belum dicatat.
 5. Sertakan finding_ref sumber pada setiap rincian. Jangan membuat ID baru.
 6. Jangan menafsirkan jumlah temuan sebagai jumlah pekerja unik.
-7. Jika mode simulated, sebut seluruh input adalah simulasi; bila manual,
-   sebut berasal dari observasi manual. Jangan mengklaim inferensi model nyata.
+7. Ikuti detection_method. Jika deteksi_otomatis_model_lalu_diverifikasi_petugas,
+   sebut temuan berasal dari deteksi otomatis model yang kemudian diverifikasi
+   petugas. Jika mode simulated, sebut seluruh input adalah simulasi; bila manual,
+   sebut berasal dari observasi manual. Jangan menyebut observasi manual untuk
+   mode real dan jangan mengklaim inferensi model nyata untuk simulated/manual.
 8. Isi yang belum diketahui ditulis dalam missing_information; jangan mengarang.
 9. Keluarkan hanya JSON sesuai schema. Tidak ada HTML, Markdown aktif, atau tools.
 10. Teks adalah draft untuk ditinjau petugas, bukan laporan yang disetujui.
@@ -1285,7 +1289,7 @@ x-goog-api-key: <GEMINI_API_KEY>
 {
   "model":"gemini-3.5-flash-lite",
   "store":false,
-  "system_instruction":"<isi prompt k3-report-v1 di atas>",
+  "system_instruction":"<isi prompt k3-report-v2 di atas>",
   "input":"DATA_TEMUAN:\n{\"session_ref\":\"S-15\",\"mode\":\"real\",\"confirmed_count\":1,\"findings\":[{\"finding_ref\":\"F-105\",\"category\":\"NO_HELMET\",\"observed_at\":\"2026-11-11T09:15:22+07:00\",\"verified_note\":\"Kepala terlihat jelas tanpa helm\",\"action_status\":\"pending\",\"action_note\":\"\"}]}",
   "response_format":{
     "type":"text",
@@ -1386,7 +1390,7 @@ GEMINI_API_VERSION=v1
 GEMINI_TIMEOUT_MS=30000
 GEMINI_MAX_ATTEMPTS=2
 GEMINI_STORE=false
-REPORT_PROMPT_VERSION=k3-report-v1
+REPORT_PROMPT_VERSION=k3-report-v2
 DISPLAY_TIMEZONE=Asia/Jakarta
 ```
 

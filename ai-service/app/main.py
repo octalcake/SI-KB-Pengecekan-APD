@@ -9,6 +9,7 @@ from app.api import router
 from app.config import Settings
 from app.detector import Detector
 from app.session_state import Sessions, SessionError
+from app.simulated import SimulatedDetector
 
 
 def create_app(settings: Settings | None = None, detector=None) -> FastAPI:
@@ -16,7 +17,8 @@ def create_app(settings: Settings | None = None, detector=None) -> FastAPI:
     async def lifespan(app: FastAPI):
         app.state.settings = settings or Settings()
         # Weights load once per process (SRS §10); tests inject a fake detector.
-        app.state.detector = detector or Detector(app.state.settings)
+        s = app.state.settings
+        app.state.detector = detector or (SimulatedDetector(s) if s.ai_mode == "simulated" else Detector(s))
         app.state.sessions = Sessions(app.state.detector)
         yield
 

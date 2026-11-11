@@ -80,6 +80,8 @@ func (a *API) Routes() http.Handler {
 	h("POST /api/v1/reports/{id}/approve", req(a.approveReport))
 
 	h("GET /api/v1/dashboard/summary", req(a.dashboardSummary))
+	h("GET /api/v1/dashboard/trends", req(a.dashboardTrends))
+	h("GET /api/v1/dashboard/zones", req(a.dashboardZones))
 
 	h("/", func(w http.ResponseWriter, r *http.Request) { httpx.Error(w, r, domain.NotFound()) })
 

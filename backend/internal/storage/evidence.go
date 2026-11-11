@@ -62,6 +62,48 @@ func (e *Evidence) Remove(rel string) {
 	}
 }
 
+const quarantineDir = "quarantine"
+
+// Quarantine moves files that no finding references (orphans from a crash between
+// file write and DB insert, or leftover .tmp-* files) to <root>/quarantine/<rel>.
+// Nothing is deleted (SRS §6.6). Returns how many files were moved.
+func (e *Evidence) Quarantine(known map[string]bool) (int, error) {
+	var orphans []string
+	err := filepath.WalkDir(e.root, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			if os.IsNotExist(err) && p == e.root {
+				return filepath.SkipAll // no evidence written yet
+			}
+			return err
+		}
+		rel, _ := filepath.Rel(e.root, p)
+		rel = filepath.ToSlash(rel)
+		if d.IsDir() {
+			if rel == quarantineDir {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !known[rel] {
+			orphans = append(orphans, rel)
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	for i, rel := range orphans {
+		dst := filepath.Join(e.root, quarantineDir, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(dst), 0o750); err != nil {
+			return i, err
+		}
+		if err := os.Rename(filepath.Join(e.root, filepath.FromSlash(rel)), dst); err != nil {
+			return i, err
+		}
+	}
+	return len(orphans), nil
+}
+
 // NewUUID returns a random RFC 4122 v4 UUID.
 func NewUUID() string {
 	var b [16]byte

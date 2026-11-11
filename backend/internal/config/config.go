@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+
+	"k3/backend/internal/gemini"
 )
 
 type Config struct {
@@ -112,6 +114,10 @@ func Load() (*Config, error) {
 	case "real", "simulated", "manual":
 	default:
 		r.fail("AI_MODE", "must be real, simulated or manual")
+	}
+	// The stored prompt_version must name the prompt actually sent.
+	if c.ReportPromptVersion != gemini.PromptVersion {
+		r.fail("REPORT_PROMPT_VERSION", "must be "+gemini.PromptVersion)
 	}
 	// Temporal baseline is locked by SRS §2.1; do not loosen it silently.
 	if c.ConfirmHits != 2 || c.ConfirmMaxFrames != 3 || c.ConfirmWindow != 2*time.Second || c.TrackTimeout != 5*time.Second {
