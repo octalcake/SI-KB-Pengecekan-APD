@@ -2,7 +2,7 @@
 
 Parent spec: [P0 frontend integration](../../spec-p0-frontend-integration.md).
 Tracker: GitHub publication pending.
-Blocked by: P0-01 (project/zone APIs already exist; P0-02 UI is not a prerequisite).
+Blocked by: P0-00 and P0-01 (project/zone APIs already exist; P0-02 UI is not a prerequisite). Reuse the Python boundary from P0-00 rather than rebuild it.
 Assigned lane: Antigravity 3, Gemini 4 Argon, high.
 Status: blocked.
 

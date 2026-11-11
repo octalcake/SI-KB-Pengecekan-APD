@@ -4,7 +4,7 @@ Parent spec: [P0 frontend integration](../../spec-p0-frontend-integration.md).
 Tracker: GitHub publication pending; this local record is an implementation mirror, not a closed tracker issue.
 Blocked by: None.
 Assigned lane: Antigravity 1, Gemini 4 Argon, high.
-Status: ready-for-agent.
+Status: in progress in the existing Antigravity 1 worktree; do not cancel or duplicate this implementation.
 
 ## What it delivers
 
