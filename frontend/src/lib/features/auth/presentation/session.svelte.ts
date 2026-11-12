@@ -27,18 +27,18 @@ export function createAuthSessionStore(workflow: AuthWorkflow) {
 	}
 
 	workflow.hooks.onUnauthorized(() => {
-		clearSession('Sesi Anda telah berakhir. Silakan masuk kembali.');
+		clearSession('Sesi sudah berakhir. Masuk lagi untuk melanjutkan.');
 	});
 
 	async function refreshSystemStatus(): Promise<SystemStatus | null> {
-		if(status !== 'authenticated') {
+		if (status !== 'authenticated') {
 			return null;
 		}
 		systemStatusLoading = true;
 		systemStatusError = null;
 		try {
 			const outcome = await workflow.runRefreshSystemStatus();
-			if(outcome.ok) {
+			if (outcome.ok) {
 				systemStatus = outcome.systemStatus;
 				return outcome.systemStatus;
 			}
@@ -78,7 +78,7 @@ export function createAuthSessionStore(workflow: AuthWorkflow) {
 		registerBeforeLogout(callback: (() => Promise<void>) | null): () => void {
 			beforeLogoutCallback = callback;
 			return () => {
-				if(beforeLogoutCallback === callback) {
+				if (beforeLogoutCallback === callback) {
 					beforeLogoutCallback = null;
 				}
 			};
@@ -87,10 +87,10 @@ export function createAuthSessionStore(workflow: AuthWorkflow) {
 		clearSession,
 
 		async bootstrap(force = false): Promise<AuthBootstrapStatus> {
-			if(!force && (status === 'authenticated' || status === 'unauthenticated')) {
+			if (!force && (status === 'authenticated' || status === 'unauthenticated')) {
 				return status;
 			}
-			if(inflightBootstrap && !force) {
+			if (inflightBootstrap && !force) {
 				return inflightBootstrap;
 			}
 
@@ -100,7 +100,7 @@ export function createAuthSessionStore(workflow: AuthWorkflow) {
 			const run = (async (): Promise<AuthBootstrapStatus> => {
 				try {
 					const outcome = await workflow.runBootstrap();
-					if(outcome.status === 'authenticated') {
+					if (outcome.status === 'authenticated') {
 						user = outcome.user;
 						csrfToken = outcome.csrfToken;
 						sessionNotice = null;
@@ -108,7 +108,7 @@ export function createAuthSessionStore(workflow: AuthWorkflow) {
 						await refreshSystemStatus();
 						return 'authenticated';
 					}
-					if(outcome.status === 'unauthenticated') {
+					if (outcome.status === 'unauthenticated') {
 						clearSession(sessionNotice);
 						return 'unauthenticated';
 					}
@@ -142,7 +142,7 @@ export function createAuthSessionStore(workflow: AuthWorkflow) {
 
 		async logout(): Promise<void> {
 			const outcome = await workflow.runLogout(beforeLogoutCallback);
-			if(outcome.cleared) {
+			if (outcome.cleared) {
 				clearSession(null);
 				return;
 			}

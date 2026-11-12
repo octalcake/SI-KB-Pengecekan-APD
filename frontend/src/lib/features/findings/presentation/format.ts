@@ -1,4 +1,7 @@
-import { isApiError as isFindingApiError, type ApiError as SharedApiErrorLike } from '#lib/shared/errors';
+import {
+	isApiError as isFindingApiError,
+	type ApiError as SharedApiErrorLike
+} from '#lib/shared/errors';
 import type {
 	ActionStatus,
 	BBox,
@@ -9,23 +12,23 @@ import type {
 } from '../domain/types';
 
 export function formatViolationLabel(type: ViolationType | string | null | undefined): string {
-	if(type === 'NO_HELMET') return 'Indikasi Tanpa Helm (NO_HELMET)';
-	if(type === 'NO_VEST') return 'Indikasi Tanpa Rompi (NO_VEST)';
-	if(!type) return 'Tidak ada deteksi otomatis';
+	if (type === 'NO_HELMET') return 'Indikasi tanpa helm';
+	if (type === 'NO_VEST') return 'Indikasi tanpa rompi';
+	if (!type) return 'Tidak ada deteksi otomatis';
 	return String(type);
 }
 
 export function formatViolationShortLabel(type: ViolationType | string | null | undefined): string {
-	if(type === 'NO_HELMET') return 'Tanpa Helm';
-	if(type === 'NO_VEST') return 'Tanpa Rompi';
-	if(!type) return 'Manual / Kosong';
+	if (type === 'NO_HELMET') return 'Tanpa Helm';
+	if (type === 'NO_VEST') return 'Tanpa Rompi';
+	if (!type) return 'Manual / Kosong';
 	return String(type);
 }
 
 export function formatVerificationStatusLabel(status: VerificationStatus | string): string {
-	switch(status) {
+	switch (status) {
 		case 'pending':
-			return 'Menunggu Verifikasi';
+			return 'Belum diperiksa';
 		case 'confirmed':
 			return 'Terkonfirmasi';
 		case 'rejected':
@@ -36,11 +39,11 @@ export function formatVerificationStatusLabel(status: VerificationStatus | strin
 }
 
 export function formatActionStatusLabel(status: ActionStatus | string): string {
-	switch(status) {
+	switch (status) {
 		case 'pending':
-			return 'Belum Ditindaklanjuti';
+			return 'Belum ditindaklanjuti';
 		case 'in_progress':
-			return 'Sedang Ditindaklanjuti';
+			return 'Dalam proses';
 		case 'completed':
 			return 'Selesai';
 		default:
@@ -49,7 +52,7 @@ export function formatActionStatusLabel(status: ActionStatus | string): string {
 }
 
 export function formatModeLabel(mode: SystemMode | string): string {
-	switch(mode) {
+	switch (mode) {
 		case 'real':
 			return 'NYATA';
 		case 'simulated':
@@ -62,8 +65,8 @@ export function formatModeLabel(mode: SystemMode | string): string {
 }
 
 export function formatSourceLabel(source: FindingSource | string): string {
-	if(source === 'auto') return 'Otomatis (Konfirmasi Temporal)';
-	if(source === 'manual') return 'Observasi Manual Petugas';
+	if (source === 'auto') return 'Deteksi kamera';
+	if (source === 'manual') return 'Foto manual';
 	return String(source);
 }
 
@@ -79,9 +82,9 @@ const jakartaFormatter = new Intl.DateTimeFormat('id-ID', {
 });
 
 export function formatJakartaDateTime(iso: string | null | undefined): string {
-	if(!iso) return '—';
+	if (!iso) return '—';
 	const date = new Date(iso);
-	if(Number.isNaN(date.getTime())) return iso;
+	if (Number.isNaN(date.getTime())) return iso;
 	return `${jakartaFormatter.format(date)} WIB`;
 }
 
@@ -90,41 +93,38 @@ export function formatJakartaDateTime(iso: string | null | undefined): string {
  * to a UTC RFC3339 timestamp with `Z` suffix as required by Go `timeParam` (SRS §9.1).
  * `from` is inclusive (`00:00:00.000+07:00`), `to` is exclusive next-day start (`00:00:00.000+07:00` + 1 day) when date-only.
  */
-export function localFilterDateToUtcRfc3339(
-	value: string,
-	bound: 'from' | 'to'
-): string {
+export function localFilterDateToUtcRfc3339(value: string, bound: 'from' | 'to'): string {
 	const trimmed = value.trim();
-	if(!trimmed) return '';
+	if (!trimmed) return '';
 
-	if(/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+	if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
 		const startJakarta = new Date(`${trimmed}T00:00:00.000+07:00`);
-		if(Number.isNaN(startJakarta.getTime())) return '';
-		if(bound === 'to') {
+		if (Number.isNaN(startJakarta.getTime())) return '';
+		if (bound === 'to') {
 			const nextDay = new Date(startJakarta.getTime() + 24 * 60 * 60 * 1000);
 			return nextDay.toISOString();
 		}
 		return startJakarta.toISOString();
 	}
 
-	if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(trimmed)) {
+	if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(trimmed)) {
 		const withSec = trimmed.length === 16 ? `${trimmed}:00` : trimmed;
 		const dt = new Date(`${withSec}+07:00`);
-		if(Number.isNaN(dt.getTime())) return '';
+		if (Number.isNaN(dt.getTime())) return '';
 		return dt.toISOString();
 	}
 
 	const parsed = new Date(trimmed);
-	if(Number.isNaN(parsed.getTime())) return trimmed;
+	if (Number.isNaN(parsed.getTime())) return trimmed;
 	return parsed.toISOString();
 }
 
 export function normalizeBBox(raw: unknown): BBox | null {
-	if(!Array.isArray(raw) || raw.length !== 4) return null;
+	if (!Array.isArray(raw) || raw.length !== 4) return null;
 	const nums = raw.map((n) => Number(n));
-	if(nums.some((n) => !Number.isFinite(n))) return null;
+	if (nums.some((n) => !Number.isFinite(n))) return null;
 	const [xMin, yMin, xMax, yMax] = nums;
-	if(xMin < 0 || yMin < 0 || xMax > 1 || yMax > 1 || xMin >= xMax || yMin >= yMax) {
+	if (xMin < 0 || yMin < 0 || xMax > 1 || yMax > 1 || xMin >= xMax || yMin >= yMax) {
 		return null;
 	}
 	return [xMin, yMin, xMax, yMax];
@@ -140,52 +140,52 @@ export function bboxToPercentStyle(bbox: BBox): string {
 }
 
 export function formatConfidenceScore(confidence: number | null | undefined): string {
-	if(confidence === null || confidence === undefined || !Number.isFinite(confidence)) {
-		return 'Tidak ada (pencatatan manual)';
+	if (confidence === null || confidence === undefined || !Number.isFinite(confidence)) {
+		return 'Tidak tersedia (foto manual)';
 	}
-	return `${(confidence * 100).toFixed(1)}% (${confidence.toFixed(2)} — skor indikasi model, bukan kepastian pelanggaran)`;
+	return `${(confidence * 100).toFixed(1)}% (skor model, bukan kepastian pelanggaran)`;
 }
 
 export function translateFieldError(field: string, reason: string): string {
 	const r = reason.trim().toLowerCase();
-	if(field === 'notes') {
-		if(r.includes('required when rejected')) {
-			return 'Alasan penolakan wajib diisi pada catatan verifikasi.';
+	if (field === 'notes') {
+		if (r.includes('required when rejected')) {
+			return 'Alasan penolakan wajib diisi pada catatan pemeriksaan.';
 		}
-		if(r.includes('reason required to correct')) {
+		if (r.includes('reason required to correct')) {
 			return 'Catatan alasan koreksi wajib diisi saat mengubah keputusan verifikasi sebelumnya.';
 		}
-		if(r.includes('max') || r.includes('2000')) {
-			return 'Catatan verifikasi maksimal 2.000 karakter.';
+		if (r.includes('max') || r.includes('2000')) {
+			return 'Catatan pemeriksaan maksimal 2.000 karakter.';
 		}
-		return `Catatan verifikasi tidak valid (${reason}).`;
+		return `Catatan pemeriksaan tidak valid (${reason}).`;
 	}
-	if(field === 'action_notes') {
-		if(r.includes('required when completed')) {
+	if (field === 'action_notes') {
+		if (r.includes('required when completed')) {
 			return 'Catatan tindak lanjut wajib diisi sebelum menandai tindak lanjut selesai.';
 		}
-		if(r.includes('max') || r.includes('2000')) {
+		if (r.includes('max') || r.includes('2000')) {
 			return 'Catatan tindak lanjut maksimal 2.000 karakter.';
 		}
 		return `Catatan tindak lanjut tidak valid (${reason}).`;
 	}
-	if(field === 'violation_type') {
-		return 'Jenis indikasi APD wajib dipilih (NO_HELMET atau NO_VEST).';
+	if (field === 'violation_type') {
+		return 'Pilih kategori tanpa helm atau tanpa rompi.';
 	}
-	if(field === 'verification_status') {
-		return 'Status keputusan verifikasi harus Dikonfirmasi atau Ditolak.';
+	if (field === 'verification_status') {
+		return 'Pilih Dikonfirmasi atau Ditolak.';
 	}
-	if(field === 'action_status') {
+	if (field === 'action_status') {
 		return 'Status tindak lanjut tidak valid.';
 	}
-	if(field === 'session_id') {
-		return 'Sesi mode manual yang sudah ditutup wajib dipilih.';
+	if (field === 'session_id') {
+		return 'Pilih sesi manual yang sudah selesai.';
 	}
-	if(field === 'evidence') {
-		return 'File foto bukti JPEG wajib dilampirkan.';
+	if (field === 'evidence') {
+		return 'Pilih foto JPEG.';
 	}
-	if(field === 'version') {
-		return 'Versi data (version) wajib disertakan untuk mencegah konflik perubahan.';
+	if (field === 'version') {
+		return 'Data belum lengkap. Ambil data terbaru, lalu coba lagi.';
 	}
 	return `${field}: ${reason}`;
 }
@@ -214,11 +214,11 @@ export function parseFindingApiError(
 	err: unknown,
 	fallbackMessage = 'Terjadi kesalahan saat memproses permintaan temuan.'
 ): ParsedFindingError {
-	if(!isFindingApiError(err)) {
+	if (!isFindingApiError(err)) {
 		return {
 			status: 0,
 			code: 'UNKNOWN_ERROR',
-			title: 'Kesalahan Aplikasi',
+			title: 'Ada masalah di aplikasi',
 			message: err instanceof Error && err.message ? err.message : fallbackMessage,
 			fieldErrors: {},
 			requestId: null,
@@ -238,85 +238,69 @@ export function parseFindingApiError(
 
 	const apiErr: SharedApiErrorLike = err;
 	const fieldErrors: Record<string, string> = {};
-	if(apiErr.fields) {
-		for(const [key, val] of Object.entries(apiErr.fields)) {
+	if (apiErr.fields) {
+		for (const [key, val] of Object.entries(apiErr.fields)) {
 			fieldErrors[key] = translateFieldError(key, val);
 		}
 	}
 
 	const code = apiErr.code || `HTTP_${apiErr.status}`;
 	const isUnauthorized = apiErr.status === 401;
-	const isManualFallbackDisabled =
-		apiErr.status === 403 && code === 'MANUAL_FALLBACK_DISABLED';
+	const isManualFallbackDisabled = apiErr.status === 403 && code === 'MANUAL_FALLBACK_DISABLED';
 	const isForbidden = apiErr.status === 403;
 	const isEvidenceMissing = apiErr.status === 410 || code === 'EVIDENCE_MISSING';
 	const isVersionConflict = apiErr.status === 409 && code === 'VERSION_CONFLICT';
 	const isReportLocked = apiErr.status === 409 && code === 'REPORT_LOCKED';
-	const isFindingConfirmedDeleteLock =
-		apiErr.status === 409 && code === 'FINDING_CONFIRMED';
-	const isActionRequiresConfirmed =
-		apiErr.status === 422 && code === 'ACTION_REQUIRES_CONFIRMED';
+	const isFindingConfirmedDeleteLock = apiErr.status === 409 && code === 'FINDING_CONFIRMED';
+	const isActionRequiresConfirmed = apiErr.status === 422 && code === 'ACTION_REQUIRES_CONFIRMED';
 	const isSessionNotManual = apiErr.status === 422 && code === 'SESSION_NOT_MANUAL';
-	const isNetworkError = Boolean(apiErr.isNetworkError || apiErr.status === 0 || code === 'BACKEND_UNREACHABLE');
+	const isNetworkError = Boolean(
+		apiErr.isNetworkError || apiErr.status === 0 || code === 'BACKEND_UNREACHABLE'
+	);
 	const isSharedFoundationMissing = code === 'SHARED_FOUNDATION_MISSING';
 
 	let title = 'Permintaan Gagal';
 	let message = apiErr.message || fallbackMessage;
 
-	if(isSharedFoundationMissing) {
-		title = 'Prasyarat Modul Fondasi Belum Terintegrasi';
-	} else if(isNetworkError) {
-		title = 'Layanan Backend Tidak Terjangkau';
+	if (isSharedFoundationMissing) {
+		title = 'Fitur belum tersedia';
+	} else if (isNetworkError) {
+		title = 'Server belum terhubung';
+		message = 'Cek koneksi, lalu coba lagi. Isianmu belum hilang.';
+	} else if (isUnauthorized) {
+		title = 'Sesi sudah berakhir';
+		message = 'Masuk lagi untuk melanjutkan. Catatanmu masih ada di halaman ini.';
+	} else if (isManualFallbackDisabled) {
+		title = 'Pencatatan manual belum aktif';
+		message = 'Hubungi operator untuk mengaktifkan pencatatan manual.';
+	} else if (isForbidden) {
+		title = 'Akses ditolak';
+		message = 'Masuk lagi, lalu coba ulang. Kalau masih ditolak, hubungi operator.';
+	} else if (isEvidenceMissing) {
+		title = 'Foto bukti tidak ditemukan';
 		message =
-			apiErr.message ||
-			'Tidak dapat terhubung ke server Go (/api/v1). Input Anda tetap tersimpan di layar; periksa koneksi atau proses backend lalu coba lagi.';
-	} else if(isUnauthorized) {
-		title = 'Sesi Autentikasi Berakhir (401)';
+			'Foto asli tidak ada di penyimpanan. Hubungi operator; temuan ini belum bisa diperiksa.';
+	} else if (isVersionConflict) {
+		title = 'Temuan sudah diubah';
 		message =
-			'Sesi login Anda tidak valid atau telah berakhir. Catatan yang belum disimpan tetap ada di halaman ini; silakan masuk kembali.';
-	} else if(isManualFallbackDisabled) {
-		title = 'Pencatatan Manual Dinonaktifkan Server (403)';
+			'Temuan ini diubah dari tempat lain. Ambil data terbaru, lalu simpan lagi. Isianmu belum hilang.';
+	} else if (isReportLocked) {
+		title = 'Temuan terkunci';
+		message = 'Temuan ini masuk laporan yang sudah disetujui, jadi tidak bisa diubah atau dihapus.';
+	} else if (isFindingConfirmedDeleteLock) {
+		title = 'Temuan sudah dikonfirmasi';
 		message =
-			apiErr.message ||
-			'Fitur pencatatan temuan manual tidak diaktifkan pada konfigurasi server (ALLOW_MANUAL_FALLBACK=false).';
-	} else if(isForbidden) {
-		title = 'Akses Ditolak (403)';
-		message =
-			apiErr.message ||
-			'Permintaan ditolak oleh server (token CSRF tidak cocok atau hak akses tidak terpenuhi).';
-	} else if(isEvidenceMissing) {
-		title = 'File Bukti Asli Tidak Ditemukan (410)';
-		message =
-			apiErr.message ||
-			'File foto bukti asli tidak ditemukan di penyimpanan server (EVIDENCE_MISSING). Sistem tidak mengganti foto yang hilang dengan gambar lain.';
-	} else if(isVersionConflict) {
-		title = 'Konflik Versi Data (409 VERSION_CONFLICT)';
-		message =
-			'Data temuan ini telah diubah di tab atau proses lain. Input Anda dipertahankan di formulir; muat ulang data terbaru sebelum menyimpan ulang.';
-	} else if(isReportLocked) {
-		title = 'Terkunci oleh Laporan Disetujui (409 REPORT_LOCKED)';
-		message =
-			apiErr.message ||
-			'Temuan ini sudah menjadi bagian dari snapshot laporan inspeksi yang telah disetujui (approved) dan tidak dapat diubah atau dihapus.';
-	} else if(isFindingConfirmedDeleteLock) {
-		title = 'Temuan Terkonfirmasi Tidak Dapat Dihapus Langsung (409)';
-		message =
-			apiErr.message ||
-			'Temuan berstatus Terkonfirmasi harus dikoreksi menjadi Ditolak terlebih dahulu dengan alasan sebelum dapat dihapus.';
-	} else if(isActionRequiresConfirmed) {
-		title = 'Tindak Lanjut Membutuhkan Konfirmasi (422)';
-		message =
-			apiErr.message ||
-			'Tindak lanjut hanya dapat dicatat untuk temuan yang sudah berstatus Terkonfirmasi.';
-	} else if(isSessionNotManual) {
-		title = 'Sesi Tidak Memenuhi Syarat Manual (422)';
-		message =
-			apiErr.message ||
-			'Temuan manual hanya dapat ditambahkan ke sesi bermode manual yang sudah ditutup (stopped/interrupted).';
-	} else if(apiErr.status === 422 || code === 'VALIDATION_ERROR') {
-		title = 'Validasi Input Gagal (422)';
+			'Jika konfirmasi keliru, ubah keputusan menjadi Ditolak dan isi alasannya sebelum menghapus.';
+	} else if (isActionRequiresConfirmed) {
+		title = 'Konfirmasi temuan dulu';
+		message = 'Tindak lanjut bisa dicatat setelah temuan dikonfirmasi.';
+	} else if (isSessionNotManual) {
+		title = 'Pilih sesi manual yang selesai';
+		message = 'Pilih sesi manual yang sudah selesai untuk menambah foto.';
+	} else if (apiErr.status === 422 || code === 'VALIDATION_ERROR') {
+		title = 'Periksa isian';
 		const firstFieldMsg = Object.values(fieldErrors)[0];
-		if(firstFieldMsg) {
+		if (firstFieldMsg) {
 			message = firstFieldMsg;
 		}
 	}

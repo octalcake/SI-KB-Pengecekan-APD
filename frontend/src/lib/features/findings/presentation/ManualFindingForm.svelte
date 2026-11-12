@@ -1,14 +1,7 @@
 <script lang="ts">
 	import { authSession } from '#lib/app/auth';
-	import {
-		createManualFindingApi,
-		createManualSessionApi
-	} from '#lib/app/findings';
-	import {
-		formatJakartaDateTime,
-		parseFindingApiError,
-		type ParsedFindingError
-	} from './format';
+	import { createManualFindingApi, createManualSessionApi } from '#lib/app/findings';
+	import { formatJakartaDateTime, parseFindingApiError, type ParsedFindingError } from './format';
 	import type {
 		Finding,
 		ProjectLookup,
@@ -66,7 +59,7 @@
 	);
 
 	$effect(() => {
-		if(eligibleManualSessions.length > 0 && selectedSessionId === 0) {
+		if (eligibleManualSessions.length > 0 && selectedSessionId === 0) {
 			selectedSessionId = eligibleManualSessions[0].id;
 		}
 	});
@@ -85,17 +78,17 @@
 		const pid = Number(target.value) || 0;
 		newSessionProjectId = pid;
 		newSessionZoneId = 0;
-		if(pid > 0 && onEnsureZonesLoaded) {
+		if (pid > 0 && onEnsureZonesLoaded) {
 			await onEnsureZonesLoaded(pid);
 		}
 	}
 
 	async function handleCreateManualSession(event: SubmitEvent) {
 		event.preventDefault();
-		if(creatingSession) return;
+		if (creatingSession) return;
 		createSessionError = null;
 
-		if(newSessionProjectId <= 0 || newSessionZoneId <= 0) {
+		if (newSessionProjectId <= 0 || newSessionZoneId <= 0) {
 			createSessionError = {
 				status: 422,
 				code: 'VALIDATION_ERROR',
@@ -126,11 +119,8 @@
 			});
 			selectedSessionId = sess.id;
 			onSessionCreated?.(sess);
-		} catch(err) {
-			createSessionError = parseFindingApiError(
-				err,
-				'Gagal membuat sesi mode manual.'
-			);
+		} catch (err) {
+			createSessionError = parseFindingApiError(err, 'Gagal membuat sesi mode manual.');
 		} finally {
 			creatingSession = false;
 		}
@@ -143,26 +133,26 @@
 
 	async function handleSubmitManual(event: SubmitEvent) {
 		event.preventDefault();
-		if(submitting) return;
+		if (submitting) return;
 		errorState = null;
 		createdFinding = null;
 
 		const localFields: Record<string, string> = {};
-		if(selectedSessionId <= 0) {
-			localFields.session_id = 'Sesi mode manual yang sudah ditutup wajib dipilih.';
+		if (selectedSessionId <= 0) {
+			localFields.session_id = 'Pilih sesi manual yang sudah selesai.';
 		}
-		if(!selectedFile) {
-			localFields.evidence = 'File foto bukti JPEG wajib dipilih.';
+		if (!selectedFile) {
+			localFields.evidence = 'Pilih foto JPEG.';
 		}
-		if(notes.trim().length > 2000) {
-			localFields.notes = 'Catatan observasi manual maksimal 2.000 karakter.';
+		if (notes.trim().length > 2000) {
+			localFields.notes = 'Catatan maksimal 2.000 karakter.';
 		}
 
-		if(Object.keys(localFields).length > 0) {
+		if (Object.keys(localFields).length > 0) {
 			errorState = {
 				status: 422,
 				code: 'VALIDATION_ERROR',
-				title: 'Validasi Input Manual Gagal',
+				title: 'Periksa isian temuan',
 				message: Object.values(localFields)[0],
 				fieldErrors: localFields,
 				requestId: null,
@@ -194,12 +184,9 @@
 			selectedFile = null;
 			fileInputKey += 1;
 			onCreated?.(finding);
-		} catch(err) {
+		} catch (err) {
 			// Preserve unsaved input on error!
-			errorState = parseFindingApiError(
-				err,
-				'Gagal menyimpan temuan manual.'
-			);
+			errorState = parseFindingApiError(err, 'Gagal menyimpan temuan manual.');
 		} finally {
 			submitting = false;
 		}
@@ -209,22 +196,8 @@
 <section class="manual-panel" aria-labelledby="manual-fallback-heading">
 	<div class="manual-header">
 		<div>
-			<div class="header-badges">
-				<span class="prov-badge">FALLBACK MANUAL</span>
-				{#if systemMode}
-					<span class="mode-info">
-						Mode Server Saat Ini: <strong>{systemMode.toUpperCase()}</strong>
-					</span>
-				{/if}
-			</div>
-			<h2 id="manual-fallback-heading" class="manual-title">
-				Pencatatan Bukti Temuan Manual (Tanpa Inferensi AI)
-			</h2>
-			<p class="manual-desc">
-				Digunakan hanya ketika server mengaktifkan <code>ALLOW_MANUAL_FALLBACK</code> dan terdapat sesi bermode
-				<code>manual</code> yang sudah ditutup (<code>stopped</code>/<code>interrupted</code>). Catatan manual diberi label provenance
-				<strong>manual</strong> permanen dan tidak pernah diklaim sebagai hasil deteksi model YOLO.
-			</p>
+			<h2 id="manual-fallback-heading" class="manual-title">Tambah dari foto</h2>
+			<p class="manual-desc">Temuan dicatat manual, tanpa deteksi otomatis.</p>
 		</div>
 
 		<button
@@ -233,7 +206,7 @@
 			aria-expanded={expanded}
 			onclick={() => (expanded = !expanded)}
 		>
-			{expanded ? 'Tutup Formulir Manual' : 'Tambah Temuan Manual'}
+			{expanded ? 'Tutup formulir' : 'Tambah foto'}
 		</button>
 	</div>
 
@@ -241,18 +214,18 @@
 		<div class="manual-body">
 			{#if eligibleManualSessions.length === 0}
 				<div class="empty-manual-sessions" role="status">
-					<strong>Belum ada sesi mode manual yang ditutup.</strong>
+					<strong>Belum ada sesi manual yang selesai.</strong>
 					<p>
-						Temuan manual hanya diterima oleh backend pada sesi dengan <code>mode="manual"</code> dan status
-						<code>stopped</code> atau <code>interrupted</code>.
+						Pilih sesi manual yang sudah selesai untuk menambah foto.
 						{#if systemMode && systemMode !== 'manual'}
-							Server saat ini berjalan pada mode <strong>{systemMode.toUpperCase()}</strong>, sehingga pembuatan sesi manual baru akan ditolak kecuali server dikonfigurasi ke <code>AI_MODE=manual</code>.
+							Mode saat ini: <strong>{systemMode.toUpperCase()}</strong>. Hubungi operator untuk
+							mengaktifkan mode manual.
 						{/if}
 					</p>
 
 					{#if activeProjects.length > 0}
 						<form class="create-manual-session-form" onsubmit={handleCreateManualSession}>
-							<h3>Buat Sesi Pencatatan Manual (Khusus Mode Server Manual)</h3>
+							<h3>Buat sesi manual</h3>
 							<div class="session-grid">
 								<div class="field-group">
 									<label for="manual-new-sess-project">Proyek Aktif</label>
@@ -284,7 +257,7 @@
 
 								<div class="field-actions">
 									<button type="submit" class="secondary-btn" disabled={creatingSession}>
-										{creatingSession ? 'Membuat Sesi...' : 'Buat Sesi Manual Tertutup'}
+										{creatingSession ? 'Membuat Sesi...' : 'Buat sesi manual'}
 									</button>
 								</div>
 							</div>
@@ -309,21 +282,18 @@
 				>
 					<div class="alert-header">
 						<strong>{errorState.title}</strong>
-						<span class="code-pill">{errorState.code}</span>
 					</div>
 					<p>{errorState.message}</p>
-					<p class="preserve-note">
-						Input formulir Anda tetap dipertahankan di layar.
-					</p>
+					<p class="preserve-note">Isianmu belum hilang.</p>
 				</div>
 			{/if}
 
 			{#if createdFinding}
 				<div class="alert-box success" role="status" data-testid="manual-finding-success">
-					<strong>Temuan manual #{createdFinding.id} berhasil disimpan (Provenance: MANUAL).</strong>
+					<strong>Temuan #{createdFinding.id} tersimpan.</strong>
 					<p>
-						Status awal adalah <em>Menunggu Verifikasi</em> tanpa nilai confidence atau track ID model.
-						<a href={`/findings/${createdFinding.id}`}>Buka Detail Temuan #{createdFinding.id}</a>
+						Foto manual ini masih perlu diperiksa.
+						<a href={`/findings/${createdFinding.id}`}>Buka temuan #{createdFinding.id}</a>
 					</p>
 				</div>
 			{/if}
@@ -331,17 +301,20 @@
 			<form class="manual-form" onsubmit={handleSubmitManual} novalidate>
 				<div class="form-grid">
 					<div class="field-group">
-						<label for="manual-session-id">Sesi Mode Manual (Tertutup) *</label>
+						<label for="manual-session-id">Sesi manual *</label>
 						<select
 							id="manual-session-id"
 							name="session_id"
 							bind:value={selectedSessionId}
 							aria-invalid={Boolean(errorState?.fieldErrors.session_id)}
 						>
-							<option value={0}>-- Pilih Sesi Mode Manual --</option>
+							<option value={0}>Pilih sesi manual</option>
 							{#each eligibleManualSessions as sess (sess.id)}
 								<option value={sess.id}>
-									Sesi #{sess.id} — {projectName(sess.project_id)} / {zoneName(sess.project_id, sess.zone_id)} ({sess.status}, {formatJakartaDateTime(sess.started_at)})
+									Sesi #{sess.id} — {projectName(sess.project_id)} / {zoneName(
+										sess.project_id,
+										sess.zone_id
+									)} ({formatJakartaDateTime(sess.started_at)})
 								</option>
 							{/each}
 						</select>
@@ -351,15 +324,15 @@
 					</div>
 
 					<div class="field-group">
-						<label for="manual-violation-type">Jenis Indikasi APD *</label>
+						<label for="manual-violation-type">Kategori APD *</label>
 						<select
 							id="manual-violation-type"
 							name="violation_type"
 							bind:value={violationType}
 							aria-invalid={Boolean(errorState?.fieldErrors.violation_type)}
 						>
-							<option value="NO_HELMET">Indikasi Tanpa Helm (NO_HELMET)</option>
-							<option value="NO_VEST">Indikasi Tanpa Rompi (NO_VEST)</option>
+							<option value="NO_HELMET">Tanpa helm</option>
+							<option value="NO_VEST">Tanpa rompi</option>
 						</select>
 						{#if errorState?.fieldErrors.violation_type}
 							<span class="field-error">{errorState.fieldErrors.violation_type}</span>
@@ -368,7 +341,7 @@
 				</div>
 
 				<div class="field-group">
-					<label for="manual-evidence-file">Foto Bukti JPEG (Maks. 1 MiB, Maks. 1 MP) *</label>
+					<label for="manual-evidence-file">Foto JPEG (maks. 1 MiB, 1 megapiksel) *</label>
 					{#key fileInputKey}
 						<input
 							id="manual-evidence-file"
@@ -381,7 +354,9 @@
 					{/key}
 					{#if selectedFile}
 						<span class="file-hint">
-							File dipilih: <strong>{selectedFile.name}</strong> ({(selectedFile.size / 1024).toFixed(1)} KiB)
+							File dipilih: <strong>{selectedFile.name}</strong> ({(
+								selectedFile.size / 1024
+							).toFixed(1)} KiB)
 						</span>
 					{/if}
 					{#if errorState?.fieldErrors.evidence}
@@ -390,7 +365,7 @@
 				</div>
 
 				<div class="field-group">
-					<label for="manual-notes">Catatan Observasi Manual Petugas</label>
+					<label for="manual-notes">Catatan</label>
 					<textarea
 						id="manual-notes"
 						name="notes"
@@ -406,11 +381,9 @@
 				</div>
 
 				<div class="form-footer">
-					<span class="disclaimer">
-						Provenance tersimpan sebagai <code>source="manual"</code>, <code>mode="manual"</code>, <code>confidence=null</code>, <code>track_key=null</code>.
-					</span>
+					<span class="disclaimer"> Foto ini disimpan sebagai temuan manual. </span>
 					<button type="submit" class="submit-btn" disabled={submitting}>
-						{submitting ? 'Menyimpan Bukti Manual...' : 'Simpan Temuan Manual'}
+						{submitting ? 'Menyimpan...' : 'Simpan temuan'}
 					</button>
 				</div>
 			</form>
@@ -422,40 +395,16 @@
 	.manual-panel {
 		background: var(--bg-surface, #ffffff);
 		border: 1px solid var(--border-strong, #c9c3b6);
-		border-radius: 10px;
+		border-radius: 12px;
 		padding: 1.15rem 1.25rem;
 	}
 
 	.manual-header {
 		display: flex;
 		flex-wrap: wrap;
-		align-items: flex-start;
+		align-items: center;
 		justify-content: space-between;
 		gap: 1rem;
-	}
-
-	.header-badges {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 0.5rem;
-		margin-bottom: 0.35rem;
-	}
-
-	.prov-badge {
-		font-size: 0.72rem;
-		font-weight: 700;
-		letter-spacing: 0.04em;
-		padding: 0.15rem 0.45rem;
-		border-radius: 4px;
-		background: var(--status-warn-bg, #fffbeb);
-		color: var(--status-warn-ink, #92400e);
-		border: 1px solid var(--status-warn-border, #fcd34d);
-	}
-
-	.mode-info {
-		font-size: 0.78rem;
-		color: var(--ink-secondary, #4a453d);
 	}
 
 	.manual-title {
@@ -473,9 +422,9 @@
 		padding: 0.5rem 0.9rem;
 		border-radius: 7px;
 		border: 1px solid var(--border-strong, #c9c3b6);
-		background: var(--bg-subtle, #ece9e1);
-		color: var(--ink-primary, #1c1a17);
-		font-weight: 600;
+		background: var(--bg-surface);
+		color: var(--ink-primary);
+		font-weight: 550;
 		font-size: 0.85rem;
 		cursor: pointer;
 	}
@@ -628,14 +577,6 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.5rem;
-	}
-
-	.code-pill {
-		font-family: monospace;
-		font-size: 0.75rem;
-		padding: 0.1rem 0.35rem;
-		border-radius: 4px;
-		background: rgba(0, 0, 0, 0.06);
 	}
 
 	.preserve-note {

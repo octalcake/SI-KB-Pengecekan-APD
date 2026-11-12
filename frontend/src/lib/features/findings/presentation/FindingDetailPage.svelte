@@ -15,6 +15,7 @@
 		formatSourceLabel,
 		formatVerificationStatusLabel,
 		formatViolationLabel,
+		formatViolationShortLabel,
 		parseFindingApiError,
 		type ParsedFindingError
 	} from './format';
@@ -59,30 +60,26 @@
 	let isLockedByApprovedReport = $state<boolean>(false);
 
 	const canSubmitAction = $derived(
-		finding !== null &&
-		finding.verification_status === 'confirmed' &&
-		!isLockedByApprovedReport
+		finding !== null && finding.verification_status === 'confirmed' && !isLockedByApprovedReport
 	);
 
 	const canDeleteFinding = $derived(
-		finding !== null &&
-		finding.verification_status !== 'confirmed' &&
-		!isLockedByApprovedReport
+		finding !== null && finding.verification_status !== 'confirmed' && !isLockedByApprovedReport
 	);
 
 	const deleteDisabledReason = $derived.by(() => {
-		if(!finding) return '';
-		if(isLockedByApprovedReport) {
+		if (!finding) return '';
+		if (isLockedByApprovedReport) {
 			return 'Terkunci oleh laporan yang sudah disetujui (REPORT_LOCKED).';
 		}
-		if(finding.verification_status === 'confirmed') {
+		if (finding.verification_status === 'confirmed') {
 			return 'Temuan Terkonfirmasi tidak dapat dihapus langsung; koreksi menjadi Ditolak dengan catatan alasan terlebih dahulu.';
 		}
 		return '';
 	});
 
 	function syncFormFromFinding(data: Finding, forceOverwrite = false) {
-		if(!dirtyByOfficer || forceOverwrite) {
+		if (!dirtyByOfficer || forceOverwrite) {
 			formViolationType = data.violation_type;
 			formNotes = data.notes ?? '';
 			formActionStatus = data.action_status;
@@ -93,20 +90,20 @@
 
 	async function loadContextLookups(data: Finding) {
 		const context = await loadFindingContextLookups(data);
-		if(findingId !== data.id) return;
+		if (findingId !== data.id) return;
 		projectLookup = context.projectLookup;
 		zoneLookup = context.zoneLookup;
 		sessionLookup = context.sessionLookup;
 	}
 
 	async function loadDetail(id: number, forceSyncForm = false) {
-		if(!Number.isFinite(id) || id <= 0) {
+		if (!Number.isFinite(id) || id <= 0) {
 			loading = false;
 			loadError = {
 				status: 404,
 				code: 'NOT_FOUND',
-				title: 'ID Temuan Tidak Valid (404)',
-				message: 'ID temuan harus berupa bilangan bulat positif.',
+				title: 'Temuan tidak ditemukan',
+				message: 'Buka temuan dari halaman Temuan.',
 				fieldErrors: {},
 				requestId: null,
 				isUnauthorized: false,
@@ -131,11 +128,8 @@
 			finding = data;
 			syncFormFromFinding(data, forceSyncForm);
 			void loadContextLookups(data);
-		} catch(err) {
-			loadError = parseFindingApiError(
-				err,
-				`Gagal memuat detail temuan #${id}.`
-			);
+		} catch (err) {
+			loadError = parseFindingApiError(err, `Gagal memuat detail temuan #${id}.`);
 		} finally {
 			loading = false;
 		}
@@ -152,45 +146,41 @@
 	});
 
 	async function reloadPreservingUnsavedInput() {
-		if(!finding) return;
+		if (!finding) return;
 		mutationError = null;
 		try {
 			const fresh = await getFindingApi(finding.id);
 			finding = fresh;
-			mutationSuccess = `Data terbaru versi #${fresh.version} berhasil dimuat ulang. Input yang sedang Anda ketik tetap dipertahankan di formulir.`;
-		} catch(err) {
-			mutationError = parseFindingApiError(
-				err,
-				'Gagal memuat ulang versi terbaru temuan.'
-			);
+			mutationSuccess = `Data terbaru dimuat. Isianmu belum hilang.`;
+		} catch (err) {
+			mutationError = parseFindingApiError(err, 'Gagal memuat ulang versi terbaru temuan.');
 		}
 	}
 
 	async function submitReviewDecision(targetStatus: 'confirmed' | 'rejected') {
-		if(!finding || savingReview || isLockedByApprovedReport) return;
+		if (!finding || savingReview || isLockedByApprovedReport) return;
 		mutationError = null;
 		mutationSuccess = null;
 
 		const trimmedNotes = formNotes.trim();
 		const isCorrection =
-			finding.verification_status !== 'pending' &&
-			finding.verification_status !== targetStatus;
+			finding.verification_status !== 'pending' && finding.verification_status !== targetStatus;
 
 		const localFields: Record<string, string> = {};
-		if(targetStatus === 'rejected' && trimmedNotes.length === 0) {
-			localFields.notes = 'Alasan penolakan wajib diisi pada catatan verifikasi.';
-		} else if(isCorrection && trimmedNotes.length === 0) {
+		if (targetStatus === 'rejected' && trimmedNotes.length === 0) {
+			localFields.notes = 'Alasan penolakan wajib diisi pada catatan pemeriksaan.';
+		} else if (isCorrection && trimmedNotes.length === 0) {
 			localFields.notes =
 				'Catatan alasan koreksi wajib diisi saat mengubah keputusan verifikasi sebelumnya.';
-		} else if(trimmedNotes.length > 2000) {
-			localFields.notes = 'Catatan verifikasi maksimal 2.000 karakter.';
+		} else if (trimmedNotes.length > 2000) {
+			localFields.notes = 'Catatan pemeriksaan maksimal 2.000 karakter.';
 		}
 
-		if(Object.keys(localFields).length > 0) {
+		if (Object.keys(localFields).length > 0) {
 			mutationError = {
 				status: 422,
 				code: 'VALIDATION_ERROR',
-				title: 'Validasi Verifikasi Gagal (422)',
+				title: 'Periksa catatan pemeriksaan',
 				message: Object.values(localFields)[0],
 				fieldErrors: localFields,
 				requestId: null,
@@ -221,14 +211,11 @@
 			syncFormFromFinding(updated, true);
 			mutationSuccess =
 				targetStatus === 'confirmed'
-					? `Temuan #${updated.id} berhasil dikonfirmasi (versi #${updated.version}).`
-					: `Temuan #${updated.id} berhasil ditolak dengan alasan tercatat (versi #${updated.version}).`;
-		} catch(err) {
-			const parsed = parseFindingApiError(
-				err,
-				'Gagal menyimpan keputusan verifikasi.'
-			);
-			if(parsed.isReportLocked) {
+					? `Temuan #${updated.id} dikonfirmasi.`
+					: `Temuan #${updated.id} ditolak.`;
+		} catch (err) {
+			const parsed = parseFindingApiError(err, 'Gagal menyimpan keputusan verifikasi.');
+			if (parsed.isReportLocked) {
 				isLockedByApprovedReport = true;
 			}
 			mutationError = parsed;
@@ -239,23 +226,23 @@
 
 	async function handleSaveCorrectionOrNotesOnly(event: SubmitEvent) {
 		event.preventDefault();
-		if(!finding || savingReview || isLockedByApprovedReport) return;
+		if (!finding || savingReview || isLockedByApprovedReport) return;
 		mutationError = null;
 		mutationSuccess = null;
 
 		const trimmedNotes = formNotes.trim();
 		const localFields: Record<string, string> = {};
-		if(finding.verification_status === 'rejected' && trimmedNotes.length === 0) {
-			localFields.notes = 'Alasan penolakan wajib diisi pada catatan verifikasi.';
-		} else if(trimmedNotes.length > 2000) {
-			localFields.notes = 'Catatan verifikasi maksimal 2.000 karakter.';
+		if (finding.verification_status === 'rejected' && trimmedNotes.length === 0) {
+			localFields.notes = 'Alasan penolakan wajib diisi pada catatan pemeriksaan.';
+		} else if (trimmedNotes.length > 2000) {
+			localFields.notes = 'Catatan pemeriksaan maksimal 2.000 karakter.';
 		}
 
-		if(Object.keys(localFields).length > 0) {
+		if (Object.keys(localFields).length > 0) {
 			mutationError = {
 				status: 422,
 				code: 'VALIDATION_ERROR',
-				title: 'Validasi Catatan / Kategori Gagal (422)',
+				title: 'Periksa kategori dan catatan',
 				message: Object.values(localFields)[0],
 				fieldErrors: localFields,
 				requestId: null,
@@ -283,13 +270,13 @@
 			});
 			finding = updated;
 			syncFormFromFinding(updated, true);
-			mutationSuccess = `Kategori akhir dan catatan verifikasi temuan #${updated.id} berhasil diperbarui (versi #${updated.version}).`;
-		} catch(err) {
+			mutationSuccess = `Kategori dan catatan tersimpan.`;
+		} catch (err) {
 			const parsed = parseFindingApiError(
 				err,
-				'Gagal memperbarui kategori atau catatan verifikasi.'
+				'Gagal memperbarui kategori atau catatan pemeriksaan.'
 			);
-			if(parsed.isReportLocked) {
+			if (parsed.isReportLocked) {
 				isLockedByApprovedReport = true;
 			}
 			mutationError = parsed;
@@ -300,15 +287,15 @@
 
 	async function handleSaveFollowUp(event: SubmitEvent) {
 		event.preventDefault();
-		if(!finding || savingAction || isLockedByApprovedReport) return;
+		if (!finding || savingAction || isLockedByApprovedReport) return;
 		mutationError = null;
 		mutationSuccess = null;
 
-		if(finding.verification_status !== 'confirmed') {
+		if (finding.verification_status !== 'confirmed') {
 			mutationError = {
 				status: 422,
 				code: 'ACTION_REQUIRES_CONFIRMED',
-				title: 'Tindak Lanjut Membutuhkan Konfirmasi (422)',
+				title: 'Konfirmasi temuan dulu',
 				message: 'Tindak lanjut hanya untuk temuan yang dikonfirmasi.',
 				fieldErrors: {},
 				requestId: null,
@@ -329,18 +316,18 @@
 
 		const trimmedActionNotes = formActionNotes.trim();
 		const localFields: Record<string, string> = {};
-		if(formActionStatus === 'completed' && trimmedActionNotes.length === 0) {
+		if (formActionStatus === 'completed' && trimmedActionNotes.length === 0) {
 			localFields.action_notes =
 				'Catatan tindak lanjut wajib diisi sebelum menandai tindak lanjut selesai.';
-		} else if(trimmedActionNotes.length > 2000) {
+		} else if (trimmedActionNotes.length > 2000) {
 			localFields.action_notes = 'Catatan tindak lanjut maksimal 2.000 karakter.';
 		}
 
-		if(Object.keys(localFields).length > 0) {
+		if (Object.keys(localFields).length > 0) {
 			mutationError = {
 				status: 422,
 				code: 'VALIDATION_ERROR',
-				title: 'Validasi Tindak Lanjut Gagal (422)',
+				title: 'Periksa catatan tindak lanjut',
 				message: Object.values(localFields)[0],
 				fieldErrors: localFields,
 				requestId: null,
@@ -368,13 +355,10 @@
 			});
 			finding = updated;
 			syncFormFromFinding(updated, true);
-			mutationSuccess = `Status tindak lanjut temuan #${updated.id} berhasil disimpan sebagai "${formatActionStatusLabel(updated.action_status)}" (versi #${updated.version}).`;
-		} catch(err) {
-			const parsed = parseFindingApiError(
-				err,
-				'Gagal menyimpan tindak lanjut temuan.'
-			);
-			if(parsed.isReportLocked) {
+			mutationSuccess = `Tindak lanjut tersimpan: ${formatActionStatusLabel(updated.action_status)}.`;
+		} catch (err) {
+			const parsed = parseFindingApiError(err, 'Gagal menyimpan tindak lanjut temuan.');
+			if (parsed.isReportLocked) {
 				isLockedByApprovedReport = true;
 			}
 			mutationError = parsed;
@@ -384,7 +368,7 @@
 	}
 
 	async function handleConfirmSoftDelete() {
-		if(!finding || deletingFinding || isLockedByApprovedReport) return;
+		if (!finding || deletingFinding || isLockedByApprovedReport) return;
 		mutationError = null;
 		mutationSuccess = null;
 
@@ -392,12 +376,9 @@
 		try {
 			await deleteFindingApi(finding.id, finding.version);
 			await goto('/findings');
-		} catch(err) {
-			const parsed = parseFindingApiError(
-				err,
-				'Gagal menghapus temuan.'
-			);
-			if(parsed.isReportLocked) {
+		} catch (err) {
+			const parsed = parseFindingApiError(err, 'Gagal menghapus temuan.');
+			if (parsed.isReportLocked) {
 				isLockedByApprovedReport = true;
 			}
 			mutationError = parsed;
@@ -410,13 +391,12 @@
 
 <div class="detail-workspace">
 	<nav class="breadcrumb-nav" aria-label="Breadcrumb">
-		<a href="/findings" class="back-link">← Kembali ke Daftar Temuan</a>
+		<a href="/findings" class="back-link">← Temuan</a>
 	</nav>
 
 	{#if loading}
 		<section class="state-card loading" role="status" aria-live="polite">
 			<h1>Memuat Detail Temuan #{findingId}...</h1>
-			<p>Mengambil metadata bukti, provenance, dan status verifikasi dari server Go.</p>
 		</section>
 	{:else if loadError || !finding}
 		<section
@@ -429,16 +409,15 @@
 			<p>{loadError?.message ?? `Data temuan #${findingId} tidak ditemukan atau telah dihapus.`}</p>
 			<div class="error-actions">
 				<button type="button" class="btn-secondary" onclick={() => loadDetail(findingId, true)}>
-					Coba Lagi
+					Coba lagi
 				</button>
-				<a href="/findings" class="btn-primary-link">Kembali ke Galeri Temuan</a>
+				<a href="/findings" class="btn-primary-link">Kembali ke temuan</a>
 			</div>
 		</section>
 	{:else}
 		<header class="detail-header">
 			<div>
 				<div class="top-pills">
-					<span class="pill-id">Temuan #{finding.id}</span>
 					<span class="pill-mode" data-mode={finding.mode} data-testid="finding-mode-badge">
 						Mode: <strong>{formatModeLabel(finding.mode)}</strong>
 					</span>
@@ -449,12 +428,12 @@
 						Versi #{finding.version}
 					</span>
 				</div>
-				<h1>Detail Temuan #{finding.id} — {formatViolationLabel(finding.violation_type)}</h1>
+				<h1>Temuan #{finding.id} — {formatViolationShortLabel(finding.violation_type)}</h1>
 			</div>
 
 			<div class="status-group">
 				<div class="status-box">
-					<span class="status-caption">Status Verifikasi Petugas</span>
+					<span class="status-caption">Verifikasi</span>
 					<span
 						class="status-badge verif"
 						data-status={finding.verification_status}
@@ -465,7 +444,7 @@
 				</div>
 
 				<div class="status-box">
-					<span class="status-caption">Status Tindak Lanjut</span>
+					<span class="status-caption">Tindak lanjut</span>
 					<span
 						class="status-badge action"
 						data-status={finding.action_status}
@@ -479,20 +458,18 @@
 
 		{#if finding.mode === 'simulated'}
 			<div class="provenance-notice simulated" role="status">
-				<strong>PROVENANCE SIMULASI DETERMINISTIK:</strong> Temuan ini dihasilkan pada sesi mode
-				<code>simulated</code> dan tetap dipisahkan dari statistik inspeksi kamera nyata.
+				<strong>Bukti simulasi.</strong> Temuan ini bukan hasil inspeksi kamera nyata.
 			</div>
 		{:else if finding.mode === 'manual' || finding.source === 'manual'}
 			<div class="provenance-notice manual" role="status">
-				<strong>PROVENANCE OBSERVASI MANUAL:</strong> Bukti foto dan catatan ini diunggah secara manual oleh petugas K3 pada sesi mode
-				<code>manual</code> tanpa inferensi model YOLO.
+				<strong>Bukti manual.</strong> Foto dan catatan diunggah petugas, tanpa deteksi otomatis.
 			</div>
 		{/if}
 
 		{#if isLockedByApprovedReport}
 			<div class="lock-banner" role="alert" data-testid="approved-report-lock-banner">
-				<strong>TERKUNCI OLEH LAPORAN DISETUJUI (BR-08 / REPORT_LOCKED):</strong>
-				Temuan ini telah menjadi bagian dari snapshot historis laporan inspeksi yang disetujui (approved). Seluruh keputusan verifikasi, kategori, catatan, tindak lanjut, dan penghapusan dikunci secara permanen untuk menjaga integritas laporan.
+				<strong>Temuan terkunci</strong>
+				Temuan ini sudah masuk laporan yang disetujui. Temuan tidak bisa diubah atau dihapus.
 			</div>
 		{/if}
 
@@ -505,12 +482,9 @@
 			>
 				<div class="alert-top">
 					<strong>{mutationError.title}</strong>
-					<span class="code-tag">{mutationError.code}</span>
 				</div>
 				<p>{mutationError.message}</p>
-				<p class="preserve-hint">
-					Input catatan dan pilihan Anda tetap dipertahankan di formulir di bawah ini.
-				</p>
+				<p class="preserve-hint">Isianmu belum hilang.</p>
 				{#if mutationError.isVersionConflict}
 					<div class="conflict-actions">
 						<button
@@ -518,7 +492,7 @@
 							class="btn-reload-conflict"
 							onclick={reloadPreservingUnsavedInput}
 						>
-							Muat Ulang Data Terbaru (Pertahankan Input Saya)
+							Ambil data terbaru
 						</button>
 					</div>
 				{/if}
@@ -536,23 +510,15 @@
 			<!-- Left column: Original Full-Frame Evidence & Immutable Model Output -->
 			<div class="evidence-column">
 				<section class="panel-card" aria-labelledby="evidence-section-title">
-					<h2 id="evidence-section-title" class="panel-title">
-						Foto Bukti Asli Full-Frame
-					</h2>
-					<p class="panel-subtitle">
-						Frame asli yang memicu event disimpan tanpa modifikasi piksel. Gunakan tombol di bawah gambar untuk mematikan/menampilkan overlay kotak deteksi atau memperbesar foto.
-					</p>
+					<h2 id="evidence-section-title" class="panel-title">Foto bukti</h2>
+					<p class="panel-subtitle">Kotak deteksi tidak mengubah foto asli.</p>
 
 					<FindingEvidenceViewer {finding} compact={false} defaultShowOverlay={true} />
 				</section>
 
 				<section class="panel-card" aria-labelledby="immutable-meta-title">
-					<h2 id="immutable-meta-title" class="panel-title">
-						Metadata Bukti &amp; Hasil Model (Immutable)
-					</h2>
-					<p class="panel-subtitle">
-						Data di bawah ini adalah rekaman asli saat capture dan tidak pernah berubah meskipun petugas mengoreksi kategori akhir.
-					</p>
+					<h2 id="immutable-meta-title" class="panel-title">Detail temuan</h2>
+					<p class="panel-subtitle">Hasil awal model tetap tersimpan meski kategori dikoreksi.</p>
 
 					<dl class="meta-table" data-testid="immutable-metadata-list">
 						<div class="meta-row">
@@ -564,45 +530,51 @@
 						</div>
 
 						<div class="meta-row">
-							<dt>Sesi Monitoring</dt>
+							<dt>Sesi inspeksi</dt>
 							<dd>
 								Sesi #{finding.session_id}
 								{#if sessionLookup}
-									({sessionLookup.status}, sumber: <code>{sessionLookup.source}</code>)
+									· {sessionLookup.status === 'active'
+										? 'Berjalan'
+										: sessionLookup.status === 'stopped'
+											? 'Selesai'
+											: 'Terhenti'} · {sessionLookup.source === 'browser_webcam'
+										? 'Kamera'
+										: 'Foto manual'}
 								{/if}
 							</dd>
 						</div>
 
 						<div class="meta-row">
-							<dt>Indikasi Awal Model (Immutable)</dt>
+							<dt>Hasil awal model</dt>
 							<dd data-testid="immutable-detected-violation">
 								{#if finding.detected_violation}
 									<strong>{formatViolationLabel(finding.detected_violation)}</strong>
 								{:else}
-									<span>Tidak ada (observasi manual petugas)</span>
+									<span>Tidak ada (foto manual)</span>
 								{/if}
 							</dd>
 						</div>
 
 						<div class="meta-row">
-							<dt>Kategori Akhir Petugas</dt>
+							<dt>Hasil pemeriksaan</dt>
 							<dd data-testid="final-violation-type">
 								<strong>{formatViolationLabel(finding.violation_type)}</strong>
 							</dd>
 						</div>
 
 						<div class="meta-row">
-							<dt>Skor Confidence Model</dt>
+							<dt>Skor model</dt>
 							<dd data-testid="model-confidence-score">
 								{formatConfidenceScore(finding.confidence)}
 							</dd>
 						</div>
 
 						<div class="meta-row">
-							<dt>Referensi Track Sementara</dt>
+							<dt>ID deteksi sementara</dt>
 							<dd data-testid="temporary-track-reference">
 								{#if finding.track_key}
-									<code>{finding.track_key}</code> (Raw Track ID: {finding.track_id ?? '—'})
+									<code>{finding.track_key}</code>
 									<span class="semantic-disclaimer">
 										— ID episode sementara pada sesi ini, <strong>bukan identitas pekerja</strong>.
 									</span>
@@ -621,7 +593,7 @@
 						</div>
 
 						<div class="meta-row">
-							<dt>Waktu Capture Frame</dt>
+							<dt>Waktu foto</dt>
 							<dd data-testid="finding-captured-at">
 								{formatJakartaDateTime(finding.captured_at)}
 								<span class="utc-sub">({finding.captured_at})</span>
@@ -636,7 +608,7 @@
 						</div>
 
 						<div class="meta-row">
-							<dt>Integritas SHA-256 Bukti</dt>
+							<dt>Sidik digital foto (SHA-256)</dt>
 							<dd>
 								<code class="sha-code">{finding.evidence_sha256}</code>
 							</dd>
@@ -646,7 +618,9 @@
 							<div class="meta-row">
 								<dt>Terakhir Diverifikasi</dt>
 								<dd>
-									Petugas ID #{finding.verified_by ?? '—'} pada {formatJakartaDateTime(finding.verified_at)}
+									Petugas ID #{finding.verified_by ?? '—'} pada {formatJakartaDateTime(
+										finding.verified_at
+									)}
 								</dd>
 							</div>
 						{/if}
@@ -657,16 +631,15 @@
 			<!-- Right column: Human Verification/Correction, Follow-up, and Soft Delete -->
 			<div class="actions-column">
 				<section class="panel-card" aria-labelledby="review-section-title">
-					<h2 id="review-section-title" class="panel-title">
-						Keputusan Verifikasi &amp; Koreksi Petugas K3
-					</h2>
+					<h2 id="review-section-title" class="panel-title">Periksa temuan</h2>
 					<p class="panel-subtitle">
-						Petugas K3 memeriksa bukti foto asli sebelum mengonfirmasi atau menolak temuan. Menolak temuan atau mengoreksi keputusan verifikasi lama wajib menyertakan alasan pada catatan verifikasi.
+						Periksa foto, lalu konfirmasi atau tolak temuan. Isi alasan jika menolak atau mengubah
+						keputusan.
 					</p>
 
 					<form class="action-form" onsubmit={handleSaveCorrectionOrNotesOnly} novalidate>
 						<div class="field-group">
-							<label for="review-violation-type">Jenis Hasil Petugas (Kategori Akhir)</label>
+							<label for="review-violation-type">Kategori hasil pemeriksaan</label>
 							<select
 								id="review-violation-type"
 								name="violation_type"
@@ -675,12 +648,9 @@
 								disabled={savingReview || isLockedByApprovedReport}
 								aria-invalid={Boolean(mutationError?.fieldErrors.violation_type)}
 							>
-								<option value="NO_HELMET">Tanpa Helm (NO_HELMET)</option>
-								<option value="NO_VEST">Tanpa Rompi (NO_VEST)</option>
+								<option value="NO_HELMET">Tanpa helm</option>
+								<option value="NO_VEST">Tanpa rompi</option>
 							</select>
-							<span class="field-help">
-								Mengubah kategori akhir tidak mengubah rekaman indikasi awal model (<code>{finding.detected_violation ?? 'manual'}</code>).
-							</span>
 							{#if mutationError?.fieldErrors.violation_type}
 								<span class="field-error">{mutationError.fieldErrors.violation_type}</span>
 							{/if}
@@ -688,9 +658,9 @@
 
 						<div class="field-group">
 							<label for="review-notes">
-								Catatan Verifikasi / Alasan Penolakan atau Koreksi
+								Catatan pemeriksaan
 								{#if finding.verification_status !== 'pending'}
-									(Wajib diisi bila mengubah status keputusan)
+									(wajib jika menolak atau mengubah keputusan)
 								{/if}
 							</label>
 							<textarea
@@ -719,7 +689,7 @@
 								{savingReview
 									? 'Menyimpan...'
 									: finding.verification_status === 'confirmed'
-										? 'Simpan & Pertahankan Konfirmasi'
+										? 'Simpan pemeriksaan'
 										: 'Konfirmasi Temuan'}
 							</button>
 
@@ -732,7 +702,7 @@
 								{savingReview
 									? 'Menyimpan...'
 									: finding.verification_status === 'rejected'
-										? 'Perbarui Catatan Penolakan'
+										? 'Simpan alasan penolakan'
 										: 'Tolak Temuan'}
 							</button>
 
@@ -741,30 +711,28 @@
 								class="btn-save-secondary"
 								disabled={savingReview || isLockedByApprovedReport}
 							>
-								Simpan Kategori / Catatan Saja
+								Simpan kategori dan catatan
 							</button>
 						</div>
 					</form>
 				</section>
 
 				<section class="panel-card" aria-labelledby="followup-section-title">
-					<h2 id="followup-section-title" class="panel-title">
-						Tindak Lanjut Lapangan
-					</h2>
-					<p class="panel-subtitle">
-						Tindak lanjut hanya tersedia untuk temuan yang berstatus <strong>Terkonfirmasi</strong>. Menandai tindak lanjut sebagai <strong>Selesai</strong> wajib menyertakan catatan tindakan.
-					</p>
+					<h2 id="followup-section-title" class="panel-title">Tindak lanjut</h2>
+					<p class="panel-subtitle">Isi catatan tindakan sebelum menandai selesai.</p>
 
 					{#if finding.verification_status !== 'confirmed'}
 						<div class="disabled-reason-box" role="status" data-testid="followup-disabled-reason">
-							<strong>Tindak lanjut belum dapat dicatat:</strong>
-							Temuan saat ini berstatus <em>{formatVerificationStatusLabel(finding.verification_status)}</em>. Konfirmasi temuan di atas terlebih dahulu agar tindak lanjut dapat disimpan.
+							<strong>Konfirmasi temuan dulu</strong>
+							Temuan saat ini berstatus
+							<em>{formatVerificationStatusLabel(finding.verification_status)}</em>. Konfirmasi
+							temuan di atas terlebih dahulu agar tindak lanjut dapat disimpan.
 						</div>
 					{/if}
 
 					<form class="action-form" onsubmit={handleSaveFollowUp} novalidate>
 						<div class="field-group">
-							<label for="followup-action-status">Status Tindak Lanjut</label>
+							<label for="followup-action-status">Status tindak lanjut</label>
 							<select
 								id="followup-action-status"
 								name="action_status"
@@ -773,9 +741,9 @@
 								disabled={!canSubmitAction || savingAction}
 								aria-invalid={Boolean(mutationError?.fieldErrors.action_status)}
 							>
-								<option value="pending">Belum Ditindaklanjuti (pending)</option>
-								<option value="in_progress">Sedang Ditindaklanjuti (in_progress)</option>
-								<option value="completed">Selesai (completed)</option>
+								<option value="pending">Belum ditindaklanjuti</option>
+								<option value="in_progress">Dalam proses</option>
+								<option value="completed">Selesai</option>
 							</select>
 							{#if mutationError?.fieldErrors.action_status}
 								<span class="field-error">{mutationError.fieldErrors.action_status}</span>
@@ -784,7 +752,7 @@
 
 						<div class="field-group">
 							<label for="followup-action-notes">
-								Catatan Tindak Lanjut {formActionStatus === 'completed' ? '*' : ''}
+								Catatan tindak lanjut {formActionStatus === 'completed' ? '*' : ''}
 							</label>
 							<textarea
 								id="followup-action-notes"
@@ -815,16 +783,16 @@
 				</section>
 
 				<section class="panel-card danger-card" aria-labelledby="delete-section-title">
-					<h2 id="delete-section-title" class="panel-title">
-						Penghapusan Temuan (Soft Delete)
-					</h2>
+					<h2 id="delete-section-title" class="panel-title">Hapus temuan</h2>
 					<p class="panel-subtitle">
-						Hanya temuan berstatus <code>pending</code> atau <code>rejected</code> yang belum masuk laporan disetujui yang boleh dihapus dari daftar. Tombstone tetap mempertahankan kunci deduplikasi episode.
+						Hanya temuan yang belum diperiksa atau ditolak yang bisa dihapus. Temuan dalam laporan
+						yang disetujui tetap terkunci.
 					</p>
 
 					{#if !canDeleteFinding}
 						<p class="delete-lock-note" data-testid="delete-disabled-reason">
-							<strong>Penghapusan dinonaktifkan:</strong> {deleteDisabledReason}
+							<strong>Belum bisa dihapus:</strong>
+							{deleteDisabledReason}
 						</p>
 					{/if}
 
@@ -840,7 +808,8 @@
 					{:else}
 						<div class="delete-confirm-box" role="alertdialog" aria-label="Konfirmasi Hapus Temuan">
 							<p>
-								Apakah Anda yakin ingin menghapus temuan <strong>#{finding.id}</strong> (versi #{finding.version})? Temuan akan disembunyikan dari daftar dan hitungan dashboard.
+								Hapus temuan <strong>#{finding.id}</strong>? Temuan ini akan dikeluarkan dari daftar
+								dan hitungan beranda.
 							</p>
 							<div class="confirm-buttons">
 								<button
@@ -857,7 +826,7 @@
 									disabled={deletingFinding}
 									onclick={handleConfirmSoftDelete}
 								>
-									{deletingFinding ? 'Menghapus...' : 'Ya, Hapus Temuan'}
+									{deletingFinding ? 'Menghapus...' : 'Hapus temuan'}
 								</button>
 							</div>
 						</div>
@@ -908,26 +877,16 @@
 	.top-pills {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.45rem;
+		gap: 0.45rem 0.8rem;
 		margin-bottom: 0.45rem;
 	}
 
-	.pill-id,
 	.pill-mode,
 	.pill-source,
 	.pill-version {
 		font-size: 0.75rem;
-		padding: 0.18rem 0.5rem;
-		border-radius: 4px;
-		background: var(--bg-subtle, #ece9e1);
-		border: 1px solid var(--border-strong, #c9c3b6);
-	}
-
-	.pill-id {
-		background: #1c1a17;
-		color: #ffffff;
-		border-color: #1c1a17;
-		font-weight: 700;
+		padding: 0.18rem 0;
+		color: var(--ink-secondary);
 	}
 
 	.pill-mode[data-mode='simulated'],
@@ -951,22 +910,18 @@
 	}
 
 	.status-box {
-		background: var(--bg-surface, #ffffff);
-		border: 1px solid var(--border-strong, #c9c3b6);
-		border-radius: 8px;
-		padding: 0.5rem 0.8rem;
 		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
+		align-items: center;
+		gap: 0.65rem;
+		flex-wrap: wrap;
 		min-width: 0;
-		flex: 1 1 160px;
 	}
 
 	.status-caption {
 		font-size: 0.72rem;
 		color: var(--ink-muted, #655e53);
 		font-weight: 600;
-		text-transform: uppercase;
+		text-transform: none;
 	}
 
 	.status-badge {
@@ -1044,14 +999,6 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.5rem;
-	}
-
-	.code-tag {
-		font-family: monospace;
-		font-size: 0.75rem;
-		padding: 0.1rem 0.4rem;
-		border-radius: 4px;
-		background: rgba(0, 0, 0, 0.08);
 	}
 
 	.preserve-hint {
@@ -1229,12 +1176,6 @@
 	.field-group textarea:disabled {
 		background: var(--bg-subtle, #ece9e1);
 		opacity: 0.75;
-	}
-
-	.field-help {
-		font-size: 0.76rem;
-		color: var(--ink-muted, #655e53);
-		overflow-wrap: anywhere;
 	}
 
 	.field-error {

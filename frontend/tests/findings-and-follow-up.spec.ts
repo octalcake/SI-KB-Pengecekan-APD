@@ -67,12 +67,7 @@ async function startDisposableFindingStack(options: {
 	aiMode?: 'real' | 'simulated' | 'manual';
 	allowManualFallback?: boolean;
 }): Promise<DisposableFindingStack> {
-	const {
-		webPort,
-		apiPort,
-		aiMode = 'simulated',
-		allowManualFallback = true
-	} = options;
+	const { webPort, apiPort, aiMode = 'simulated', allowManualFallback = true } = options;
 
 	const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'k3-p0-04-'));
 	const dbPath = path.join(tempRoot, 'k3.sqlite');
@@ -84,10 +79,7 @@ async function startDisposableFindingStack(options: {
 	const seedBin = path.join(tempRoot, `seed${exeExt}`);
 	const apiBin = path.join(tempRoot, `api${exeExt}`);
 
-	const migrationSql = fs.readFileSync(
-		path.join(backendDir, 'migrations', '001_init.sql'),
-		'utf8'
-	);
+	const migrationSql = fs.readFileSync(path.join(backendDir, 'migrations', '001_init.sql'), 'utf8');
 	const [upSql] = migrationSql.split('-- migrate:down');
 	const db = new DatabaseSync(dbPath);
 	db.exec(upSql);
@@ -224,7 +216,9 @@ async function startDisposableFindingStack(options: {
 		track_id: 17,
 		confidence: 0.93,
 		bbox: [0.2, 0.1, 0.6, 0.95],
-		ppe: [{ type: 'NO_HELMET', state: 'positive', confidence: 0.89, bbox: [0.31, 0.11, 0.45, 0.29] }]
+		ppe: [
+			{ type: 'NO_HELMET', state: 'positive', confidence: 0.89, bbox: [0.31, 0.11, 0.45, 0.29] }
+		]
 	});
 
 	// Insert Findings #1, #2, #3 (in Session #1) and Finding #4 (in Session #3, confirmed & locked by approved report)
@@ -391,22 +385,22 @@ test.describe('P0-04: Galeri temuan, verifikasi bukti, tindak lanjut, dan fallba
 	}) => {
 		await page.goto(`${stack.baseUrl}/`);
 		await expect(page).toHaveURL(/\/login$/);
-		await expect(page.getByRole('heading', { name: /Masuk Petugas K3/i })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /Masuk/i })).toBeVisible();
 
-		await page.getByLabel(/Username/i).fill(TEST_USERNAME);
-		await page.getByLabel(/Password/i).fill(TEST_PASSWORD);
+		await page.getByLabel('Nama pengguna', { exact: true }).fill(TEST_USERNAME);
+		await page.getByLabel('Kata sandi', { exact: true }).fill(TEST_PASSWORD);
 		await page.getByRole('button', { name: /Masuk/i }).click();
 		await expect(page).toHaveURL(/\/$/);
 
 		// 1. Buka galeri /findings dan periksa daftar awal (4 temuan fixture terpersisten di SQLite)
 		await page.goto(`${stack.baseUrl}/findings`);
-		await expect(page.getByRole('heading', { name: /Daftar Temuan Inspeksi/i })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /Temuan/i })).toBeVisible();
 		await expect(page.getByTestId('findings-total-count')).toHaveText('4');
 
 		// Filter berdasarkan Proyek #1 dan Status Verifikasi = pending -> harus menampilkan #1 dan #2
 		await page.getByLabel(/^Proyek$/i).selectOption('1');
-		await page.getByLabel(/Status Verifikasi/i).selectOption('pending');
-		await page.getByRole('button', { name: /Terapkan Filter/i }).click();
+		await page.getByLabel(/Status pemeriksaan/i).selectOption('pending');
+		await page.getByRole('button', { name: /Terapkan/i }).click();
 		await expect(page.getByTestId('findings-total-count')).toHaveText('2');
 		await expect(page.getByTestId('finding-card-1')).toBeVisible();
 		await expect(page.getByTestId('finding-card-2')).toBeVisible();
@@ -414,43 +408,47 @@ test.describe('P0-04: Galeri temuan, verifikasi bukti, tindak lanjut, dan fallba
 		// 2. Buka detail Temuan #1, periksa bukti asli, toggle overlay, perbesar, dan metadata immutable
 		await page.getByRole('link', { name: /Buka Temuan #1/i }).click();
 		await expect(page).toHaveURL(/\/findings\/1$/);
-		await expect(page.getByRole('heading', { name: /Detail Temuan #1/i })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /Temuan #1/i })).toBeVisible();
 
 		await expect(page.getByTestId('finding-evidence-img')).toBeVisible();
 		await expect(page.getByTestId('finding-bbox-overlay')).toBeVisible();
-		await expect(page.getByTestId('immutable-detected-violation')).toContainText('NO_HELMET');
+		await expect(page.getByTestId('immutable-detected-violation')).toContainText(
+			'Indikasi tanpa helm'
+		);
 		await expect(page.getByTestId('temporary-track-reference')).toContainText('17:1');
 		await expect(page.getByTestId('temporary-track-reference')).toContainText(
 			/bukan identitas pekerja/i
 		);
 
 		// Toggle overlay off dan on
-		await page.getByRole('button', { name: /Sembunyikan Overlay/i }).click();
+		await page.getByRole('button', { name: /Sembunyikan kotak/i }).click();
 		await expect(page.getByTestId('finding-bbox-overlay')).toBeHidden();
-		await page.getByRole('button', { name: /Tampilkan Overlay/i }).click();
+		await page.getByRole('button', { name: /Tampilkan kotak/i }).click();
 		await expect(page.getByTestId('finding-bbox-overlay')).toBeVisible();
 
 		// Perbesar bukti dan tutup dengan tombol
-		await page.getByRole('button', { name: /Perbesar Bukti/i }).click();
-		await expect(page.getByRole('dialog', { name: /Pratinjau Penuh Foto Bukti/i })).toBeVisible();
-		await page.getByRole('button', { name: /Tutup Pratinjau/i }).click();
-		await expect(page.getByRole('dialog', { name: /Pratinjau Penuh Foto Bukti/i })).toBeHidden();
+		await page.getByRole('button', { name: /Perbesar foto/i }).click();
+		await expect(page.getByRole('dialog', { name: /Foto bukti/i })).toBeVisible();
+		await page.getByRole('button', { name: /Tutup foto/i }).click();
+		await expect(page.getByRole('dialog', { name: /Foto bukti/i })).toBeHidden();
 
 		// Sebelum dikonfirmasi, tindak lanjut dinonaktifkan dengan alasan jelas
 		await expect(page.getByTestId('followup-disabled-reason')).toBeVisible();
 
 		// 3. Konfirmasi Temuan #1 beserta koreksi kategori akhir ke NO_VEST (indikasi model NO_HELMET tetap immutable)
-		await page.getByLabel(/Jenis Hasil Petugas/i).selectOption('NO_VEST');
+		await page.getByLabel(/Kategori hasil pemeriksaan/i).selectOption('NO_VEST');
 		await page
-			.getByLabel(/Catatan Verifikasi/i)
+			.getByLabel(/Catatan pemeriksaan/i)
 			.fill('Kepala memakai topi gelap namun rompi keselamatan tidak digunakan.');
 		await page.getByRole('button', { name: /Konfirmasi Temuan/i }).click();
 
 		await expect(page.getByTestId('verification-status-badge')).toContainText(/Terkonfirmasi/i);
 		await expect(page.getByTestId('finding-version-badge')).toContainText('Versi #2');
 		// Indikasi awal model tetap NO_HELMET sedangkan kategori akhir menjadi NO_VEST
-		await expect(page.getByTestId('immutable-detected-violation')).toContainText('NO_HELMET');
-		await expect(page.getByTestId('final-violation-type')).toContainText('NO_VEST');
+		await expect(page.getByTestId('immutable-detected-violation')).toContainText(
+			'Indikasi tanpa helm'
+		);
+		await expect(page.getByTestId('final-violation-type')).toContainText('Indikasi tanpa rompi');
 
 		// 4. Tindak lanjut pada temuan terkonfirmasi: completed wajib catatan
 		await page.getByLabel(/Status Tindak Lanjut/i).selectOption('completed');
@@ -474,10 +472,10 @@ test.describe('P0-04: Galeri temuan, verifikasi bukti, tindak lanjut, dan fallba
 
 		// 5. Buka Temuan #2 dan uji penolakan (wajib alasan) serta konflik versi (409 VERSION_CONFLICT)
 		await page.goto(`${stack.baseUrl}/findings/2`);
-		await expect(page.getByRole('heading', { name: /Detail Temuan #2/i })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /Temuan #2/i })).toBeVisible();
 
 		// Tolak tanpa alasan -> error validasi
-		await page.getByLabel(/Catatan Verifikasi/i).fill('');
+		await page.getByLabel(/Catatan pemeriksaan/i).fill('');
 		await page.getByRole('button', { name: /Tolak Temuan/i }).click();
 		await expect(page.getByTestId('finding-mutation-error')).toContainText(
 			/Alasan penolakan wajib diisi/i
@@ -507,7 +505,7 @@ test.describe('P0-04: Galeri temuan, verifikasi bukti, tindak lanjut, dan fallba
 		// Sekarang petugas di halaman ini (masih memegang version=1) mengisi alasan penolakan dan klik Tolak Temuan -> 409 VERSION_CONFLICT
 		const officerRejectionReason =
 			'Rompi tertutup bayangan perancah namun sebenarnya terpakai dengan benar.';
-		await page.getByLabel(/Catatan Verifikasi/i).fill(officerRejectionReason);
+		await page.getByLabel(/Catatan pemeriksaan/i).fill(officerRejectionReason);
 		await page.getByRole('button', { name: /Tolak Temuan/i }).click();
 
 		await expect(page.getByTestId('finding-mutation-error')).toHaveAttribute(
@@ -515,14 +513,12 @@ test.describe('P0-04: Galeri temuan, verifikasi bukti, tindak lanjut, dan fallba
 			'VERSION_CONFLICT'
 		);
 		// Pastikan teks yang sudah diketik petugas tidak hilang!
-		await expect(page.getByLabel(/Catatan Verifikasi/i)).toHaveValue(officerRejectionReason);
+		await expect(page.getByLabel(/Catatan pemeriksaan/i)).toHaveValue(officerRejectionReason);
 
-		// Klik tombol Muat Ulang Data Terbaru (Pertahankan Input Saya) lalu simpan ulang -> berhasil!
-		await page
-			.getByRole('button', { name: /Muat Ulang Data Terbaru \(Pertahankan Input Saya\)/i })
-			.click();
+		// Klik tombol Ambil data terbaru (Pertahankan Input Saya) lalu simpan ulang -> berhasil!
+		await page.getByRole('button', { name: /Ambil data terbaru/i }).click();
 		await expect(page.getByTestId('finding-version-badge')).toContainText('Versi #2');
-		await expect(page.getByLabel(/Catatan Verifikasi/i)).toHaveValue(officerRejectionReason);
+		await expect(page.getByLabel(/Catatan pemeriksaan/i)).toHaveValue(officerRejectionReason);
 
 		await page.getByRole('button', { name: /Tolak Temuan/i }).click();
 		await expect(page.getByTestId('verification-status-badge')).toContainText(/Ditolak/i);
@@ -534,18 +530,22 @@ test.describe('P0-04: Galeri temuan, verifikasi bukti, tindak lanjut, dan fallba
 			'data-error-code',
 			'EVIDENCE_MISSING'
 		);
-		await expect(page.getByTestId('evidence-error-state')).toContainText(/410 EVIDENCE_MISSING/i);
+		await expect(page.getByTestId('evidence-error-state')).toContainText(
+			/Foto bukti tidak ditemukan/i
+		);
 
 		// Soft delete Temuan #3 (berstatus rejected dan tidak dikunci laporan)
 		await page.getByRole('button', { name: /Hapus Temuan/i }).click();
-		await page.getByRole('button', { name: /Ya, Hapus Temuan/i }).click();
+		await page.getByRole('button', { name: /^Hapus temuan$/i }).click();
 		await expect(page).toHaveURL(/\/findings$/);
 		await expect(page.getByTestId('findings-total-count')).toHaveText('3');
 
 		// 7. Periksa Temuan #4 yang dikunci oleh laporan disetujui (409 REPORT_LOCKED)
 		await page.goto(`${stack.baseUrl}/findings/4`);
-		await page.getByLabel(/Catatan Verifikasi/i).fill('Coba ubah temuan yang sudah masuk laporan approved');
-		await page.getByRole('button', { name: /Simpan Kategori \/ Catatan Saja/i }).click();
+		await page
+			.getByLabel(/Catatan pemeriksaan/i)
+			.fill('Coba ubah temuan yang sudah masuk laporan approved');
+		await page.getByRole('button', { name: /Simpan kategori dan catatan/i }).click();
 		await expect(page.getByTestId('finding-mutation-error')).toHaveAttribute(
 			'data-error-code',
 			'REPORT_LOCKED'
@@ -554,20 +554,20 @@ test.describe('P0-04: Galeri temuan, verifikasi bukti, tindak lanjut, dan fallba
 
 		// 8. Tambah temuan manual melalui formulir multipart pada Sesi #2 (mode manual tertutup)
 		await page.goto(`${stack.baseUrl}/findings`);
-		await page.getByRole('button', { name: /Tambah Temuan Manual/i }).click();
-		await page.getByLabel(/Sesi Mode Manual \(Tertutup\)/i).selectOption('2');
-		await page.getByLabel(/Jenis Indikasi APD/i).selectOption('NO_HELMET');
-		await page
-			.getByLabel(/Catatan Observasi Manual Petugas/i)
-			.fill('Observasi manual petugas pada area tangga darurat.');
-		await page.getByLabel(/Foto Bukti JPEG/i).setInputFiles({
+		await page.getByRole('button', { name: /Tambah foto/i }).click();
+		await page.getByLabel(/Sesi manual/i).selectOption('2');
+		await page.getByLabel('Kategori APD *', { exact: true }).selectOption('NO_HELMET');
+		await page.getByLabel(/Catatan/i).fill('Observasi manual petugas pada area tangga darurat.');
+		await page.getByLabel(/Foto JPEG/i).setInputFiles({
 			name: 'bukti-manual.jpg',
 			mimeType: 'image/jpeg',
 			buffer: TEST_ONLY_VALID_JPEG_BYTES
 		});
-		await page.getByRole('button', { name: /Simpan Temuan Manual/i }).click();
+		await page.getByRole('button', { name: /Simpan temuan/i }).click();
 
-		await expect(page.getByTestId('manual-finding-success')).toContainText(/Provenance: MANUAL/i);
+		await expect(page.getByTestId('manual-finding-success')).toContainText(
+			/Foto manual ini masih perlu diperiksa/i
+		);
 		await expect(page.getByTestId('findings-total-count')).toHaveText('4');
 
 		// 9. Reload halaman dan pastikan perubahan Temuan #1 dan #2 tetap tersimpan dari Go/SQLite
@@ -581,11 +581,11 @@ test.describe('P0-04: Galeri temuan, verifikasi bukti, tindak lanjut, dan fallba
 
 		await page.goto(`${stack.baseUrl}/findings/2`);
 		await expect(page.getByTestId('verification-status-badge')).toContainText(/Ditolak/i);
-		await expect(page.getByLabel(/Catatan Verifikasi/i)).toHaveValue(officerRejectionReason);
+		await expect(page.getByLabel(/Catatan pemeriksaan/i)).toHaveValue(officerRejectionReason);
 
 		// 10. Uji kegagalan jaringan (network failure) saat menyimpan koreksi: tampilkan error spesifik dan pertahankan input!
 		const unsavedNetworkNote = 'Catatan koreksi saat jaringan terputus sementara';
-		await page.getByLabel(/Catatan Verifikasi/i).fill(unsavedNetworkNote);
+		await page.getByLabel(/Catatan pemeriksaan/i).fill(unsavedNetworkNote);
 		await page.route('**/api/v1/findings/2', async (route) => {
 			if (route.request().method() === 'PATCH') {
 				await route.abort('failed');
@@ -598,7 +598,7 @@ test.describe('P0-04: Galeri temuan, verifikasi bukti, tindak lanjut, dan fallba
 			'data-error-code',
 			'BACKEND_UNREACHABLE'
 		);
-		await expect(page.getByLabel(/Catatan Verifikasi/i)).toHaveValue(unsavedNetworkNote);
+		await expect(page.getByLabel(/Catatan pemeriksaan/i)).toHaveValue(unsavedNetworkNote);
 		await page.unroute('**/api/v1/findings/2');
 
 		// 10b. Uji 401 pada endpoint bukti terlindungi (/api/v1/findings/1/evidence) saat frontend masih merasa autentik -> apiBlob bersama memicu invalidasi sesi bersama & redirect ke /login!
@@ -617,15 +617,15 @@ test.describe('P0-04: Galeri temuan, verifikasi bukti, tindak lanjut, dan fallba
 		});
 		await page.goto(`${stack.baseUrl}/findings/1`);
 		await expect(page).toHaveURL(/\/login$/);
-		await expect(page.getByText(/Sesi Anda telah berakhir/i)).toBeVisible();
+		await expect(page.getByText(/Sesi sudah berakhir/i)).toBeVisible();
 		await page.unroute('**/api/v1/findings/1/evidence');
 
 		// 11. Uji 403 MANUAL_FALLBACK_DISABLED pada stack default (playwright webServer di baseURL yang memiliki ALLOW_MANUAL_FALLBACK=false)
 		await page.goto('/');
 		await expect(page).toHaveURL(/\/login$/);
-		await expect(page.getByRole('heading', { name: /Masuk Petugas K3/i })).toBeVisible();
-		await page.getByLabel(/Username/i).fill(TEST_USERNAME);
-		await page.getByLabel(/Password/i).fill(TEST_PASSWORD);
+		await expect(page.getByRole('heading', { name: /Masuk/i })).toBeVisible();
+		await page.getByLabel('Nama pengguna', { exact: true }).fill(TEST_USERNAME);
+		await page.getByLabel('Kata sandi', { exact: true }).fill(TEST_PASSWORD);
 		await page.getByRole('button', { name: /Masuk/i }).click();
 		await expect(page).toHaveURL(/\/$/);
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/shared/presentation/Icon.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { authSession } from '#lib/app/auth';
@@ -8,6 +9,7 @@
 	interface NavItem {
 		label: string;
 		href?: string;
+		icon?: string;
 		disabledReason?: string;
 	}
 
@@ -17,11 +19,11 @@
 	}
 
 	const defaultNavItems: NavItem[] = [
-		{ label: 'Dashboard', href: '/' },
-		{ label: 'Proyek & Zona', href: '/projects' },
-		{ label: 'Monitoring', href: '/monitoring' },
-		{ label: 'Temuan', href: '/findings' },
-		{ label: 'Laporan', href: '/reports' }
+		{ label: 'Beranda', href: '/', icon: 'dashboard' },
+		{ label: 'Proyek & Zona', href: '/projects', icon: 'projects' },
+		{ label: 'Monitoring', href: '/monitoring', icon: 'camera' },
+		{ label: 'Temuan', href: '/findings', icon: 'findings' },
+		{ label: 'Laporan', href: '/reports', icon: 'reports' }
 	];
 
 	let { children, navItems = defaultNavItems }: Props = $props();
@@ -31,40 +33,40 @@
 
 	const modeLabel = $derived.by(() => {
 		const mode = authSession.systemStatus?.mode;
-		if(mode === 'real') return 'NYATA';
-		if(mode === 'simulated') return 'SIMULASI';
-		if(mode === 'manual') return 'MANUAL';
+		if (mode === 'real') return 'NYATA';
+		if (mode === 'simulated') return 'SIMULASI';
+		if (mode === 'manual') return 'MANUAL';
 		return 'MEMUAT';
 	});
 
 	const readinessBadge = $derived.by(() => {
-		if(authSession.systemStatusLoading && !authSession.systemStatus) {
-			return { text: 'Memeriksa kesiapan...', tone: 'warn' as const };
+		if (authSession.systemStatusLoading && !authSession.systemStatus) {
+			return { text: 'Memeriksa model...', tone: 'warn' as const };
 		}
-		if(authSession.systemStatusError && !authSession.systemStatus) {
-			return { text: 'Status sistem gagal dimuat', tone: 'err' as const };
+		if (authSession.systemStatusError && !authSession.systemStatus) {
+			return { text: 'Status belum bisa dimuat', tone: 'err' as const };
 		}
 		const st = authSession.systemStatus;
-		if(!st) {
+		if (!st) {
 			return { text: 'Status belum tersedia', tone: 'warn' as const };
 		}
-		if(st.ai_ready) {
+		if (st.ai_ready) {
 			return {
-				text: st.mode === 'manual' ? 'Siap (Mode Manual)' : 'Model Siap',
+				text: st.mode === 'manual' ? 'Pencatatan manual' : 'Model siap',
 				tone: 'ok' as const
 			};
 		}
-		return { text: 'Model Belum Siap', tone: 'warn' as const };
+		return { text: 'Model belum siap', tone: 'warn' as const };
 	});
 
 	async function handleLogout() {
-		if(loggingOut) return;
+		if (loggingOut) return;
 		loggingOut = true;
 		logoutError = null;
 		try {
 			await authSession.logout();
 			await goto('/login', { replaceState: true });
-		} catch(err) {
+		} catch (err) {
 			logoutError = isApiError(err) ? err.message : 'Gagal keluar dari sesi. Silakan coba lagi.';
 		} finally {
 			loggingOut = false;
@@ -73,396 +75,429 @@
 </script>
 
 <a class="skip-link" href="#workspace-main">Lewati ke konten utama</a>
-
 <div class="shell-root">
-	<header class="topbar">
-		<div class="brand-group">
-			<a href="/" class="brand-title">Inspeksi K3</a>
-			<span class="mode-pill" data-mode={authSession.systemStatus?.mode ?? 'unknown'}>
-				Mode: <strong>{modeLabel}</strong>
-			</span>
-			<span class="readiness-pill" data-tone={readinessBadge.tone}>
-				{readinessBadge.text}
-			</span>
-		</div>
-
-		<div class="officer-group">
-			{#if authSession.user}
-				<span class="officer-label" data-testid="officer-identity">
-					Petugas: <strong>{authSession.user.display_name}</strong>
-					<span class="officer-role">({authSession.user.role})</span>
-				</span>
-			{/if}
-			<button
-				type="button"
-				class="logout-button"
-				onclick={handleLogout}
-				disabled={loggingOut}
-			>
-				{loggingOut ? 'Keluar...' : 'Keluar'}
-			</button>
-		</div>
-	</header>
-
-	{#if authSession.systemStatus?.mode === 'simulated'}
-		<div class="provenance-banner simulated" role="status">
-			<strong>MODE SIMULASI AKTIF:</strong> Seluruh hasil deteksi berasal dari simulasi deterministik, bukan inferensi model kamera nyata.
-		</div>
-	{:else if authSession.systemStatus?.mode === 'manual'}
-		<div class="provenance-banner manual" role="status">
-			<strong>MODE FALLBACK MANUAL AKTIF:</strong> Pencatatan menggunakan foto observasi manual petugas tanpa inferensi otomatis.
-		</div>
-	{/if}
-
-	{#if logoutError}
-		<div class="logout-alert" role="alert">
-			<span>{logoutError}</span>
-		</div>
-	{/if}
-
-	<div class="shell-body">
-		<nav class="sidebar" aria-label="Navigasi utama">
+	<aside class="sidebar">
+		<a href="/" class="brand" aria-label="Inspeksi K3 - Beranda">
+			<Icon name="shield" size={29} />
+			<span><strong>Inspeksi K3<span class="brand-dot">.</span></strong></span>
+		</a>
+		<nav aria-label="Navigasi utama">
 			<ul class="nav-list">
 				{#each navItems as item (item.label)}
-					<li class="nav-item">
+					<li>
 						{#if item.href}
 							{@const isCurrent =
 								item.href === '/'
 									? page.url.pathname === '/'
-									: page.url.pathname === item.href || page.url.pathname.startsWith(`${item.href}/`)}
+									: page.url.pathname === item.href ||
+										page.url.pathname.startsWith(`${item.href}/`)}
 							<a
 								href={item.href}
 								class="nav-link"
 								class:active={isCurrent}
 								aria-current={isCurrent ? 'page' : undefined}
 							>
-								{item.label}
+								<Icon name={item.icon ?? 'dashboard'} size={19} /><span>{item.label}</span>
 							</a>
 						{:else}
-							<button
-								type="button"
-								class="nav-disabled"
-								disabled
-								title={item.disabledReason}
-							>
-								<span class="nav-disabled-label">{item.label}</span>
-								{#if item.disabledReason}
-									<span class="nav-disabled-reason">{item.disabledReason}</span>
-								{/if}
+							<button type="button" class="nav-link" disabled title={item.disabledReason}>
+								<Icon name={item.icon ?? 'dashboard'} size={19} /><span>{item.label}</span>
 							</button>
 						{/if}
 					</li>
 				{/each}
 			</ul>
 		</nav>
-
-		<main id="workspace-main" class="workspace-main" tabindex="-1">
-			{@render children()}
-		</main>
+	</aside>
+	<div class="main-column">
+		<header class="topbar">
+			<div class="breadcrumb">
+				<span class="current-crumb"
+					>{navItems.find((item) =>
+						item.href === '/'
+							? page.url.pathname === '/'
+							: item.href && page.url.pathname.startsWith(item.href)
+					)?.label ?? 'Inspeksi K3'}</span
+				>
+			</div>
+			<div class="officer-group">
+				{#if authSession.user}
+					<span class="avatar" aria-hidden="true"
+						>{authSession.user.display_name.charAt(0).toUpperCase()}</span
+					>
+					<span class="officer-label" data-testid="officer-identity"
+						><span class="sr-only">Petugas:{' '}</span><strong
+							>{authSession.user.display_name}</strong
+						><small>Petugas K3</small></span
+					>
+				{/if}
+				<button
+					type="button"
+					class="logout-button"
+					onclick={handleLogout}
+					disabled={loggingOut}
+					aria-label={loggingOut ? 'Keluar...' : 'Keluar'}
+					title="Keluar dari akun"><Icon name="logout" size={18} /></button
+				>
+			</div>
+		</header>
+		<div class="system-bar">
+			<div class="system-context">
+				<span class="mode-label">Mode <strong>{modeLabel}</strong></span><span
+					class="context-separator"
+					aria-hidden="true"
+				></span><span class="readiness-label" data-tone={readinessBadge.tone}
+					><span class="status-dot" aria-hidden="true"></span>{readinessBadge.text}</span
+				>
+			</div>
+		</div>
+		{#if authSession.systemStatus?.mode === 'simulated'}
+			<div class="provenance-banner" role="status">
+				<strong>Mode simulasi.</strong> Hasil ini bukan deteksi kamera nyata.
+			</div>
+		{:else if authSession.systemStatus?.mode === 'manual'}
+			<div class="provenance-banner" role="status">
+				<strong>Mode manual.</strong> Foto dicatat petugas, tanpa deteksi otomatis.
+			</div>
+		{/if}
+		{#if logoutError}<div class="logout-alert" role="alert">{logoutError}</div>{/if}
+		<main id="workspace-main" class="workspace-main" tabindex="-1">{@render children()}</main>
 	</div>
 </div>
 
 <style>
 	.skip-link {
-		position: absolute;
-		left: -9999px;
-		top: 0.5rem;
+		position: fixed;
+		left: 1rem;
+		top: -100px;
 		z-index: 100;
-		padding: 0.5rem 0.875rem;
+		padding: 0.75rem 1rem;
 		background: var(--bg-surface);
 		color: var(--ink-primary);
 		border: 2px solid var(--focus-ring);
 		border-radius: 6px;
-		font-weight: 600;
-		text-decoration: none;
 	}
-
 	.skip-link:focus {
-		left: 0.75rem;
+		top: 1rem;
 	}
-
 	.shell-root {
 		min-height: 100vh;
+	}
+	.sidebar {
+		position: fixed;
+		inset: 0 auto 0 0;
+		width: 224px;
 		display: flex;
 		flex-direction: column;
+		padding: 2rem 1rem 1.25rem;
+		background: var(--nav-ground);
+		color: var(--nav-text);
+		z-index: 30;
 	}
-
-	.topbar {
+	.brand {
 		display: flex;
-		flex-wrap: wrap;
 		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem 1.25rem;
-		padding: 0.75rem 1.25rem;
-		background: var(--bg-surface);
-		border-bottom: 1px solid var(--border-strong);
-	}
-
-	.brand-group {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 0.625rem;
-	}
-
-	.brand-title {
-		font-size: 1.125rem;
-		font-weight: 700;
-		letter-spacing: -0.02em;
-		color: var(--ink-primary);
+		gap: 0.65rem;
+		margin: 0 0.6rem 3rem;
+		color: #f4f8fa;
 		text-decoration: none;
 	}
-
-	.mode-pill,
-	.readiness-pill {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		padding: 0.2rem 0.6rem;
-		border-radius: 6px;
-		font-size: 0.8125rem;
-		font-variant-numeric: tabular-nums;
-		border: 1px solid var(--border-default);
-		background: var(--bg-subtle);
-		color: var(--ink-secondary);
+	.brand strong {
+		display: block;
+		font-size: 1.22rem;
+		font-weight: 650;
+		letter-spacing: -0.04em;
+		line-height: 1.25;
 	}
-
-	.readiness-pill[data-tone='ok'] {
-		background: var(--status-ok-bg);
-		color: var(--status-ok-ink);
-		border-color: var(--status-ok-border);
-		font-weight: 600;
+	.brand-dot {
+		color: #7ba5ff;
 	}
-
-	.readiness-pill[data-tone='warn'] {
-		background: var(--status-warn-bg);
-		color: var(--status-warn-ink);
-		border-color: var(--status-warn-border);
-		font-weight: 600;
-	}
-
-	.readiness-pill[data-tone='err'] {
-		background: var(--status-err-bg);
-		color: var(--status-err-ink);
-		border-color: var(--status-err-border);
-		font-weight: 600;
-	}
-
-	.officer-group {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 0.875rem;
-	}
-
-	.officer-label {
-		font-size: 0.9375rem;
-		color: var(--ink-primary);
-	}
-
-	.officer-role {
-		color: var(--ink-secondary);
-		font-size: 0.8125rem;
-	}
-
-	.logout-button {
-		padding: 0.4rem 0.85rem;
-		border-radius: 6px;
-		border: 1px solid var(--border-strong);
-		background: var(--bg-surface);
-		color: var(--ink-primary);
-		font-size: 0.875rem;
-		font-weight: 600;
-		cursor: pointer;
-	}
-
-	.logout-button:hover:not(:disabled) {
-		background: var(--bg-subtle);
-		border-color: var(--ink-secondary);
-	}
-
-	.logout-button:disabled {
-		opacity: 0.65;
-		cursor: not-allowed;
-	}
-
-	.provenance-banner {
-		padding: 0.65rem 1.25rem;
-		font-size: 0.875rem;
-		border-bottom: 1px solid var(--status-warn-border);
-		background: var(--status-warn-bg);
-		color: var(--status-warn-ink);
-	}
-
-	.logout-alert {
-		padding: 0.65rem 1.25rem;
-		font-size: 0.875rem;
-		border-bottom: 1px solid var(--status-err-border);
-		background: var(--status-err-bg);
-		color: var(--status-err-ink);
-	}
-
-	.shell-body {
-		flex: 1;
-		display: grid;
-		grid-template-columns: 240px minmax(0, 1fr);
-		min-height: 0;
-	}
-
-	.sidebar {
-		background: var(--bg-surface);
-		border-right: 1px solid var(--border-default);
-		padding: 1rem 0.75rem;
-	}
-
 	.nav-list {
 		list-style: none;
 		margin: 0;
 		padding: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 0.375rem;
+		gap: 0.4rem;
 	}
-
 	.nav-link {
-		display: block;
-		padding: 0.55rem 0.75rem;
-		border-radius: 8px;
-		text-decoration: none;
-		font-weight: 600;
-		font-size: 0.9375rem;
-		color: var(--ink-primary);
-		border: 1px solid transparent;
-	}
-
-	.nav-link:hover {
-		background: var(--bg-subtle);
-	}
-
-	.nav-link.active {
-		background: var(--accent-surface);
-		color: var(--accent-primary);
-		border-color: var(--accent-border);
-	}
-
-	.nav-disabled {
-		width: 100%;
-		text-align: left;
-		padding: 0.5rem 0.75rem;
-		border-radius: 8px;
-		border: 1px solid transparent;
-		background: transparent;
-		color: var(--ink-muted);
-		cursor: not-allowed;
 		display: flex;
-		flex-direction: column;
-		gap: 0.125rem;
-	}
-
-	.nav-disabled-label {
-		font-size: 0.9375rem;
-		font-weight: 500;
-	}
-
-	.nav-disabled-reason {
-		font-size: 0.75rem;
-		color: var(--ink-muted);
-	}
-
-	.workspace-main {
-		padding: 1.5rem 1.75rem;
-		max-width: 1200px;
+		align-items: center;
+		gap: 0.8rem;
 		width: 100%;
+		min-height: 44px;
+		padding: 0.7rem 0.8rem;
+		border: 0;
+		border-radius: 6px;
+		color: var(--nav-text);
+		background: transparent;
+		text-decoration: none;
+		font-size: 0.875rem;
+		font-weight: 450;
+		transition:
+			color 150ms,
+			background-color 150ms;
+	}
+	.nav-link:hover {
+		background: #203e4b;
+		color: #fff;
+	}
+	.nav-link.active {
+		background: #2b4b5b;
+		color: #fff;
+		font-weight: 600;
+	}
+	.nav-link:focus-visible,
+	.brand:focus-visible {
+		outline-color: #adc6ff;
+	}
+	.nav-link:disabled {
+		opacity: 0.5;
+	}
+	.main-column {
+		margin-left: 224px;
 		min-width: 0;
 	}
-
-	@media (max-width: 900px) {
-		.shell-body {
-			grid-template-columns: minmax(0, 1fr);
-		}
-
-		.sidebar {
-			border-right: none;
-			border-bottom: 1px solid var(--border-default);
-			padding: 0.75rem 1rem;
-		}
-
-		.nav-list {
-			flex-direction: row;
-			flex-wrap: wrap;
-			gap: 0.5rem;
-		}
-
-		.nav-disabled {
-			width: auto;
-		}
-
+	.topbar {
+		height: 72px;
+		padding: 0 2.5rem;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		background: var(--bg-surface);
+		border-bottom: 1px solid var(--border-default);
+	}
+	.breadcrumb {
+		display: flex;
+		gap: 0.8rem;
+		font-size: 0.8rem;
+		color: var(--ink-muted);
+	}
+	.current-crumb {
+		font-weight: 500;
+		color: var(--ink-primary);
+	}
+	.officer-group {
+		display: flex;
+		align-items: center;
+		gap: 0.7rem;
+	}
+	.avatar {
+		display: grid;
+		place-items: center;
+		width: 34px;
+		height: 34px;
+		border-radius: 50%;
+		background: #e7edf1;
+		color: #355366;
+		font-size: 0.875rem;
+		font-weight: 600;
+	}
+	.officer-label {
+		display: flex;
+		flex-direction: column;
+		font-size: 0.8rem;
+		line-height: 1.5;
+	}
+	.officer-label strong {
+		font-weight: 600;
+	}
+	.officer-label small {
+		color: var(--ink-muted);
+		font-size: 0.66rem;
+	}
+	.logout-button {
+		display: grid;
+		place-items: center;
+		width: 36px;
+		height: 36px;
+		margin-left: 0.65rem;
+		border: 0;
+		border-radius: 6px;
+		background: transparent;
+		color: var(--ink-secondary);
+	}
+	.logout-button:hover {
+		background: var(--bg-subtle);
+		color: var(--ink-primary);
+	}
+	.logout-button:disabled {
+		opacity: 0.5;
+	}
+	.system-bar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		padding: 0.65rem 2.5rem;
+		background: var(--bg-surface);
+		font-size: 0.7rem;
+		color: var(--ink-secondary);
+	}
+	.system-context {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.85rem;
+	}
+	.mode-label strong {
+		font-weight: 550;
+		margin-left: 0.2rem;
+	}
+	.context-separator {
+		height: 12px;
+		width: 1px;
+		background: var(--border-default);
+	}
+	.readiness-label {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+	.readiness-label[data-tone='warn'] {
+		color: var(--status-warn-ink);
+	}
+	.readiness-label[data-tone='err'] {
+		color: var(--status-err-ink);
+	}
+	.readiness-label[data-tone='ok'] {
+		color: var(--status-ok-ink);
+	}
+	.status-dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: currentColor;
+	}
+	.workspace-main {
+		max-width: 1500px;
+		width: 100%;
+		padding: 2.25rem 2.5rem 3.5rem;
+		min-width: 0;
+		margin: 0 auto;
+	}
+	.workspace-main:focus {
+		outline: none;
+	}
+	.provenance-banner,
+	.logout-alert {
+		padding: 0.65rem 2.5rem;
+		background: var(--status-warn-bg);
+		color: var(--status-warn-ink);
+		font-size: 0.8rem;
+		border-block: 1px solid var(--status-warn-border);
+	}
+	.logout-alert {
+		background: var(--status-err-bg);
+		color: var(--status-err-ink);
+		border-color: var(--status-err-border);
+	}
+	@media (min-width: 1800px) {
 		.workspace-main {
-			padding: 1.25rem 1rem;
+			padding-inline: 3rem;
 		}
 	}
-
-	@media (max-width: 640px) {
-		.topbar {
-			padding: max(0.65rem, env(safe-area-inset-top)) max(0.875rem, env(safe-area-inset-right))
-				0.65rem max(0.875rem, env(safe-area-inset-left));
-			gap: 0.625rem;
+	@media (max-width: 1100px) {
+		.sidebar {
+			width: 200px;
+			padding-inline: 0.75rem;
 		}
-
-		.brand-group {
-			width: 100%;
-			gap: 0.45rem;
+		.main-column {
+			margin-left: 200px;
 		}
-
-		.officer-group {
+		.topbar,
+		.system-bar {
+			padding-inline: 1.5rem;
+		}
+		.workspace-main {
+			padding: 1.75rem 1.5rem 3rem;
+		}
+	}
+	@media (max-width: 900px) {
+		.sidebar {
+			inset: auto 0 0;
 			width: 100%;
-			justify-content: space-between;
-			gap: 0.5rem;
-			padding-top: 0.45rem;
+			padding: 0.3rem max(0.35rem, env(safe-area-inset-right))
+				max(0.3rem, env(safe-area-inset-bottom)) max(0.35rem, env(safe-area-inset-left));
+			background: var(--bg-surface);
 			border-top: 1px solid var(--border-default);
 		}
-
-		.logout-button {
-			min-height: 2.75rem;
-			padding: 0.5rem 0.95rem;
+		.brand {
+			display: none;
 		}
-
-		.provenance-banner,
-		.logout-alert {
-			padding: 0.65rem max(0.875rem, env(safe-area-inset-right)) 0.65rem
-				max(0.875rem, env(safe-area-inset-left));
-		}
-
-		.sidebar {
-			padding: 0.65rem max(0.875rem, env(safe-area-inset-right)) 0.65rem
-				max(0.875rem, env(safe-area-inset-left));
-		}
-
 		.nav-list {
 			display: grid;
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-			gap: 0.45rem;
+			grid-template-columns: repeat(5, minmax(0, 1fr));
+			gap: 0;
 		}
-
-		.nav-item:last-child:nth-child(odd) {
-			grid-column: 1 / -1;
-		}
-
 		.nav-link {
-			display: flex;
-			align-items: center;
+			flex-direction: column;
 			justify-content: center;
-			min-height: 2.75rem;
-			padding: 0.55rem 0.65rem;
-			text-align: center;
-			font-size: 0.875rem;
-			border-color: var(--border-default);
-			background: var(--bg-canvas);
+			gap: 0.3rem;
+			min-height: 58px;
+			padding: 0.35rem 0.1rem;
+			font-size: 0.61rem;
+			color: var(--ink-secondary);
+			white-space: nowrap;
+			border-radius: 6px;
 		}
-
+		.nav-link.active {
+			background: var(--accent-surface);
+			color: var(--accent-primary);
+		}
+		.nav-link:hover {
+			background: var(--bg-subtle);
+			color: var(--ink-primary);
+		}
+		.nav-link:focus-visible {
+			outline-color: var(--focus-ring);
+			outline-offset: -2px;
+		}
+		.main-column {
+			margin-left: 0;
+		}
+		.topbar {
+			height: 64px;
+			padding: env(safe-area-inset-top) 1.1rem 0;
+		}
+		.current-crumb {
+			font-size: 0.9rem;
+			font-weight: 600;
+		}
+		.avatar {
+			width: 30px;
+			height: 30px;
+			font-size: 0.8rem;
+		}
+		.officer-group {
+			gap: 0.5rem;
+		}
+		.officer-label {
+			font-size: 0.75rem;
+		}
+		.officer-label small {
+			display: none;
+		}
+		.logout-button {
+			margin-left: 0;
+			width: 40px;
+			min-height: 44px;
+		}
+		.system-bar {
+			padding: 0.55rem 1.1rem;
+			font-size: 0.66rem;
+		}
+		.system-context {
+			gap: 0.65rem;
+		}
 		.workspace-main {
-			padding: 1rem max(0.875rem, env(safe-area-inset-right))
-				max(1.5rem, env(safe-area-inset-bottom)) max(0.875rem, env(safe-area-inset-left));
+			padding: 1.6rem 1.1rem calc(6rem + env(safe-area-inset-bottom));
+		}
+		.provenance-banner,
+		.logout-alert {
+			padding: 0.6rem 1.1rem;
+			font-size: 0.75rem;
 		}
 	}
 </style>

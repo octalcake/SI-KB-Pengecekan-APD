@@ -76,10 +76,7 @@ async function startDisposableReportStack(options: {
 	const seedBin = path.join(tempRoot, `seed${exeExt}`);
 	const apiBin = path.join(tempRoot, `api${exeExt}`);
 
-	const migrationSql = fs.readFileSync(
-		path.join(backendDir, 'migrations', '001_init.sql'),
-		'utf8'
-	);
+	const migrationSql = fs.readFileSync(path.join(backendDir, 'migrations', '001_init.sql'), 'utf8');
 	const [upSql] = migrationSql.split('-- migrate:down');
 	const db = new DatabaseSync(dbPath);
 	db.exec(upSql);
@@ -218,7 +215,9 @@ async function startDisposableReportStack(options: {
 		track_id: 17,
 		confidence: 0.93,
 		bbox: [0.2, 0.1, 0.6, 0.95],
-		ppe: [{ type: 'NO_HELMET', state: 'positive', confidence: 0.89, bbox: [0.31, 0.11, 0.45, 0.29] }]
+		ppe: [
+			{ type: 'NO_HELMET', state: 'positive', confidence: 0.89, bbox: [0.31, 0.11, 0.45, 0.29] }
+		]
 	});
 
 	seedDb
@@ -294,7 +293,9 @@ async function startDisposableReportStack(options: {
 	// Ensure Session #4 is active after Go startup recovery so 409 SESSION_STILL_ACTIVE is tested against live Go
 	const activeDb = new DatabaseSync(dbPath);
 	activeDb
-		.prepare(`UPDATE monitoring_sessions SET status = 'active', ended_at = NULL, end_reason = NULL WHERE id = 4`)
+		.prepare(
+			`UPDATE monitoring_sessions SET status = 'active', ended_at = NULL, end_reason = NULL WHERE id = 4`
+		)
 		.run();
 	activeDb.close();
 
@@ -348,23 +349,23 @@ test.describe('P0-05: Penyusunan laporan inspeksi, snapshot sumber, staleness, d
 		await page.goto(`${stack.baseUrl}/`);
 		await expect(page).toHaveURL(/\/login$/);
 
-		await page.getByLabel(/Username/i).fill(TEST_USERNAME);
-		await page.getByLabel(/Password/i).fill(TEST_PASSWORD);
+		await page.getByLabel('Nama pengguna', { exact: true }).fill(TEST_USERNAME);
+		await page.getByLabel('Kata sandi', { exact: true }).fill(TEST_PASSWORD);
 		await page.getByRole('button', { name: /Masuk/i }).click();
 		await expect(page).toHaveURL(/\/$/);
 
 		// 1. Buka halaman /reports dan periksa kesiapan serta kelayakan sesi
 		await page.goto(`${stack.baseUrl}/reports`);
-		await expect(page.getByRole('heading', { name: /Laporan Inspeksi K3/i })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /^Laporan$/i })).toBeVisible();
 		await expect(page.getByTestId('reports-total-count')).toHaveText('0');
-		await expect(page.getByTestId('gemini-readiness-chip')).toContainText(
-			/Tidak Dikonfigurasi \/ Nonaktif/i
-		);
+		await expect(page.getByTestId('gemini-readiness-chip')).toContainText(/Belum aktif/i);
 
 		// Uji Sesi #4 (masih aktif) -> 409 SESSION_STILL_ACTIVE
+		if (!(await page.getByTestId('create-session-select').isVisible()))
+			await page.locator('summary.create-trigger').click();
 		await page.getByTestId('create-session-select').selectOption('4');
 		await expect(page.getByTestId('session-eligibility-status')).toContainText(
-			/SESSION_STILL_ACTIVE/i
+			/Inspeksi masih berjalan/i
 		);
 		await page.getByTestId('submit-create-template').click();
 		await expect(page.getByTestId('report-create-error')).toHaveAttribute(
@@ -373,9 +374,11 @@ test.describe('P0-05: Penyusunan laporan inspeksi, snapshot sumber, staleness, d
 		);
 
 		// Uji Sesi #3 (tertutup tetapi 0 temuan terkonfirmasi) -> 422 NO_CONFIRMED_FINDINGS
+		if (!(await page.getByTestId('create-session-select').isVisible()))
+			await page.locator('summary.create-trigger').click();
 		await page.getByTestId('create-session-select').selectOption('3');
 		await expect(page.getByTestId('session-eligibility-status')).toContainText(
-			/NO_CONFIRMED_FINDINGS/i
+			/Belum ada temuan terkonfirmasi/i
 		);
 		await page.getByTestId('submit-create-template').click();
 		await expect(page.getByTestId('report-create-error')).toHaveAttribute(
@@ -384,13 +387,17 @@ test.describe('P0-05: Penyusunan laporan inspeksi, snapshot sumber, staleness, d
 		);
 
 		// 2. Pilih Sesi #1 (memenuhi syarat: tertutup + 1 temuan terkonfirmasi) dan uji generasi Gemini (503 GEMINI_UNAVAILABLE + retensi UUID request_key)
+		if (!(await page.getByTestId('create-session-select').isVisible()))
+			await page.locator('summary.create-trigger').click();
 		await page.getByTestId('create-session-select').selectOption('1');
 		await expect(page.getByTestId('session-eligibility-status')).toHaveAttribute(
 			'data-eligible',
 			'true'
 		);
 
-		await page.getByRole('radio', { name: /Generasi Narasi Gemini Backend/i }).check();
+		if (!(await page.getByTestId('create-session-select').isVisible()))
+			await page.locator('summary.create-trigger').click();
+		await page.getByRole('radio', { name: /Gunakan Gemini/i }).check();
 		await page.getByTestId('submit-generate-gemini').click();
 
 		// Go mengembalikan 503 GEMINI_UNAVAILABLE karena GEMINI_ENABLED=false; UI jujur menampilkannya dan menyimpan request_key
@@ -433,6 +440,8 @@ test.describe('P0-05: Penyusunan laporan inspeksi, snapshot sumber, staleness, d
 		await page.unroute('**/api/v1/reports/generate');
 
 		// Jika input (session_id) diganti ke Sesi #2, request_key lama tidak boleh dipakai ulang!
+		if (!(await page.getByTestId('create-session-select').isVisible()))
+			await page.locator('summary.create-trigger').click();
 		await page.getByTestId('create-session-select').selectOption('2');
 		await page.getByTestId('submit-generate-gemini').click();
 		const session2Key = (
@@ -441,38 +450,44 @@ test.describe('P0-05: Penyusunan laporan inspeksi, snapshot sumber, staleness, d
 		expect(session2Key).not.toBe(firstSession1Key);
 
 		// 3. Buat Draft Manual pada Sesi #2 kemudian hapus draft tersebut (DELETE /reports/{id}?version=1 -> 204)
-		await page.getByRole('radio', { name: /Draft Tulis Manual Petugas/i }).check();
-		await page.getByLabel(/Judul Laporan Manual/i).fill('Draft Manual Sementara Sesi 2');
+		if (!(await page.getByTestId('create-session-select').isVisible()))
+			await page.locator('summary.create-trigger').click();
+		await page.getByRole('radio', { name: /Tulis manual/i }).check();
+		await page.getByLabel(/Judul laporan/i).fill('Draft Manual Sementara Sesi 2');
 		await page
-			.getByLabel(/Isi Narasi Laporan Manual/i)
+			.getByLabel(/^Isi laporan/i)
 			.fill('Narasi manual awal untuk menguji penghapusan draft.');
 		await page.getByTestId('submit-create-manual').click();
 
 		await expect(page).toHaveURL(/\/reports\/1$/);
-		await expect(page.getByTestId('report-provenance-badge')).toContainText(/Provenance: MANUAL/i);
+		await expect(page.getByTestId('report-provenance-badge')).toContainText(
+			/Dibuat dengan: MANUAL/i
+		);
 		await page.getByTestId('open-delete-report-btn').click();
 		await page.getByTestId('confirm-delete-report-btn').click();
 		await expect(page).toHaveURL(/\/reports$/);
 		await expect(page.getByTestId('reports-total-count')).toHaveText('0');
 
 		// 4. Buat Draft Template pada Sesi #1 (POST /reports { session_id: 1, use_template: true })
+		if (!(await page.getByTestId('create-session-select').isVisible()))
+			await page.locator('summary.create-trigger').click();
 		await page.getByTestId('create-session-select').selectOption('1');
-		await page.getByRole('radio', { name: /Draft Template Terstruktur/i }).check();
+		if (!(await page.getByTestId('create-session-select').isVisible()))
+			await page.locator('summary.create-trigger').click();
+		await page.getByRole('radio', { name: /Gunakan templat/i }).check();
 		await page.getByTestId('submit-create-template').click();
 
 		// Karena ID #1 sudah soft-deleted, laporan baru memiliki ID #2
 		await expect(page).toHaveURL(/\/reports\/2$/);
-		await expect(page.getByTestId('report-status-badge')).toContainText(/Draft/i);
+		await expect(page.getByTestId('report-status-badge')).toContainText(/Draf/i);
 		await expect(page.getByTestId('report-provenance-badge')).toContainText(
-			/Provenance: TEMPLATE/i
+			/Dibuat dengan: TEMPLATE/i
 		);
 		await expect(page.getByTestId('report-fresh-badge')).toBeVisible();
 		await expect(page.getByTestId('report-version-badge')).toContainText('Versi #1');
 
 		// Periksa snapshot sumber historis dan tautan ke temuan F-1
-		await expect(page.getByTestId('report-snapshot-section')).toContainText(
-			'Pembangunan Gedung A'
-		);
+		await expect(page.getByTestId('report-snapshot-section')).toContainText('Pembangunan Gedung A');
 		await expect(page.getByTestId('report-snapshot-section')).toContainText('Lantai 2 Struktur');
 		await expect(page.getByTestId('snapshot-finding-1')).toContainText('[F-1]');
 		await expect(page.getByTestId('snapshot-finding-link-1')).toHaveAttribute(
@@ -483,6 +498,8 @@ test.describe('P0-05: Penyusunan laporan inspeksi, snapshot sumber, staleness, d
 		// 5. Uji pembuatan duplikat pada Sesi #1 dari halaman daftar -> 409 REPORT_EXISTS menawarkan pembukaan laporan yang sudah ada
 		await page.goto(`${stack.baseUrl}/reports`);
 		await expect(page.getByTestId('reports-total-count')).toHaveText('1');
+		if (!(await page.getByTestId('create-session-select').isVisible()))
+			await page.locator('summary.create-trigger').click();
 		await page.getByTestId('create-session-select').selectOption('1');
 		await page.getByTestId('submit-create-template').click();
 		await expect(page.getByTestId('report-create-error')).toHaveAttribute(
@@ -517,7 +534,7 @@ test.describe('P0-05: Penyusunan laporan inspeksi, snapshot sumber, staleness, d
 		const editedNarrative =
 			'Proyek: Pembangunan Gedung A\nZona: Lantai 2 Struktur\n\nRingkasan Petugas: Temuan [F-1] tanpa helm telah ditindaklanjuti di lapangan. <script>alert("xss")</script>';
 		await page.getByLabel(/Judul Laporan/i).fill(editedTitle);
-		await page.getByLabel(/^Isi Narasi Laporan/i).fill(editedNarrative);
+		await page.getByLabel(/^Isi laporan/i).fill(editedNarrative);
 		await page.getByTestId('save-report-narrative-btn').click();
 
 		// Harus 409 VERSION_CONFLICT dan teks suntingan petugas tetap utuh!
@@ -526,9 +543,9 @@ test.describe('P0-05: Penyusunan laporan inspeksi, snapshot sumber, staleness, d
 			'VERSION_CONFLICT'
 		);
 		await expect(page.getByLabel(/Judul Laporan/i)).toHaveValue(editedTitle);
-		await expect(page.getByLabel(/^Isi Narasi Laporan/i)).toHaveValue(editedNarrative);
+		await expect(page.getByLabel(/^Isi laporan/i)).toHaveValue(editedNarrative);
 
-		// Klik Muat Ulang Data Terbaru (Pertahankan Input Saya) -> version naik ke #2, lalu simpan ulang -> version #3
+		// Klik Ambil data terbaru (Pertahankan Input Saya) -> version naik ke #2, lalu simpan ulang -> version #3
 		await page.getByTestId('reload-report-preserving-input').click();
 		await expect(page.getByTestId('report-version-badge')).toContainText('Versi #2');
 		await expect(page.getByLabel(/Judul Laporan/i)).toHaveValue(editedTitle);
@@ -539,7 +556,7 @@ test.describe('P0-05: Penyusunan laporan inspeksi, snapshot sumber, staleness, d
 		// Ketika sumber fresh, sebelum centang review_acknowledged, tombol Setujui Laporan harus disabled dengan alasan terlihat!
 		await expect(page.getByTestId('approve-report-btn')).toBeDisabled();
 		await expect(page.getByTestId('approve-disabled-reason')).toContainText(
-			/Centang pernyataan peninjauan petugas/i
+			/Centang pernyataan di atas/i
 		);
 
 		// 7. Ubah temuan sumber F-1 sehingga laporan menjadi STALE (is_stale=true)
@@ -572,17 +589,21 @@ test.describe('P0-05: Penyusunan laporan inspeksi, snapshot sumber, staleness, d
 
 		// Menyimpan suntingan teks narasi TIDAK menyegarkan status stale!
 		const noteWhileStale = `${editedNarrative}\nCatatan tambahan saat sumber stale.`;
-		await page.getByLabel(/^Isi Narasi Laporan/i).fill(noteWhileStale);
+		await page.getByLabel(/^Isi laporan/i).fill(noteWhileStale);
 		await page.getByTestId('save-report-narrative-btn').click();
 		await expect(page.getByTestId('report-version-badge')).toContainText('Versi #4');
 		await expect(page.getByTestId('report-stale-badge')).toBeVisible();
 
 		// Saat laporan STALE, tombol Setujui Laporan wajib tetap DISABLED baik sebelum maupun sesudah centang review_acknowledged!
 		await expect(page.getByTestId('approve-report-btn')).toBeDisabled();
-		await expect(page.getByTestId('approve-disabled-reason')).toContainText(/STALE/i);
+		await expect(page.getByTestId('approve-disabled-reason')).toContainText(
+			/Temuan sumber berubah/i
+		);
 		await page.getByTestId('review-acknowledged-checkbox').check();
 		await expect(page.getByTestId('approve-report-btn')).toBeDisabled();
-		await expect(page.getByTestId('approve-disabled-reason')).toContainText(/STALE/i);
+		await expect(page.getByTestId('approve-disabled-reason')).toContainText(
+			/Temuan sumber berubah/i
+		);
 
 		// Buktikan pula kontrak API publik Go menolak unacknowledged (422 VALIDATION_ERROR) dan stale (409 STALE_REPORT)
 		const approveApiChecks = await page.evaluate(async () => {
@@ -623,7 +644,7 @@ test.describe('P0-05: Penyusunan laporan inspeksi, snapshot sumber, staleness, d
 		page.on('request', onReq);
 
 		const unsavedBeforeRegen = `${noteWhileStale}\nBaris belum disimpan sebelum klik regenerate.`;
-		await page.getByLabel(/^Isi Narasi Laporan/i).fill(unsavedBeforeRegen);
+		await page.getByLabel(/^Isi laporan/i).fill(unsavedBeforeRegen);
 		await expect(page.getByTestId('unsaved-edits-indicator')).toBeVisible();
 
 		await page.getByTestId('open-regenerate-confirm-btn').click();
@@ -634,7 +655,7 @@ test.describe('P0-05: Penyusunan laporan inspeksi, snapshot sumber, staleness, d
 			'data-error-code',
 			'GEMINI_UNAVAILABLE'
 		);
-		await expect(page.getByLabel(/^Isi Narasi Laporan/i)).toHaveValue(unsavedBeforeRegen);
+		await expect(page.getByLabel(/^Isi laporan/i)).toHaveValue(unsavedBeforeRegen);
 		expect(deleteCallsDuringRegen).toBe(0);
 		page.off('request', onReq);
 
@@ -650,8 +671,12 @@ test.describe('P0-05: Penyusunan laporan inspeksi, snapshot sumber, staleness, d
 		await page.getByTestId('confirm-delete-report-btn').click();
 		await expect(page).toHaveURL(/\/reports$/);
 
+		if (!(await page.getByTestId('create-session-select').isVisible()))
+			await page.locator('summary.create-trigger').click();
 		await page.getByTestId('create-session-select').selectOption('1');
-		await page.getByRole('radio', { name: /Draft Template Terstruktur/i }).check();
+		if (!(await page.getByTestId('create-session-select').isVisible()))
+			await page.locator('summary.create-trigger').click();
+		await page.getByRole('radio', { name: /Gunakan templat/i }).check();
 		await page.getByTestId('submit-create-template').click();
 
 		await expect(page).toHaveURL(/\/reports\/3$/);
@@ -720,20 +745,20 @@ test.describe('P0-05: Penyusunan laporan inspeksi, snapshot sumber, staleness, d
 		// Klik tautan temuan F-1 dari snapshot laporan -> mengarah ke /findings/1 dan membuktikan integrasi lintas halaman
 		await page.getByTestId('snapshot-finding-link-1').click();
 		await expect(page).toHaveURL(/\/findings\/1$/);
-		await expect(page.getByRole('heading', { name: /Detail Temuan #1/i })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /Temuan #1/i })).toBeVisible();
 
 		// Kembali ke /reports dan uji filter berdasarkan status=approved serta project_id=1
 		await page.goto(`${stack.baseUrl}/reports`);
 		await expect(page.getByTestId('reports-total-count')).toHaveText('1');
 		await page.getByLabel(/Proyek/i).selectOption('1');
 		await page.getByLabel(/Status Laporan/i).selectOption('approved');
-		await page.getByRole('button', { name: /Terapkan Filter/i }).click();
+		await page.getByRole('button', { name: /Terapkan/i }).click();
 		await expect(page.getByTestId('reports-total-count')).toHaveText('1');
 		await expect(page.getByTestId('report-card-3')).toBeVisible();
 
 		// Filter status=draft harus kosong (0) karena laporan #3 sudah disetujui
 		await page.getByLabel(/Status Laporan/i).selectOption('draft');
-		await page.getByRole('button', { name: /Terapkan Filter/i }).click();
+		await page.getByRole('button', { name: /Terapkan/i }).click();
 		await expect(page.getByTestId('reports-total-count')).toHaveText('0');
 	});
 });

@@ -1,18 +1,13 @@
 <script lang="ts">
 	import { authSession } from '#lib/app/auth';
 	import { goto } from '$app/navigation';
+	import Icon from '#lib/shared/presentation/Icon.svelte';
 	import { onMount } from 'svelte';
 	import {
 		loadReportContext,
 		createReportRequests,
 		createManualReportApi,
-
-
-
-
-		listReportsApi,
-
-
+		listReportsApi
 	} from '#lib/app/reports';
 	import {
 		formatGeneratedByLabel,
@@ -76,7 +71,7 @@
 	const geminiConfigured = $derived(Boolean(auth.systemStatus?.gemini_configured));
 
 	const availableSessionsForFilter = $derived.by(() => {
-		if(filterProjectId > 0) {
+		if (filterProjectId > 0) {
 			return sessions.filter((s) => s.project_id === filterProjectId);
 		}
 		return sessions;
@@ -104,14 +99,12 @@
 			const isClosed = session.status !== 'active';
 
 			let ineligibleReason: string | null = null;
-			if(!isClosed) {
-				ineligibleReason =
-					'Sesi masih aktif — hentikan sesi monitoring terlebih dahulu (SESSION_STILL_ACTIVE).';
-			} else if(confirmedCount <= 0) {
-				ineligibleReason =
-					'Belum ada temuan berstatus Terkonfirmasi petugas pada sesi ini (NO_CONFIRMED_FINDINGS).';
-			} else if(existingReport) {
-				ineligibleReason = `Sesi sudah memiliki Laporan #${existingReport.id} (${formatReportStatusShortLabel(existingReport.status)}) — maksimal 1 laporan aktif per sesi (REPORT_EXISTS).`;
+			if (!isClosed) {
+				ineligibleReason = 'Inspeksi masih berjalan. Akhiri sesi ini dulu.';
+			} else if (confirmedCount <= 0) {
+				ineligibleReason = 'Belum ada temuan terkonfirmasi di sesi ini. Periksa temuan dulu.';
+			} else if (existingReport) {
+				ineligibleReason = `Laporan #${existingReport.id} sudah dibuat untuk sesi ini.`;
 			}
 
 			return {
@@ -128,7 +121,7 @@
 	});
 
 	const selectedEligibility = $derived.by((): SessionEligibilityInfo | null => {
-		if(selectedSessionId <= 0) return null;
+		if (selectedSessionId <= 0) return null;
 		return sessionEligibilityList.find((e) => e.session.id === selectedSessionId) ?? null;
 	});
 
@@ -152,7 +145,7 @@
 		createError = null;
 		createSuccess = null;
 		existingReportConflict = null;
-		if(nextSessionId !== prevSessionId) {
+		if (nextSessionId !== prevSessionId) {
 			// Changed input -> do not reuse operation key from a different session
 			requests.clear();
 			retainedGenerateKey = null;
@@ -168,7 +161,7 @@
 			allReportsBySession = context.allReportsBySession;
 			zonesByProject = context.zonesByProject;
 			confirmedCountsBySession = context.confirmedCountsBySession;
-			if(selectedSessionId === 0) selectedSessionId = context.firstEligibleSessionId;
+			if (selectedSessionId === 0) selectedSessionId = context.firstEligibleSessionId;
 		} catch {
 			// Lookup errors do not mask main list error
 		}
@@ -193,7 +186,7 @@
 			reports = res.data;
 			pageMeta = res.meta;
 			currentPage = res.meta.page;
-		} catch(err) {
+		} catch (err) {
 			listError = parseReportApiError(err, 'Gagal memuat daftar laporan dari server Go.');
 		} finally {
 			loading = false;
@@ -215,7 +208,7 @@
 	}
 
 	async function goToPage(pageNumber: number) {
-		if(pageNumber < 1 || pageNumber > totalPages || pageNumber === currentPage) return;
+		if (pageNumber < 1 || pageNumber > totalPages || pageNumber === currentPage) return;
 		currentPage = pageNumber;
 		await loadReports(pageNumber);
 	}
@@ -223,7 +216,7 @@
 	async function lookupExistingReportForSession(sessionId: number): Promise<Report | null> {
 		try {
 			const res = await listReportsApi({ session_id: sessionId, page: 1, page_size: 1 });
-			if(res.data.length > 0) {
+			if (res.data.length > 0) {
 				allReportsBySession = {
 					...allReportsBySession,
 					[sessionId]: res.data[0]
@@ -237,18 +230,18 @@
 	}
 
 	async function handleCreateTemplateOrManual(mode: 'template' | 'manual') {
-		if(submittingCreate) return;
+		if (submittingCreate) return;
 		createError = null;
 		createSuccess = null;
 		existingReportConflict = null;
 
-		if(selectedSessionId <= 0) {
+		if (selectedSessionId <= 0) {
 			createError = {
 				status: 422,
 				code: 'VALIDATION_ERROR',
-				title: 'Validasi Input Laporan Gagal (422)',
-				message: 'Pilih sesi monitoring terlebih dahulu.',
-				fieldErrors: { session_id: 'Sesi monitoring wajib dipilih.' },
+				title: 'Periksa isian laporan',
+				message: 'Pilih sesi inspeksi dulu.',
+				fieldErrors: { session_id: 'Pilih sesi inspeksi.' },
 				requestId: null,
 				isUnauthorized: false,
 				isForbidden: false,
@@ -268,21 +261,21 @@
 			return;
 		}
 
-		if(mode === 'manual') {
+		if (mode === 'manual') {
 			const trimmedTitle = manualTitle.trim();
 			const trimmedContent = manualContent.trim();
 			const fields: Record<string, string> = {};
-			if(trimmedTitle.length < 1 || trimmedTitle.length > 200) {
-				fields.title = 'Judul laporan manual wajib diisi (1–200 karakter).';
+			if (trimmedTitle.length < 1 || trimmedTitle.length > 200) {
+				fields.title = 'Judul laporan wajib diisi (1–200 karakter).';
 			}
-			if(trimmedContent.length < 1 || trimmedContent.length > 20000) {
-				fields.content = 'Isi narasi laporan manual wajib diisi (1–20.000 karakter).';
+			if (trimmedContent.length < 1 || trimmedContent.length > 20000) {
+				fields.content = 'Isi laporan wajib diisi (1–20.000 karakter).';
 			}
-			if(Object.keys(fields).length > 0) {
+			if (Object.keys(fields).length > 0) {
 				createError = {
 					status: 422,
 					code: 'VALIDATION_ERROR',
-					title: 'Validasi Input Laporan Gagal (422)',
+					title: 'Periksa isian laporan',
 					message: Object.values(fields)[0],
 					fieldErrors: fields,
 					requestId: null,
@@ -310,15 +303,15 @@
 			const created = await createManualReportApi(
 				mode === 'template'
 					? {
-						session_id: selectedSessionId,
-						use_template: true
-					}
+							session_id: selectedSessionId,
+							use_template: true
+						}
 					: {
-						session_id: selectedSessionId,
-						title: manualTitle.trim(),
-						content: manualContent.trim(),
-						use_template: false
-					}
+							session_id: selectedSessionId,
+							title: manualTitle.trim(),
+							content: manualContent.trim(),
+							use_template: false
+						}
 			);
 			allReportsBySession = {
 				...allReportsBySession,
@@ -326,18 +319,16 @@
 			};
 			createSuccess =
 				mode === 'template'
-					? `Draft laporan Template #${created.id} berhasil dibuat untuk Sesi S-${created.session_id}.`
-					: `Draft laporan Manual #${created.id} berhasil dibuat untuk Sesi S-${created.session_id}.`;
+					? `Draf #${created.id} dibuat dengan templat.`
+					: `Draf #${created.id} tersimpan.`;
 			await goto(`/reports/${created.id}`);
-		} catch(err) {
+		} catch (err) {
 			const parsed = parseReportApiError(
 				err,
-				mode === 'template'
-					? 'Gagal membuat draft laporan template.'
-					: 'Gagal membuat draft laporan manual.'
+				mode === 'template' ? 'Gagal membuat draf dari templat.' : 'Gagal membuat draf manual.'
 			);
 			createError = parsed;
-			if(parsed.isReportExists) {
+			if (parsed.isReportExists) {
 				existingReportConflict = await lookupExistingReportForSession(selectedSessionId);
 			}
 		} finally {
@@ -346,18 +337,18 @@
 	}
 
 	async function handleGenerateGeminiDraft(forceFreshKey = false) {
-		if(submittingCreate) return;
+		if (submittingCreate) return;
 		createError = null;
 		createSuccess = null;
 		existingReportConflict = null;
 
-		if(selectedSessionId <= 0) {
+		if (selectedSessionId <= 0) {
 			createError = {
 				status: 422,
 				code: 'VALIDATION_ERROR',
-				title: 'Validasi Input Laporan Gagal (422)',
-				message: 'Pilih sesi monitoring terlebih dahulu.',
-				fieldErrors: { session_id: 'Sesi monitoring wajib dipilih.' },
+				title: 'Periksa isian laporan',
+				message: 'Pilih sesi inspeksi dulu.',
+				fieldErrors: { session_id: 'Pilih sesi inspeksi.' },
 				requestId: null,
 				isUnauthorized: false,
 				isForbidden: false,
@@ -377,7 +368,7 @@
 			return;
 		}
 
-		if(forceFreshKey) {
+		if (forceFreshKey) {
 			resetGenerateKeyForSession(selectedSessionId, true);
 		}
 		getOrMintGenerateKey(selectedSessionId);
@@ -389,17 +380,18 @@
 				...allReportsBySession,
 				[created.session_id]: created
 			};
-			createSuccess = `Draft laporan Gemini #${created.id} berhasil dibuat/dipulihkan untuk Sesi S-${created.session_id}.`;
+			createSuccess = `Draf #${created.id} dari Gemini sudah tersedia.`;
 			await goto(`/reports/${created.id}`);
-		} catch(err) {
-			const parsed = parseReportApiError(
-				err,
-				'Gagal membuat draft laporan melalui layanan Gemini.'
-			);
+		} catch (err) {
+			const parsed = parseReportApiError(err, 'Gagal membuat draf dengan Gemini.');
 			createError = parsed;
-			if(parsed.isReportExists) {
+			if (parsed.isReportExists) {
 				existingReportConflict = await lookupExistingReportForSession(selectedSessionId);
-			} else if(parsed.isSourceChanged || parsed.isIdempotencyConflict || parsed.isRequestKeyExpired) {
+			} else if (
+				parsed.isSourceChanged ||
+				parsed.isIdempotencyConflict ||
+				parsed.isRequestKeyExpired
+			) {
 				// Input/source changed so old key cannot be reused
 				resetGenerateKeyForSession(selectedSessionId);
 			}
@@ -416,310 +408,324 @@
 <div class="reports-workspace">
 	<header class="page-header">
 		<div>
-			<p class="eyebrow">MODUL PENYUSUNAN &amp; PERSETUJUAN LAPORAN INSPEKSI</p>
-			<h1>Laporan Inspeksi K3</h1>
-			<p class="subtitle">
-				Buat draft laporan dari sesi monitoring tertutup yang memiliki temuan terkonfirmasi petugas, periksa snapshot sumber historis, sunting narasi teks biasa, dan kunci laporan melalui persetujuan eksplisit.
-			</p>
+			<h1>Laporan</h1>
 		</div>
 		<div class="header-badges">
 			<div class="summary-chip" role="status" aria-live="polite">
-				Total Laporan Terfilter: <strong data-testid="reports-total-count">{pageMeta.total}</strong>
+				Total: <strong data-testid="reports-total-count">{pageMeta.total}</strong>
 			</div>
+		</div>
+	</header>
+
+	<details class="create-disclosure">
+		<summary class="create-trigger"><Icon name="plus" size={18} />Buat laporan</summary>
+		<section class="create-panel" aria-labelledby="create-report-heading">
+			<div class="panel-header">
+				<div>
+					<h2 id="create-report-heading">Laporan baru</h2>
+					<p class="panel-desc">
+						Pilih sesi yang sudah selesai dan punya temuan terkonfirmasi. Satu sesi hanya bisa
+						memiliki satu laporan aktif.
+					</p>
+				</div>
+			</div>
+
 			<div
 				class="gemini-readiness-chip"
 				data-configured={geminiConfigured ? 'true' : 'false'}
 				data-testid="gemini-readiness-chip"
 			>
-				Status Gemini Server:
+				Gemini:
 				<strong>
 					{geminiConfigured
-						? 'Terkonfigurasi (Kredensial Terpasang — Kuota Live Diverifikasi Saat Pemanggilan)'
-						: 'Tidak Dikonfigurasi / Nonaktif (Gunakan Template / Manual)'}
+						? 'Siap digunakan; kuota dicek saat membuat draf'
+						: 'Belum aktif. Pilih templat atau tulis manual.'}
 				</strong>
 			</div>
-		</div>
-	</header>
-
-	<section class="create-panel" aria-labelledby="create-report-heading">
-		<div class="panel-header">
-			<div>
-				<h2 id="create-report-heading">Buat Laporan Baru dari Sesi Tertutup</h2>
-				<p class="panel-desc">
-					Laporan hanya menggunakan temuan berstatus <strong>Terkonfirmasi</strong> yang belum dihapus dari sesi yang sudah ditutup (<code>stopped</code> / <code>interrupted</code>). Satu sesi hanya dapat memiliki satu laporan aktif.
-				</p>
-			</div>
-		</div>
-
-		<div class="create-grid">
-			<div class="form-field">
-				<label for="create-session-select">Pilih Sesi Monitoring</label>
-				<select
-					id="create-session-select"
-					data-testid="create-session-select"
-					value={selectedSessionId}
-					onchange={handleSessionSelectChange}
-				>
-					<option value={0}>— Pilih Sesi Monitoring —</option>
-					{#each sessionEligibilityList as item (item.session.id)}
-						<option value={item.session.id}>
-							Sesi S-{item.session.id} — {item.projectName} / {item.zoneName} ({formatModeLabel(item.session.mode)}, {formatSessionStatusLabel(item.session.status)}, {item.confirmedCount} temuan terkonfirmasi){item.isEligibleForNewReport ? ' [Memenuhi Syarat]' : ' [Tidak Memenuhi Syarat Baru]'}
-						</option>
-					{/each}
-				</select>
-			</div>
-
-			{#if selectedEligibility}
-				<div
-					class="eligibility-card"
-					data-eligible={selectedEligibility.isEligibleForNewReport ? 'true' : 'false'}
-					data-testid="session-eligibility-status"
-				>
-					<div class="eligibility-meta">
-						<span><strong>Sesi:</strong> S-{selectedEligibility.session.id}</span>
-						<span><strong>Proyek / Zona:</strong> {selectedEligibility.projectName} — {selectedEligibility.zoneName}</span>
-						<span><strong>Mode Provenance:</strong> {formatModeLabel(selectedEligibility.session.mode)}</span>
-						<span><strong>Status Sesi:</strong> {formatSessionStatusLabel(selectedEligibility.session.status)}</span>
-						<span><strong>Temuan Terkonfirmasi:</strong> {selectedEligibility.confirmedCount}</span>
-					</div>
-
-					{#if selectedEligibility.isEligibleForNewReport}
-						<p class="eligibility-ok">
-							Sesi tertutup ini memenuhi syarat pembuatan laporan baru ({selectedEligibility.confirmedCount} temuan terkonfirmasi petugas siap masuk ke snapshot).
-						</p>
-					{:else if selectedEligibility.ineligibleReason}
-						<p class="eligibility-warn">
-							<strong>Perhatian Kelayakan Sesi:</strong> {selectedEligibility.ineligibleReason}
-						</p>
-						{#if selectedEligibility.existingReport}
-							<div class="existing-report-action">
-								<a
-									href="/reports/{selectedEligibility.existingReport.id}"
-									class="btn-secondary"
-									data-testid="open-existing-session-report-link"
-								>
-									Buka Laporan Sesi Ini (#{selectedEligibility.existingReport.id} — {formatReportStatusShortLabel(selectedEligibility.existingReport.status)})
-								</a>
-							</div>
-						{/if}
-					{/if}
-				</div>
-			{/if}
-
-			<fieldset class="method-fieldset">
-				<legend>Metode Penyusunan Draft &amp; Provenance</legend>
-				<div class="method-tabs" role="radiogroup" aria-label="Metode Penyusunan Draft">
-					<label class="method-option" class:selected={createMode === 'template'}>
-						<input
-							type="radio"
-							name="create_mode"
-							value="template"
-							checked={createMode === 'template'}
-							onchange={() => {
-								createMode = 'template';
-								createError = null;
-							}}
-						/>
-						<span class="method-title">Draft Template Terstruktur (<code>generated_by=template</code>)</span>
-						<span class="method-sub">
-							Menyusun draf terstruktur otomatis di server Go dari snapshot temuan terkonfirmasi tanpa memanggil Gemini. Jujur ditandai sebagai Template.
-						</span>
-					</label>
-
-					<label class="method-option" class:selected={createMode === 'manual'}>
-						<input
-							type="radio"
-							name="create_mode"
-							value="manual"
-							checked={createMode === 'manual'}
-							onchange={() => {
-								createMode = 'manual';
-								createError = null;
-							}}
-						/>
-						<span class="method-title">Draft Tulis Manual Petugas (<code>generated_by=manual</code>)</span>
-						<span class="method-sub">
-							Petugas menulis judul dan narasi laporan sendiri diiringi snapshot temuan terkonfirmasi. Jujur ditandai sebagai Manual.
-						</span>
-					</label>
-
-					<label class="method-option" class:selected={createMode === 'gemini'}>
-						<input
-							type="radio"
-							name="create_mode"
-							value="gemini"
-							checked={createMode === 'gemini'}
-							onchange={() => {
-								createMode = 'gemini';
-								createError = null;
-							}}
-						/>
-						<span class="method-title">Generasi Narasi Gemini Backend (<code>generated_by=gemini</code>)</span>
-						<span class="method-sub">
-							Memanggil <code>POST /api/v1/reports/generate</code> dengan <code>request_key</code> UUID. Hanya mengirimkan teks temuan terkonfirmasi yang telah disanitasi (tanpa foto/track_id).
-						</span>
-					</label>
-				</div>
-			</fieldset>
-
-			{#if createMode === 'manual'}
-				<div class="manual-inputs" data-testid="manual-report-inputs">
-					<div class="form-field">
-						<label for="manual-report-title">Judul Laporan Manual (1–200 karakter)</label>
-						<input
-							id="manual-report-title"
-							type="text"
-							maxlength="200"
-							bind:value={manualTitle}
-							placeholder="Contoh: Laporan Inspeksi K3 Sesi S-1 Gedung A"
-						/>
-						{#if createError?.fieldErrors?.title}
-							<p class="field-error">{createError.fieldErrors.title}</p>
-						{/if}
-					</div>
-
-					<div class="form-field">
-						<label for="manual-report-content">Isi Narasi Laporan Manual (Teks Biasa, 1–20.000 karakter)</label>
-						<textarea
-							id="manual-report-content"
-							rows="6"
-							maxlength="20000"
-							bind:value={manualContent}
-							placeholder="Tuliskan ringkasan hasil verifikasi temuan APD dan tindak lanjut lapangan..."
-						></textarea>
-						{#if createError?.fieldErrors?.content}
-							<p class="field-error">{createError.fieldErrors.content}</p>
-						{/if}
-					</div>
-				</div>
-			{:else if createMode === 'gemini'}
-				<div class="gemini-info-box" data-testid="gemini-create-info">
-					<p>
-						<strong>Kunci Operasi Idempoten (UUID <code>request_key</code>):</strong>
-						<code data-testid="active-generate-request-key">
-							{retainedGenerateKey && retainedGenerateSessionId === selectedSessionId
-								? retainedGenerateKey
-								: '(dibuat otomatis saat tombol ditekan dan dipertahankan untuk pemulihan respons hilang)'}
-						</code>
-					</p>
-					<p class="privacy-note">
-						<strong>Jaminan Privasi &amp; Keamanan:</strong> Server Go hanya mengirimkan metadata teks temuan yang sudah dikonfirmasi petugas (email dan nomor telepon disamarkan menjadi <code>[disamarkan]</code>, tanpa foto bukti, tanpa <code>track_id</code>). Jika layanan Gemini gagal atau tidak tersedia (503/502), sistem tidak akan memalsukan keberhasilan dan Anda dapat beralih ke pembuatan Draft Template atau Manual.
-					</p>
-				</div>
-			{/if}
-
-			{#if createError}
-				<div
-					class="error-banner"
-					role="alert"
-					data-testid="report-create-error"
-					data-error-code={createError.code}
-				>
-					<div class="error-header">
-						<strong>{createError.title}</strong>
-						<span class="error-code-pill">Kode: {createError.code}</span>
-					</div>
-					<p>{createError.message}</p>
-					{#if createError.requestId}
-						<p class="req-id">ID Permintaan: <code>{createError.requestId}</code></p>
-					{/if}
-
-					<div class="recovery-actions">
-						{#if createError.isReportExists && existingReportConflict}
-							<a
-								href="/reports/{existingReportConflict.id}"
-								class="btn-primary"
-								data-testid="open-existing-report-on-conflict"
-							>
-								Buka Laporan yang Sudah Ada (#{existingReportConflict.id})
-							</a>
-						{/if}
-
-						{#if createError.isNetworkError && createMode === 'gemini' && retainedGenerateKey}
-							<button
-								type="button"
-								class="btn-secondary"
-								onclick={() => handleGenerateGeminiDraft(false)}
-								disabled={submittingCreate}
-								data-testid="retry-lost-response-same-key"
-							>
-								Pulihkan / Coba Ulang dengan Kunci Operasi yang Sama ({retainedGenerateKey.slice(0, 8)}…)
-							</button>
-						{/if}
-
-						{#if createError.isGeminiUnavailable || createError.isInvalidGeminiOutput}
-							<button
-								type="button"
-								class="btn-secondary"
-								onclick={() => {
-									createMode = 'template';
-									void handleCreateTemplateOrManual('template');
-								}}
-								disabled={submittingCreate}
-								data-testid="fallback-create-template-button"
-							>
-								Buat Draft Template Sebagai Gantinya
-							</button>
-							<button
-								type="button"
-								class="btn-outline"
-								onclick={() => {
-									createMode = 'manual';
-								}}
-								disabled={submittingCreate}
-							>
-								Beralih ke Formulir Draft Manual
-							</button>
-						{/if}
-					</div>
-				</div>
-			{/if}
-
-			{#if createSuccess}
-				<div class="success-banner" role="status" data-testid="report-create-success">
-					{createSuccess}
-				</div>
-			{/if}
-
-			<div class="create-actions">
-				{#if createMode === 'template'}
-					<button
-						type="button"
-						class="btn-primary"
-						onclick={() => handleCreateTemplateOrManual('template')}
-						disabled={submittingCreate}
-						data-testid="submit-create-template"
+			<div class="create-grid">
+				<div class="form-field">
+					<label for="create-session-select">Pilih sesi inspeksi</label>
+					<select
+						id="create-session-select"
+						data-testid="create-session-select"
+						value={selectedSessionId}
+						onchange={handleSessionSelectChange}
 					>
-						{submittingCreate ? 'Membuat Draft Template...' : 'Buat Draft Template'}
-					</button>
-				{:else if createMode === 'manual'}
-					<button
-						type="button"
-						class="btn-primary"
-						onclick={() => handleCreateTemplateOrManual('manual')}
-						disabled={submittingCreate}
-						data-testid="submit-create-manual"
+						<option value={0}>— Pilih sesi inspeksi —</option>
+						{#each sessionEligibilityList as item (item.session.id)}
+							<option value={item.session.id}>
+								Sesi S-{item.session.id} — {item.projectName} / {item.zoneName} ({formatModeLabel(
+									item.session.mode
+								)}, {formatSessionStatusLabel(item.session.status)}, {item.confirmedCount} temuan terkonfirmasi){item.isEligibleForNewReport
+									? '  [Bisa dipilih]'
+									: '  [Belum bisa dipilih]'}
+							</option>
+						{/each}
+					</select>
+				</div>
+
+				{#if selectedEligibility}
+					<div
+						class="eligibility-card"
+						data-eligible={selectedEligibility.isEligibleForNewReport ? 'true' : 'false'}
+						data-testid="session-eligibility-status"
 					>
-						{submittingCreate ? 'Menyimpan Draft Manual...' : 'Buat Draft Manual'}
-					</button>
-				{:else}
-					<button
-						type="button"
-						class="btn-primary"
-						onclick={() => handleGenerateGeminiDraft(false)}
-						disabled={submittingCreate}
-						data-testid="submit-generate-gemini"
-					>
-						{submittingCreate
-							? 'Menghubungi Gemini Backend...'
-							: retainedGenerateKey && retainedGenerateSessionId === selectedSessionId
-								? 'Lanjutkan / Pulihkan Generasi Gemini'
-								: 'Buat Draft dengan Gemini'}
-					</button>
+						<div class="eligibility-meta">
+							<span><strong>Sesi:</strong> S-{selectedEligibility.session.id}</span>
+							<span
+								><strong>Proyek / Zona:</strong>
+								{selectedEligibility.projectName} — {selectedEligibility.zoneName}</span
+							>
+							<span
+								><strong>Mode Dibuat dengan:</strong>
+								{formatModeLabel(selectedEligibility.session.mode)}</span
+							>
+							<span
+								><strong>Status Sesi:</strong>
+								{formatSessionStatusLabel(selectedEligibility.session.status)}</span
+							>
+							<span
+								><strong>Temuan Terkonfirmasi:</strong> {selectedEligibility.confirmedCount}</span
+							>
+						</div>
+
+						{#if selectedEligibility.isEligibleForNewReport}
+							<p class="eligibility-ok">
+								{selectedEligibility.confirmedCount} temuan siap dimasukkan ke laporan.
+							</p>
+						{:else if selectedEligibility.ineligibleReason}
+							<p class="eligibility-warn">
+								<strong>Belum bisa membuat laporan:</strong>
+								{selectedEligibility.ineligibleReason}
+							</p>
+							{#if selectedEligibility.existingReport}
+								<div class="existing-report-action">
+									<a
+										href="/reports/{selectedEligibility.existingReport.id}"
+										class="btn-secondary"
+										data-testid="open-existing-session-report-link"
+									>
+										Buka Laporan Sesi Ini (#{selectedEligibility.existingReport.id} — {formatReportStatusShortLabel(
+											selectedEligibility.existingReport.status
+										)})
+									</a>
+								</div>
+							{/if}
+						{/if}
+					</div>
 				{/if}
+
+				<fieldset class="method-fieldset">
+					<legend>Cara membuat draf</legend>
+					<div class="method-tabs" role="radiogroup" aria-label="Cara membuat draf">
+						<label class="method-option" class:selected={createMode === 'template'}>
+							<input
+								type="radio"
+								name="create_mode"
+								value="template"
+								checked={createMode === 'template'}
+								onchange={() => {
+									createMode = 'template';
+									createError = null;
+								}}
+							/>
+							<span class="method-title">Gunakan templat</span>
+							<span class="method-sub">
+								Isi otomatis dari temuan yang sudah dikonfirmasi, tanpa Gemini.
+							</span>
+						</label>
+
+						<label class="method-option" class:selected={createMode === 'manual'}>
+							<input
+								type="radio"
+								name="create_mode"
+								value="manual"
+								checked={createMode === 'manual'}
+								onchange={() => {
+									createMode = 'manual';
+									createError = null;
+								}}
+							/>
+							<span class="method-title">Tulis manual</span>
+							<span class="method-sub"> Tulis judul dan isi laporan sendiri. </span>
+						</label>
+
+						<label class="method-option" class:selected={createMode === 'gemini'}>
+							<input
+								type="radio"
+								name="create_mode"
+								value="gemini"
+								checked={createMode === 'gemini'}
+								onchange={() => {
+									createMode = 'gemini';
+									createError = null;
+								}}
+							/>
+							<span class="method-title">Gunakan Gemini</span>
+							<span class="method-sub">
+								Gemini menulis draf dari temuan terkonfirmasi. Foto tidak dikirim. Periksa hasilnya
+								sebelum disetujui.
+							</span>
+						</label>
+					</div>
+				</fieldset>
+
+				{#if createMode === 'manual'}
+					<div class="manual-inputs" data-testid="manual-report-inputs">
+						<div class="form-field">
+							<label for="manual-report-title">Judul laporan (maks. 200 karakter)</label>
+							<input
+								id="manual-report-title"
+								type="text"
+								maxlength="200"
+								bind:value={manualTitle}
+								placeholder="Contoh: Laporan Sesi S-1 Gedung A"
+							/>
+							{#if createError?.fieldErrors?.title}
+								<p class="field-error">{createError.fieldErrors.title}</p>
+							{/if}
+						</div>
+
+						<div class="form-field">
+							<label for="manual-report-content">Isi laporan (maks. 20.000 karakter)</label>
+							<textarea
+								id="manual-report-content"
+								rows="6"
+								maxlength="20000"
+								bind:value={manualContent}
+								placeholder="Tuliskan ringkasan hasil verifikasi temuan APD dan tindak lanjut lapangan..."
+							></textarea>
+							{#if createError?.fieldErrors?.content}
+								<p class="field-error">{createError.fieldErrors.content}</p>
+							{/if}
+						</div>
+					</div>
+				{:else if createMode === 'gemini'}
+					<div class="gemini-info-box" data-testid="gemini-create-info">
+						<span hidden data-testid="active-generate-request-key"
+							>{retainedGenerateKey && retainedGenerateSessionId === selectedSessionId
+								? retainedGenerateKey
+								: ''}</span
+						>
+						<p class="privacy-note">
+							<strong>Data yang dikirim:</strong> Hanya teks temuan terkonfirmasi. Email dan nomor telepon
+							disamarkan; foto dan ID deteksi tidak dikirim.
+						</p>
+					</div>
+				{/if}
+
+				{#if createError}
+					<div
+						class="error-banner"
+						role="alert"
+						data-testid="report-create-error"
+						data-error-code={createError.code}
+					>
+						<div class="error-header">
+							<strong>{createError.title}</strong>
+						</div>
+						<p>{createError.message}</p>
+						{#if createError.requestId}
+							<p class="req-id">ID Permintaan: <code>{createError.requestId}</code></p>
+						{/if}
+
+						<div class="recovery-actions">
+							{#if createError.isReportExists && existingReportConflict}
+								<a
+									href="/reports/{existingReportConflict.id}"
+									class="btn-primary"
+									data-testid="open-existing-report-on-conflict"
+								>
+									Buka Laporan yang Sudah Ada (#{existingReportConflict.id})
+								</a>
+							{/if}
+
+							{#if createError.isNetworkError && createMode === 'gemini' && retainedGenerateKey}
+								<button
+									type="button"
+									class="btn-secondary"
+									onclick={() => handleGenerateGeminiDraft(false)}
+									disabled={submittingCreate}
+									data-testid="retry-lost-response-same-key"
+								>
+									Coba lagi
+								</button>
+							{/if}
+
+							{#if createError.isGeminiUnavailable || createError.isInvalidGeminiOutput}
+								<button
+									type="button"
+									class="btn-secondary"
+									onclick={() => {
+										createMode = 'template';
+										void handleCreateTemplateOrManual('template');
+									}}
+									disabled={submittingCreate}
+									data-testid="fallback-create-template-button"
+								>
+									Gunakan templat
+								</button>
+								<button
+									type="button"
+									class="btn-outline"
+									onclick={() => {
+										createMode = 'manual';
+									}}
+									disabled={submittingCreate}
+								>
+									Tulis manual
+								</button>
+							{/if}
+						</div>
+					</div>
+				{/if}
+
+				{#if createSuccess}
+					<div class="success-banner" role="status" data-testid="report-create-success">
+						{createSuccess}
+					</div>
+				{/if}
+
+				<div class="create-actions">
+					{#if createMode === 'template'}
+						<button
+							type="button"
+							class="btn-primary"
+							onclick={() => handleCreateTemplateOrManual('template')}
+							disabled={submittingCreate}
+							data-testid="submit-create-template"
+						>
+							{submittingCreate ? 'Membuat draf...' : 'Buat draf'}
+						</button>
+					{:else if createMode === 'manual'}
+						<button
+							type="button"
+							class="btn-primary"
+							onclick={() => handleCreateTemplateOrManual('manual')}
+							disabled={submittingCreate}
+							data-testid="submit-create-manual"
+						>
+							{submittingCreate ? 'Menyimpan...' : 'Simpan draf'}
+						</button>
+					{:else}
+						<button
+							type="button"
+							class="btn-primary"
+							onclick={() => handleGenerateGeminiDraft(false)}
+							disabled={submittingCreate}
+							data-testid="submit-generate-gemini"
+						>
+							{submittingCreate
+								? 'Membuat draf...'
+								: retainedGenerateKey && retainedGenerateSessionId === selectedSessionId
+									? 'Coba lagi'
+									: 'Buat draf dengan Gemini'}
+						</button>
+					{/if}
+				</div>
 			</div>
-		</div>
-	</section>
+		</section>
+	</details>
 
 	<form class="filter-bar" onsubmit={handleFilterSubmit} aria-label="Filter Daftar Laporan">
 		<div class="filter-grid">
@@ -743,12 +749,14 @@
 			</div>
 
 			<div class="filter-field">
-				<label for="filter-report-session">Sesi Monitoring</label>
+				<label for="filter-report-session">Sesi inspeksi</label>
 				<select id="filter-report-session" name="session_id" bind:value={filterSessionId}>
 					<option value={0}>Semua Sesi</option>
 					{#each availableSessionsForFilter as sess (sess.id)}
 						<option value={sess.id}>
-							Sesi S-{sess.id} ({formatModeLabel(sess.mode)} — {formatSessionStatusLabel(sess.status)})
+							Sesi S-{sess.id} ({formatModeLabel(sess.mode)} — {formatSessionStatusLabel(
+								sess.status
+							)})
 						</option>
 					{/each}
 				</select>
@@ -758,16 +766,16 @@
 				<label for="filter-report-status">Status Laporan</label>
 				<select id="filter-report-status" name="status" bind:value={filterStatus}>
 					<option value="">Semua Status</option>
-					<option value="draft">Draft (Belum Disetujui)</option>
-					<option value="approved">Disetujui (Terkunci)</option>
+					<option value="draft">Draf</option>
+					<option value="approved">Disetujui · terkunci</option>
 				</select>
 			</div>
 		</div>
 
 		<div class="filter-actions">
-			<button type="submit" class="btn-primary" disabled={loading}>Terapkan Filter</button>
+			<button type="submit" class="btn-primary" disabled={loading}>Terapkan</button>
 			<button type="button" class="btn-outline" onclick={handleResetFilters} disabled={loading}>
-				Reset Filter
+				Reset filter
 			</button>
 		</div>
 	</form>
@@ -781,23 +789,20 @@
 		>
 			<div class="error-header">
 				<strong>{listError.title}</strong>
-				<span class="error-code-pill">Kode: {listError.code}</span>
 			</div>
 			<p>{listError.message}</p>
 			<button type="button" class="btn-secondary" onclick={() => loadReports(currentPage)}>
-				Coba Muat Ulang Daftar
+				Coba lagi
 			</button>
 		</div>
 	{:else if loading}
 		<div class="state-box" role="status" aria-live="polite" data-testid="reports-loading">
-			Memuat daftar laporan inspeksi dari server...
+			Memuat laporan...
 		</div>
 	{:else if reports.length === 0}
 		<div class="state-box empty" data-testid="reports-empty">
-			<h2>Belum Ada Laporan Sesuai Filter</h2>
-			<p>
-				Belum ditemukan laporan untuk kombinasi filter saat ini. Pilih sesi monitoring tertutup yang memiliki temuan terkonfirmasi pada panel di atas untuk membuat laporan baru.
-			</p>
+			<h2>Belum ada laporan</h2>
+			<p>Pilih Buat laporan untuk mulai, atau reset filter untuk melihat laporan lain.</p>
 		</div>
 	{:else}
 		<div class="reports-list" data-testid="reports-list">
@@ -817,14 +822,14 @@
 								class="badge gen-{rep.generated_by}"
 								data-testid="report-card-provenance-{rep.id}"
 							>
-								Provenance: {formatGeneratedByShortLabel(rep.generated_by)}
+								Dibuat dengan: {formatGeneratedByShortLabel(rep.generated_by)}
 							</span>
 							<span class="badge mode-{rep.snapshot?.mode ?? 'real'}">
-								Mode Sesi: {formatModeLabel(rep.snapshot?.mode ?? 'real')}
+								Mode: {formatModeLabel(rep.snapshot?.mode ?? 'real')}
 							</span>
 							{#if rep.is_stale}
 								<span class="badge stale-badge" data-testid="report-card-stale-{rep.id}">
-									STALE (Sumber Temuan Berubah)
+									Temuan berubah
 								</span>
 							{/if}
 							<span class="version-pill">Versi #{rep.version}</span>
@@ -837,18 +842,21 @@
 
 					<div class="card-meta-grid">
 						<div>
-							<span class="meta-label">Proyek &amp; Zona Snapshot:</span>
+							<span class="meta-label">Proyek dan zona:</span>
 							<strong>
-								{rep.snapshot?.project?.name ?? projectName(rep.project_id)} — {rep.snapshot?.zone?.name ?? '—'}
+								{rep.snapshot?.project?.name ?? projectName(rep.project_id)} — {rep.snapshot?.zone
+									?.name ?? '—'}
 							</strong>
 						</div>
 						<div>
-							<span class="meta-label">Asal Penyusunan:</span>
+							<span class="meta-label">Metode:</span>
 							<span>{formatGeneratedByLabel(rep.generated_by)}</span>
 						</div>
 						<div>
-							<span class="meta-label">Jumlah Temuan Snapshot:</span>
-							<strong>{rep.source_finding_ids?.length ?? rep.snapshot?.findings?.length ?? 0} temuan terkonfirmasi</strong>
+							<span class="meta-label">Jumlah temuan:</span>
+							<strong
+								>{rep.source_finding_ids?.length ?? rep.snapshot?.findings?.length ?? 0} temuan terkonfirmasi</strong
+							>
 						</div>
 						<div>
 							<span class="meta-label">Diperbarui:</span>
@@ -859,19 +867,15 @@
 					<div class="card-footer">
 						<div class="finding-refs">
 							{#if (rep.source_finding_ids?.length ?? 0) > 0}
-								<span class="refs-label">Referensi Temuan:</span>
+								<span class="refs-label">Temuan:</span>
 								{#each rep.source_finding_ids as fid (fid)}
 									<a href="/findings/{fid}" class="finding-ref-chip">F-{fid}</a>
 								{/each}
 							{/if}
 						</div>
 
-						<a
-							href="/reports/{rep.id}"
-							class="btn-primary"
-							data-testid="open-report-link-{rep.id}"
-						>
-							Buka Laporan #{rep.id}
+						<a href="/reports/{rep.id}" class="btn-primary" data-testid="open-report-link-{rep.id}">
+							Buka laporan #{rep.id}
 						</a>
 					</div>
 				</article>
@@ -905,6 +909,33 @@
 </div>
 
 <style>
+	.create-disclosure {
+		align-self: stretch;
+	}
+	.create-trigger {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		width: fit-content;
+		padding: 0.55rem 1rem;
+		min-height: 40px;
+		background: var(--accent-primary);
+		color: #fff;
+		border-radius: 6px;
+		font-size: 0.875rem;
+		font-weight: 600;
+		list-style: none;
+	}
+	.create-trigger::-webkit-details-marker {
+		display: none;
+	}
+	.create-trigger:hover {
+		background: var(--accent-hover);
+	}
+	.create-disclosure[open] .create-trigger {
+		margin-bottom: 1.25rem;
+	}
+
 	.reports-workspace {
 		display: flex;
 		flex-direction: column;
@@ -921,26 +952,10 @@
 		border-bottom: 1px solid var(--border-default, #d0d7de);
 	}
 
-	.eyebrow {
-		margin: 0 0 0.25rem;
-		font-size: 0.75rem;
-		font-weight: 700;
-		letter-spacing: 0.06em;
-		color: var(--ink-secondary, #57606a);
-	}
-
 	h1 {
 		margin: 0 0 0.35rem;
 		font-size: 1.5rem;
 		color: var(--ink-primary, #1f2328);
-	}
-
-	.subtitle {
-		margin: 0;
-		max-width: 70ch;
-		font-size: 0.9375rem;
-		color: var(--ink-secondary, #57606a);
-		line-height: 1.5;
 	}
 
 	.header-badges {
@@ -972,7 +987,7 @@
 	.state-box {
 		background: var(--bg-surface, #ffffff);
 		border: 1px solid var(--border-default, #d0d7de);
-		border-radius: 10px;
+		border-radius: 12px;
 		padding: 1.15rem 1.25rem;
 		min-width: 0;
 	}
@@ -1067,37 +1082,43 @@
 	}
 
 	.method-fieldset {
-		border: 1px solid var(--border-default, #d0d7de);
-		border-radius: 8px;
-		padding: 0.85rem 1rem;
+		border: 0;
+		padding: 0;
 		margin: 0;
 		min-width: 0;
 	}
 
 	.method-tabs {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-		gap: 0.75rem;
-		margin-top: 0.5rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0;
+		margin-top: 0.65rem;
+		border-top: 1px solid var(--border-default);
 	}
 
 	.method-option {
-		display: flex;
-		flex-direction: column;
-		gap: 0.3rem;
-		padding: 0.75rem;
-		border-radius: 8px;
-		border: 1px solid var(--border-default, #d0d7de);
-		background: var(--bg-subtle, #f6f8fa);
+		display: grid;
+		grid-template-columns: 20px minmax(0, 1fr);
+		gap: 0.3rem 0.65rem;
+		padding: 0.9rem 0.5rem;
+		border: 0;
+		border-bottom: 1px solid var(--border-default);
+		background: var(--bg-surface);
 		cursor: pointer;
-		font-weight: 400;
 		min-width: 0;
-		overflow-wrap: anywhere;
+	}
+	.method-option input {
+		grid-row: 1 / 3;
+		margin: 0.2rem 0 0;
+		width: 16px;
+		height: 16px;
+	}
+	.method-option .method-sub {
+		grid-column: 2;
 	}
 
 	.method-option.selected {
-		border-color: var(--accent-border, #0969da);
-		background: var(--accent-surface, #ddf4ff);
+		background: var(--accent-surface);
 	}
 
 	.method-title {
@@ -1151,14 +1172,6 @@
 		justify-content: space-between;
 		gap: 0.5rem;
 		margin-bottom: 0.35rem;
-	}
-
-	.error-code-pill {
-		font-family: monospace;
-		font-size: 0.75rem;
-		padding: 0.15rem 0.45rem;
-		border-radius: 4px;
-		background: rgba(0, 0, 0, 0.08);
 	}
 
 	.recovery-actions {
@@ -1387,7 +1400,10 @@
 		}
 
 		.method-fieldset {
-			padding: 0.75rem;
+			border: 0;
+			padding: 0;
+			margin: 0;
+			min-width: 0;
 		}
 
 		.create-actions > button,

@@ -17,18 +17,22 @@ test('officer login, explicit session bootstrap, distinct error recovery, readin
 	});
 
 	await page.goto('/');
-	await expect(page.getByRole('status')).toContainText(/Memeriksa Sesi Petugas K3/i);
+	await expect(page.getByRole('status')).toContainText(/Memeriksa akun/i);
 	await expect(page).toHaveURL(/\/login$/);
-	await expect(page.getByRole('heading', { name: /Masuk Petugas K3/i })).toBeVisible();
+	await expect(page.getByRole('heading', { name: /Masuk/i })).toBeVisible();
 
 	// 1. Distinct recovery message for incorrect credentials (401 INVALID_CREDENTIALS from Go)
-	await page.getByLabel(/Username/i).fill(TEST_USERNAME);
-	await page.getByLabel(/Password/i).fill('password-salah-123');
+	await page.getByLabel('Nama pengguna', { exact: true }).fill(TEST_USERNAME);
+	await page.getByLabel('Kata sandi', { exact: true }).fill('password-salah-123');
+	await page.getByRole('button', { name: 'Tampilkan kata sandi' }).click();
+	await expect(page.getByLabel('Kata sandi', { exact: true })).toHaveAttribute('type', 'text');
+	await page.getByRole('button', { name: 'Sembunyikan kata sandi' }).click();
+	await expect(page.getByLabel('Kata sandi', { exact: true })).toHaveAttribute('type', 'password');
 	await page.getByRole('button', { name: /Masuk/i }).click();
 	const alertBox = page.getByRole('alert');
 	await expect(alertBox).toHaveAttribute('data-error-kind', 'credentials');
-	await expect(alertBox).toContainText(/Kredensial Tidak Valid/i);
-	await expect(alertBox).toContainText(/Username atau password salah/i);
+	await expect(alertBox).toContainText(/Belum bisa masuk/i);
+	await expect(alertBox).toContainText(/Nama pengguna atau kata sandi salah/i);
 
 	// 2. Distinct recovery message when backend is unreachable
 	await page.route('/api/v1/auth/login', async (route) => {
@@ -36,20 +40,20 @@ test('officer login, explicit session bootstrap, distinct error recovery, readin
 	});
 	await page.getByRole('button', { name: /Masuk/i }).click();
 	await expect(alertBox).toHaveAttribute('data-error-kind', 'backend');
-	await expect(alertBox).toContainText(/Layanan Backend Tidak Terjangkau/i);
+	await expect(alertBox).toContainText(/Server belum terhubung/i);
 	await page.unroute('/api/v1/auth/login');
 
 	// 3. Keyboard-usable login with valid seeded credentials against real Go/SQLite
-	await page.getByLabel(/Password/i).focus();
-	await page.getByLabel(/Password/i).fill(TEST_PASSWORD);
+	await page.getByLabel('Kata sandi', { exact: true }).focus();
+	await page.getByLabel('Kata sandi', { exact: true }).fill(TEST_PASSWORD);
 	await page.keyboard.press('Enter');
 
 	await expect(page).toHaveURL(/\/$/);
 	await expect(page.getByTestId('officer-identity')).toContainText('Petugas: Anisa');
 	await expect(page.getByText(/NYATA/i).first()).toBeVisible();
 	await expect(page.getByText(/Belum Siap/i).first()).toBeVisible();
-	await expect(page.getByText(/Indikasi Tanpa Helm \(NO_HELMET\)/i)).toBeVisible();
-	await expect(page.getByText(/Indikasi Tanpa Rompi \(NO_VEST\)/i)).toBeVisible();
+	await expect(page.getByText(/Tanpa helm/i)).toBeVisible();
+	await expect(page.getByText(/Tanpa rompi/i)).toBeVisible();
 
 	// Integrated workspace modules are active navigation links in the primary sidebar
 	const primaryNav = page.getByRole('navigation', { name: /Navigasi utama/i });
@@ -71,9 +75,13 @@ test('officer login, explicit session bootstrap, distinct error recovery, readin
 	);
 
 	// 4. Responsive layout on narrow viewport
+	await page.getByRole('link', { name: /Periksa temuan/i }).click();
+	await expect(page).toHaveURL(/\/findings\?verification_status=pending$/);
+	await expect(page.getByLabel('Status pemeriksaan', { exact: true })).toHaveValue('pending');
+	await primaryNav.getByRole('link', { name: 'Beranda', exact: true }).click();
 	await page.setViewportSize({ width: 390, height: 844 });
 	await expect(page.getByRole('navigation', { name: /Navigasi utama/i })).toBeVisible();
-	await expect(page.getByRole('heading', { name: /Ruang Kerja Inspeksi K3/i })).toBeVisible();
+	await expect(page.getByRole('heading', { name: /Beranda/i })).toBeVisible();
 	await page.setViewportSize({ width: 1280, height: 800 });
 
 	// 5. Session survives page reload via HttpOnly cookie and /api/v1/auth/me

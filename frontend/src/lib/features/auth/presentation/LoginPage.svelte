@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/shared/presentation/Icon.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { isApiError } from '#lib/shared/errors';
@@ -6,6 +7,7 @@
 
 	let username = $state('');
 	let password = $state('');
+	let showPassword = $state(false);
 	let submitting = $state(false);
 	let ready = $state(false);
 	const controlsDisabled = $derived(!ready || submitting || authSession.status === 'checking');
@@ -18,30 +20,30 @@
 
 	onMount(async () => {
 		ready = true;
-		if(authSession.status === 'idle') {
+		if (authSession.status === 'idle') {
 			const status = await authSession.bootstrap();
-			if(status === 'authenticated') {
+			if (status === 'authenticated') {
 				await goto('/', { replaceState: true });
 			}
-		} else if(authSession.status === 'authenticated') {
+		} else if (authSession.status === 'authenticated') {
 			await goto('/', { replaceState: true });
 		}
 	});
 
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
-		if(controlsDisabled) return;
+		if (controlsDisabled) return;
 
 		const trimmedUser = username.trim();
 		const nextFieldErrors: { username?: string; password?: string } = {};
-		if(!trimmedUser) {
-			nextFieldErrors.username = 'Username wajib diisi.';
+		if (!trimmedUser) {
+			nextFieldErrors.username = 'Isi nama pengguna.';
 		}
-		if(!password) {
-			nextFieldErrors.password = 'Password wajib diisi.';
+		if (!password) {
+			nextFieldErrors.password = 'Isi kata sandi.';
 		}
 		fieldErrors = nextFieldErrors;
-		if(nextFieldErrors.username || nextFieldErrors.password) {
+		if (nextFieldErrors.username || nextFieldErrors.password) {
 			return;
 		}
 
@@ -51,43 +53,41 @@
 			await authSession.login(trimmedUser, password);
 			password = '';
 			await goto('/', { replaceState: true });
-		} catch(err) {
-			if(isApiError(err)) {
-				if(err.status === 401 || err.code === 'INVALID_CREDENTIALS') {
+		} catch (err) {
+			if (isApiError(err)) {
+				if (err.status === 401 || err.code === 'INVALID_CREDENTIALS') {
 					submitError = {
 						kind: 'credentials',
-						title: 'Kredensial Tidak Valid',
-						message:
-							err.message ||
-							'Username atau password salah. Gunakan akun petugas K3 yang di-seed oleh operator lokal.'
+						title: 'Belum bisa masuk',
+						message: 'Nama pengguna atau kata sandi salah. Coba cek lagi.'
 					};
-				} else if(err.status === 429 || err.code === 'RATE_LIMITED') {
-					const waitNote = err.retryAfter ? ` Tunggu sekitar ${err.retryAfter} detik.` : '';
+				} else if (err.status === 429 || err.code === 'RATE_LIMITED') {
+					const waitNote = err.retryAfter
+						? `Tunggu ${err.retryAfter} detik, lalu coba lagi.`
+						: 'Tunggu sebentar, lalu coba lagi.';
 					submitError = {
 						kind: 'rate_limit',
-						title: 'Batas Percobaan Tercapai',
-						message: `${err.message}${waitNote}`
+						title: 'Terlalu banyak percobaan',
+						message: waitNote
 					};
-				} else if(err.isNetworkError || err.code === 'BACKEND_UNREACHABLE' || err.status >= 500) {
+				} else if (err.isNetworkError || err.code === 'BACKEND_UNREACHABLE' || err.status >= 500) {
 					submitError = {
 						kind: 'backend',
-						title: 'Layanan Backend Tidak Terjangkau',
-						message:
-							'Tidak dapat menghubungi server Go (/api/v1). Pastikan layanan backend sedang berjalan lalu coba masuk kembali.'
+						title: 'Server belum terhubung',
+						message: 'Coba lagi. Kalau masih gagal, hubungi operator.'
 					};
 				} else {
 					submitError = {
 						kind: 'general',
-						title: 'Gagal Masuk',
+						title: 'Belum bisa masuk',
 						message: err.message
 					};
 				}
 			} else {
 				submitError = {
 					kind: 'backend',
-					title: 'Layanan Backend Tidak Terjangkau',
-					message:
-						'Tidak dapat menghubungi server Go (/api/v1). Pastikan layanan backend sedang berjalan lalu coba masuk kembali.'
+					title: 'Server belum terhubung',
+					message: 'Coba lagi. Kalau masih gagal, hubungi operator.'
 				};
 			}
 		} finally {
@@ -98,286 +98,336 @@
 	async function retryBootstrap() {
 		submitError = null;
 		const status = await authSession.bootstrap(true);
-		if(status === 'authenticated') {
+		if (status === 'authenticated') {
 			await goto('/', { replaceState: true });
 		}
 	}
 </script>
 
 <svelte:head>
-	<title>Masuk Petugas K3 — Inspeksi K3 Konstruksi</title>
+	<title>Masuk — Inspeksi K3 Konstruksi</title>
 </svelte:head>
 
 <main class="login-page">
-	<section class="login-panel" aria-labelledby="login-heading">
-		<header class="login-header">
-			<h1 id="login-heading">Masuk Petugas K3</h1>
-			<p class="login-subtitle">
-				Sistem Informasi Inspeksi K3 Konstruksi. Masuk menggunakan akun petugas lokal untuk mengakses ruang kerja inspeksi, verifikasi bukti, dan status kesiapan sistem.
-			</p>
-		</header>
+	<aside class="login-intro">
+		<a class="login-brand" href="/login"
+			><Icon name="shield" size={32} /><span>Inspeksi K3<span class="brand-dot">.</span></span></a
+		>
+		<div class="intro-content">
+			<h2>Inspeksi APD<br />di lapangan</h2>
+			<p>Periksa penggunaan helm dan rompi, lalu catat temuan di lokasi proyek.</p>
+		</div>
+	</aside>
+	<div class="login-form-region">
+		<section class="login-panel" aria-labelledby="login-heading">
+			<header class="login-header">
+				<h1 id="login-heading">Masuk</h1>
+			</header>
 
-		{#if (!ready || authSession.status === 'checking') && !submitting}
-			<div class="status-banner checking" role="status" aria-live="polite">
-				Memeriksa sesi aktif petugas K3...
-			</div>
-		{/if}
+			{#if (!ready || authSession.status === 'checking') && !submitting}
+				<div class="status-banner checking" role="status" aria-live="polite">Memeriksa akun...</div>
+			{/if}
 
-		{#if authSession.sessionNotice}
-			<div class="status-banner warn" role="status">
-				{authSession.sessionNotice}
-			</div>
-		{/if}
-
-		{#if authSession.status === 'error' && authSession.bootstrapError && !submitError}
-			<div class="status-banner err" role="alert" data-error-kind="backend">
-				<div class="banner-content">
-					<strong>Layanan Backend Tidak Terjangkau</strong>
-					<p>{authSession.bootstrapError}</p>
+			{#if authSession.sessionNotice}
+				<div class="status-banner warn" role="status">
+					{authSession.sessionNotice}
 				</div>
-				<button type="button" class="secondary-button" onclick={retryBootstrap}>
-					Coba Periksa Ulang
+			{/if}
+
+			{#if authSession.status === 'error' && authSession.bootstrapError && !submitError}
+				<div class="status-banner err" role="alert" data-error-kind="backend">
+					<div class="banner-content">
+						<strong>Server belum terhubung</strong>
+						<p>{authSession.bootstrapError}</p>
+					</div>
+					<button type="button" class="secondary-button" onclick={retryBootstrap}>
+						Coba lagi
+					</button>
+				</div>
+			{/if}
+
+			{#if submitError}
+				<div class="status-banner err" role="alert" data-error-kind={submitError.kind}>
+					<div class="banner-content">
+						<strong>{submitError.title}</strong>
+						<p>{submitError.message}</p>
+					</div>
+				</div>
+			{/if}
+
+			<form class="login-form" method="POST" onsubmit={handleSubmit} novalidate>
+				<div class="field-group">
+					<label for="login-username">Nama pengguna</label>
+					<input
+						id="login-username"
+						name="username"
+						type="text"
+						autocomplete="username"
+						bind:value={username}
+						aria-invalid={fieldErrors.username ? 'true' : undefined}
+						aria-describedby={fieldErrors.username ? 'login-username-error' : undefined}
+						disabled={controlsDisabled}
+						required
+					/>
+					{#if fieldErrors.username}
+						<p id="login-username-error" class="field-error">{fieldErrors.username}</p>
+					{/if}
+				</div>
+
+				<div class="field-group">
+					<label for="login-password">Kata sandi</label>
+					<div class="password-input">
+						<input
+							id="login-password"
+							name="password"
+							type={showPassword ? 'text' : 'password'}
+							autocomplete="current-password"
+							bind:value={password}
+							aria-invalid={fieldErrors.password ? 'true' : undefined}
+							aria-describedby={fieldErrors.password ? 'login-password-error' : undefined}
+							disabled={controlsDisabled}
+							required
+						/>
+						<button
+							type="button"
+							class="password-toggle"
+							onclick={() => (showPassword = !showPassword)}
+							aria-pressed={showPassword}
+							aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+							>{showPassword ? 'Sembunyikan' : 'Tampilkan'}</button
+						>
+					</div>
+					{#if fieldErrors.password}
+						<p id="login-password-error" class="field-error">{fieldErrors.password}</p>
+					{/if}
+				</div>
+
+				<button type="submit" class="primary-button" disabled={controlsDisabled}>
+					{submitting ? 'Sedang masuk...' : 'Masuk'}
 				</button>
-			</div>
-		{/if}
+			</form>
 
-		{#if submitError}
-			<div class="status-banner err" role="alert" data-error-kind={submitError.kind}>
-				<div class="banner-content">
-					<strong>{submitError.title}</strong>
-					<p>{submitError.message}</p>
-				</div>
-			</div>
-		{/if}
-
-		<form class="login-form" method="POST" onsubmit={handleSubmit} novalidate>
-			<div class="field-group">
-				<label for="login-username">Username</label>
-				<input
-					id="login-username"
-					name="username"
-					type="text"
-					autocomplete="username"
-					bind:value={username}
-					aria-invalid={fieldErrors.username ? 'true' : undefined}
-					aria-describedby={fieldErrors.username ? 'login-username-error' : undefined}
-					disabled={controlsDisabled}
-					required
-				/>
-				{#if fieldErrors.username}
-					<p id="login-username-error" class="field-error">{fieldErrors.username}</p>
-				{/if}
-			</div>
-
-			<div class="field-group">
-				<label for="login-password">Password</label>
-				<input
-					id="login-password"
-					name="password"
-					type="password"
-					autocomplete="current-password"
-					bind:value={password}
-					aria-invalid={fieldErrors.password ? 'true' : undefined}
-					aria-describedby={fieldErrors.password ? 'login-password-error' : undefined}
-					disabled={controlsDisabled}
-					required
-				/>
-				{#if fieldErrors.password}
-					<p id="login-password-error" class="field-error">{fieldErrors.password}</p>
-				{/if}
-			</div>
-
-			<button type="submit" class="primary-button" disabled={controlsDisabled}>
-				{submitting ? 'Memverifikasi...' : 'Masuk'}
-			</button>
-		</form>
-
-		<footer class="login-footer">
-			<p>
-				Akun petugas dikelola melalui perintah <code>seed</code> lokal. Sistem mendeteksi indikasi visual APD dan mewajibkan verifikasi manusia oleh petugas K3.
-			</p>
-		</footer>
-	</section>
+			<footer class="login-footer">
+				<p>Belum punya akun? Hubungi operator.</p>
+			</footer>
+		</section>
+	</div>
 </main>
 
 <style>
 	.login-page {
-		min-height: 100vh;
+		min-height: 100svh;
+		display: grid;
+		grid-template-columns: minmax(360px, 43%) minmax(0, 1fr);
+		background: var(--bg-surface);
+	}
+	.login-intro {
+		background: var(--nav-ground);
+		color: #d3e0e8;
+		padding: 3rem 3.5rem;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		gap: 4rem;
+	}
+	.login-brand {
+		display: flex;
+		gap: 0.85rem;
+		align-items: center;
+		color: #fff;
+		text-decoration: none;
+	}
+	.login-brand > span {
+		font-size: 1.4rem;
+		font-weight: 600;
+		letter-spacing: -0.04em;
+		line-height: 1.3;
+	}
+	.brand-dot {
+		color: #8bb3ff;
+	}
+	.intro-content {
+		padding-bottom: 2rem;
+	}
+	.intro-content h2 {
+		font-size: 2.6rem;
+		line-height: 1.25;
+		font-weight: 500;
+		color: #fff;
+		margin: 0 0 1.5rem;
+	}
+	.intro-content p {
+		font-size: 0.95rem;
+		line-height: 1.8;
+		margin-bottom: 2.25rem;
+		max-width: 34ch;
+	}
+	.login-form-region {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		padding: 1.5rem 1rem;
+		padding: 4rem 2.5rem;
 	}
-
 	.login-panel {
 		width: 100%;
-		max-width: 460px;
-		background: var(--bg-surface);
-		border: 1px solid var(--border-strong);
-		border-radius: 12px;
-		padding: 2rem 1.75rem;
+		max-width: 380px;
 		display: flex;
 		flex-direction: column;
-		gap: 1.25rem;
+		gap: 1.5rem;
 	}
-
+	.login-header {
+		margin-bottom: 0.75rem;
+	}
 	.login-header h1 {
-		margin: 0 0 0.5rem 0;
-		font-size: 1.5rem;
+		margin: 0 0 0.7rem;
+		font-size: 1.8rem;
+		font-weight: 650;
 	}
-
-	.login-subtitle {
-		margin: 0;
-		font-size: 0.9375rem;
-		color: var(--ink-secondary);
-	}
-
 	.status-banner {
-		padding: 0.75rem 0.9rem;
-		border-radius: 8px;
-		font-size: 0.875rem;
+		padding: 0.85rem 1rem;
+		border-radius: 6px;
+		font-size: 0.83rem;
 		display: flex;
 		flex-wrap: wrap;
-		align-items: center;
-		justify-content: space-between;
 		gap: 0.75rem;
 	}
-
-	.status-banner.checking {
+	.checking {
 		background: var(--bg-subtle);
-		border: 1px solid var(--border-default);
 		color: var(--ink-secondary);
 	}
-
-	.status-banner.warn {
+	.warn {
 		background: var(--status-warn-bg);
-		border: 1px solid var(--status-warn-border);
 		color: var(--status-warn-ink);
 	}
-
-	.status-banner.err {
+	.err {
 		background: var(--status-err-bg);
-		border: 1px solid var(--status-err-border);
 		color: var(--status-err-ink);
 	}
-
 	.banner-content p {
-		margin: 0.25rem 0 0 0;
+		margin: 0.3rem 0 0;
 	}
-
 	.login-form {
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
+		gap: 1.35rem;
 	}
-
 	.field-group {
 		display: flex;
 		flex-direction: column;
-		gap: 0.35rem;
+		gap: 0.5rem;
 	}
-
 	.field-group label {
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: var(--ink-primary);
+		font-size: 0.83rem;
+		font-weight: 550;
 	}
-
 	.field-group input {
-		padding: 0.55rem 0.75rem;
-		border-radius: 8px;
+		width: 100%;
+		min-height: 46px;
+		padding: 0.65rem 0.85rem;
 		border: 1px solid var(--border-strong);
+		border-radius: 6px;
 		background: var(--bg-surface);
-		font-size: 0.9375rem;
+		font-size: 1rem;
 	}
-
 	.field-group input[aria-invalid='true'] {
 		border-color: var(--status-err-ink);
 	}
-
 	.field-group input:disabled {
 		background: var(--bg-subtle);
-		cursor: not-allowed;
 	}
-
-	.field-error {
-		margin: 0;
-		font-size: 0.8125rem;
-		color: var(--status-err-ink);
-		font-weight: 500;
+	.password-input {
+		position: relative;
 	}
-
-	.primary-button {
-		margin-top: 0.25rem;
-		padding: 0.65rem 1rem;
-		border-radius: 8px;
-		border: 1px solid var(--accent-primary);
-		background: var(--accent-primary);
-		color: #ffffff;
-		font-weight: 600;
-		font-size: 0.9375rem;
-		cursor: pointer;
+	.password-input input {
+		padding-right: 7rem;
 	}
-
-	.primary-button:hover:not(:disabled) {
-		background: var(--accent-hover);
-		border-color: var(--accent-hover);
-	}
-
-	.primary-button:disabled {
-		opacity: 0.7;
-		cursor: not-allowed;
-	}
-
-	.secondary-button {
-		padding: 0.4rem 0.75rem;
-		border-radius: 6px;
-		border: 1px solid var(--status-err-ink);
-		background: var(--bg-surface);
-		color: var(--status-err-ink);
-		font-size: 0.8125rem;
-		font-weight: 600;
-		cursor: pointer;
-	}
-
-	.login-footer {
-		border-top: 1px solid var(--border-default);
-		padding-top: 1rem;
-	}
-
-	.login-footer p {
-		margin: 0;
-		font-size: 0.8125rem;
+	.password-toggle {
+		position: absolute;
+		right: 0.3rem;
+		top: 1px;
+		bottom: 1px;
+		min-height: 44px;
+		padding: 0 0.6rem;
+		border: 0;
+		background: transparent;
 		color: var(--ink-secondary);
-	}
-
-	.login-footer code {
-		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-		font-size: 0.78rem;
-		background: var(--bg-subtle);
-		padding: 0.1rem 0.35rem;
+		font-size: 0.75rem;
 		border-radius: 4px;
 	}
-
-	@media (max-width: 640px) {
+	.password-toggle:hover {
+		background: var(--bg-subtle);
+	}
+	.field-error {
+		margin: 0;
+		font-size: 0.78rem;
+		color: var(--status-err-ink);
+	}
+	.primary-button {
+		margin-top: 0.5rem;
+		width: 100%;
+		min-height: 46px;
+		border: 1px solid var(--accent-primary);
+		border-radius: 6px;
+		color: #fff;
+		background: var(--accent-primary);
+		font-size: 0.9rem;
+		font-weight: 600;
+	}
+	.primary-button:hover:not(:disabled) {
+		background: var(--accent-hover);
+	}
+	.primary-button:disabled {
+		opacity: 0.55;
+	}
+	.secondary-button {
+		padding: 0.5rem 0.75rem;
+		border: 1px solid var(--status-err-border);
+		border-radius: 6px;
+		background: var(--bg-surface);
+		color: var(--status-err-ink);
+		font-size: 0.8rem;
+	}
+	.login-footer {
+		margin-top: 0.5rem;
+		padding-top: 1.25rem;
+		border-top: 1px solid var(--border-default);
+	}
+	.login-footer p {
+		font-size: 0.75rem;
+		line-height: 1.7;
+		color: var(--ink-muted);
+		margin: 0;
+	}
+	@media (max-width: 900px) {
+		.login-intro {
+			padding: 2.5rem 2rem;
+		}
+		.intro-content h2 {
+			font-size: 2.1rem;
+		}
+	}
+	@media (max-width: 680px) {
 		.login-page {
-			padding: max(1rem, env(safe-area-inset-top)) max(0.875rem, env(safe-area-inset-right))
-				max(1.25rem, env(safe-area-inset-bottom)) max(0.875rem, env(safe-area-inset-left));
+			display: flex;
+			flex-direction: column;
 		}
-
-		.login-panel {
-			padding: 1.35rem 1.15rem;
+		.login-intro {
+			padding: 2rem 1.5rem;
+			gap: 0;
 		}
-
-		.field-group input {
-			min-height: 2.75rem;
-			font-size: 1rem;
+		.login-brand > span {
+			font-size: 1.25rem;
 		}
-
-		.primary-button,
-		.secondary-button {
-			min-height: 2.75rem;
-			width: 100%;
+		.intro-content,
+		.login-form-region {
+			align-items: flex-start;
+			padding: 3rem 1.5rem max(2rem, env(safe-area-inset-bottom));
+		}
+		.login-header h1 {
+			font-size: 1.65rem;
+		}
+		.password-toggle {
+			min-height: 40px;
 		}
 	}
 </style>

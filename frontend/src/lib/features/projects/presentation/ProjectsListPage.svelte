@@ -1,7 +1,14 @@
 <script lang="ts">
+	import Icon from '#lib/shared/presentation/Icon.svelte';
 	import { onMount } from 'svelte';
 	import { isApiError } from '#lib/shared/errors';
-	import { createProjectApi, deleteProjectApi, getProjectApi, listProjectsApi, updateProjectApi } from '#lib/app/projects';
+	import {
+		createProjectApi,
+		deleteProjectApi,
+		getProjectApi,
+		listProjectsApi,
+		updateProjectApi
+	} from '#lib/app/projects';
 	import { formatIndonesianDateTime, translateFieldError } from './format';
 	import type { Project, RecordStatus } from '../domain/types';
 	import type { PageMeta } from '#lib/shared/envelopes';
@@ -75,10 +82,8 @@
 			});
 			projects = res.data;
 			meta = res.meta;
-		} catch(err) {
-			listError = isApiError(err)
-				? err.message
-				: 'Gagal memuat daftar proyek dari server backend.';
+		} catch (err) {
+			listError = isApiError(err) ? err.message : 'Gagal memuat daftar proyek dari server backend.';
 		} finally {
 			loadingList = false;
 		}
@@ -100,7 +105,7 @@
 	}
 
 	async function handlePageChange(nextPage: number) {
-		if(nextPage < 1 || nextPage > totalPages || nextPage === currentPage) return;
+		if (nextPage < 1 || nextPage > totalPages || nextPage === currentPage) return;
 		currentPage = nextPage;
 		await loadProjects();
 	}
@@ -108,15 +113,15 @@
 	function validateProjectFields(name: string, location: string, description: string) {
 		const errs: Record<string, string> = {};
 		const trimmedName = name.trim();
-		if(!trimmedName) {
+		if (!trimmedName) {
 			errs.name = 'Nama wajib diisi.';
-		} else if([...trimmedName].length > 120) {
+		} else if ([...trimmedName].length > 120) {
 			errs.name = 'Nama maksimal 120 karakter.';
 		}
-		if([...location.trim()].length > 200) {
+		if ([...location.trim()].length > 200) {
 			errs.location = 'Lokasi maksimal 200 karakter.';
 		}
-		if([...description.trim()].length > 2000) {
+		if ([...description.trim()].length > 2000) {
 			errs.description = 'Deskripsi maksimal 2.000 karakter.';
 		}
 		return errs;
@@ -124,17 +129,17 @@
 
 	async function handleCreateProject(event: SubmitEvent) {
 		event.preventDefault();
-		if(creating) return;
+		if (creating) return;
 
 		actionNotice = null;
 		createGeneralError = null;
 		const clientErrs = validateProjectFields(createName, createLocation, createDescription);
 		createFieldErrors = clientErrs;
-		if(Object.keys(clientErrs).length > 0) return;
+		if (Object.keys(clientErrs).length > 0) return;
 
 		creating = true;
 		try {
-			const created = await createProjectApi({
+			await createProjectApi({
 				name: createName.trim(),
 				location: createLocation.trim(),
 				description: createDescription.trim()
@@ -143,14 +148,14 @@
 			createLocation = '';
 			createDescription = '';
 			createFieldErrors = {};
-			actionNotice = `Proyek "${created.name}" berhasil ditambahkan.`;
+			actionNotice = `Proyek ditambahkan.`;
 			currentPage = 1;
 			await loadProjects();
-		} catch(err) {
-			if(isApiError(err)) {
-				if(err.status === 422 && Object.keys(err.fields).length > 0) {
+		} catch (err) {
+			if (isApiError(err)) {
+				if (err.status === 422 && Object.keys(err.fields).length > 0) {
 					const mapped: Record<string, string> = {};
-					for(const [k, v] of Object.entries(err.fields)) {
+					for (const [k, v] of Object.entries(err.fields)) {
 						mapped[k] = translateFieldError(k, v);
 					}
 					createFieldErrors = mapped;
@@ -188,18 +193,18 @@
 
 	async function handleSaveEditProject(event: SubmitEvent) {
 		event.preventDefault();
-		if(editingProjectId === null || editSaving) return;
+		if (editingProjectId === null || editSaving) return;
 
 		actionNotice = null;
 		editGeneralError = null;
 		editSessionConflict = null;
 		const clientErrs = validateProjectFields(editName, editLocation, editDescription);
 		editFieldErrors = clientErrs;
-		if(Object.keys(clientErrs).length > 0) return;
+		if (Object.keys(clientErrs).length > 0) return;
 
 		editSaving = true;
 		try {
-			const updated = await updateProjectApi(editingProjectId, {
+			await updateProjectApi(editingProjectId, {
 				version: editVersion,
 				name: editName.trim(),
 				location: editLocation.trim(),
@@ -208,21 +213,21 @@
 			});
 			editingProjectId = null;
 			editVersionConflict = null;
-			actionNotice = `Perubahan pada proyek "${updated.name}" (v${updated.version}) berhasil disimpan.`;
+			actionNotice = `Proyek tersimpan.`;
 			await loadProjects();
-		} catch(err) {
-			if(isApiError(err)) {
-				if(err.status === 409 && err.code === 'VERSION_CONFLICT') {
+		} catch (err) {
+			if (isApiError(err)) {
+				if (err.status === 409 && err.code === 'VERSION_CONFLICT') {
 					// Preserve unsaved input and offer reload
 					editVersionConflict = {
 						message: err.message,
 						serverSnapshot: null
 					};
-				} else if(err.status === 409 && err.code === 'SESSION_ACTIVE') {
+				} else if (err.status === 409 && err.code === 'SESSION_ACTIVE') {
 					editSessionConflict = err.message;
-				} else if(err.status === 422 && Object.keys(err.fields).length > 0) {
+				} else if (err.status === 422 && Object.keys(err.fields).length > 0) {
 					const mapped: Record<string, string> = {};
-					for(const [k, v] of Object.entries(err.fields)) {
+					for (const [k, v] of Object.entries(err.fields)) {
 						mapped[k] = translateFieldError(k, v);
 					}
 					editFieldErrors = mapped;
@@ -239,43 +244,41 @@
 	}
 
 	async function reloadConflictedProject() {
-		if(editingProjectId === null) return;
+		if (editingProjectId === null) return;
 		try {
 			const latest = await getProjectApi(editingProjectId);
 			editVersion = latest.version;
 			editVersionConflict = null;
-			actionNotice = `Versi terbaru server (v${latest.version}) telah dimuat. Input Anda tetap dipertahankan; silakan periksa dan simpan kembali.`;
+			actionNotice = `Data terbaru dimuat. Isianmu belum hilang.`;
 			projects = projects.map((p) => (p.id === latest.id ? latest : p));
-		} catch(err) {
+		} catch (err) {
 			editGeneralError = isApiError(err) ? err.message : 'Gagal memuat ulang data proyek terbaru.';
 		}
 	}
 
 	async function handleArchiveProject(project: Project, targetStatus: RecordStatus = 'archived') {
-		if(archivingId !== null) return;
+		if (archivingId !== null) return;
 		archivingId = project.id;
 		actionNotice = null;
 		sessionActiveConflict = null;
 		try {
-			const updated = await updateProjectApi(project.id, {
+			await updateProjectApi(project.id, {
 				version: project.version,
 				status: targetStatus
 			});
-			if(referenceConflict?.project.id === project.id) {
+			if (referenceConflict?.project.id === project.id) {
 				referenceConflict = null;
 			}
 			actionNotice =
-				targetStatus === 'archived'
-					? `Proyek "${updated.name}" telah diarsipkan.`
-					: `Proyek "${updated.name}" telah diaktifkan kembali.`;
+				targetStatus === 'archived' ? `Proyek diarsipkan.` : `Proyek diaktifkan kembali.`;
 			await loadProjects();
-		} catch(err) {
-			if(isApiError(err) && err.status === 409 && err.code === 'SESSION_ACTIVE') {
+		} catch (err) {
+			if (isApiError(err) && err.status === 409 && err.code === 'SESSION_ACTIVE') {
 				sessionActiveConflict = {
 					project,
 					message: err.message
 				};
-			} else if(isApiError(err) && err.status === 409 && err.code === 'VERSION_CONFLICT') {
+			} else if (isApiError(err) && err.status === 409 && err.code === 'VERSION_CONFLICT') {
 				listError = err.message;
 				await loadProjects();
 			} else {
@@ -287,7 +290,7 @@
 	}
 
 	async function handleDeleteProject(project: Project) {
-		if(deletingId !== null) return;
+		if (deletingId !== null) return;
 		deletingId = project.id;
 		actionNotice = null;
 		referenceConflict = null;
@@ -295,11 +298,11 @@
 		try {
 			await deleteProjectApi(project.id, project.version);
 			confirmingDeleteId = null;
-			actionNotice = `Proyek "${project.name}" berhasil dihapus permanen.`;
+			actionNotice = `Proyek dihapus.`;
 			await loadProjects();
-		} catch(err) {
+		} catch (err) {
 			confirmingDeleteId = null;
-			if(isApiError(err) && err.status === 409 && err.code === 'PROJECT_IN_USE') {
+			if (isApiError(err) && err.status === 409 && err.code === 'PROJECT_IN_USE') {
 				referenceConflict = {
 					project,
 					message: err.message
@@ -314,16 +317,13 @@
 </script>
 
 <svelte:head>
-	<title>Manajemen Proyek & Zona — Inspeksi K3</title>
+	<title>Proyek & zona — Inspeksi K3</title>
 </svelte:head>
 
 <div class="projects-stack">
 	<header class="page-header">
 		<div>
-			<h1>Manajemen Proyek & Zona</h1>
-			<p class="lead">
-				Kelola data induk proyek konstruksi dan zona pengamatan sebelum memulai sesi inspeksi kamera. Proyek yang telah memiliki zona atau riwayat sesi diarsipkan agar riwayat bukti tetap utuh.
-			</p>
+			<h1>Proyek & zona</h1>
 		</div>
 	</header>
 
@@ -339,7 +339,7 @@
 	{#if referenceConflict}
 		<div class="banner warn" role="alert" data-error-kind="reference-conflict">
 			<div class="banner-body">
-				<strong>Penghapusan Ditolak — Gunakan Pengarsipan:</strong>
+				<strong>Data masih digunakan</strong>
 				<p>
 					Proyek <strong>{referenceConflict.project.name}</strong> tidak dapat dihapus: {referenceConflict.message}
 				</p>
@@ -349,10 +349,11 @@
 					<button
 						type="button"
 						class="primary-btn"
-						onclick={() => referenceConflict && handleArchiveProject(referenceConflict.project, 'archived')}
+						onclick={() =>
+							referenceConflict && handleArchiveProject(referenceConflict.project, 'archived')}
 						disabled={archivingId === referenceConflict.project.id}
 					>
-						{archivingId === referenceConflict.project.id ? 'Mengarsipkan...' : 'Arsipkan Sekarang'}
+						{archivingId === referenceConflict.project.id ? 'Mengarsipkan...' : 'Arsipkan'}
 					</button>
 				{/if}
 				<button type="button" class="secondary-btn" onclick={() => (referenceConflict = null)}>
@@ -365,7 +366,7 @@
 	{#if sessionActiveConflict}
 		<div class="banner err" role="alert" data-error-kind="session-active-conflict">
 			<div class="banner-body">
-				<strong>Konflik Sesi Monitoring Aktif:</strong>
+				<strong>Inspeksi masih berjalan</strong>
 				<p>
 					Proyek <strong>{sessionActiveConflict.project.name}</strong>: {sessionActiveConflict.message}
 				</p>
@@ -376,97 +377,94 @@
 		</div>
 	{/if}
 
-	<section class="panel" aria-labelledby="create-project-heading">
-		<h2 id="create-project-heading">Tambah Proyek Baru</h2>
-		<p class="panel-desc">
-			Proyek baru selalu dibuat dengan status <strong>Aktif</strong> (versi 1). Setelah dibuat, buka detail proyek untuk menambahkan zona pengamatan.
-		</p>
+	<details class="create-disclosure">
+		<summary class="create-trigger"><Icon name="plus" size={18} />Tambah proyek</summary>
+		<section class="panel" aria-labelledby="create-project-heading">
+			<h2 id="create-project-heading">Proyek baru</h2>
 
-		{#if createGeneralError}
-			<div class="banner err" role="alert">
-				<span>{createGeneralError}</span>
-			</div>
-		{/if}
+			{#if createGeneralError}
+				<div class="banner err" role="alert">
+					<span>{createGeneralError}</span>
+				</div>
+			{/if}
 
-		<form class="project-form" onsubmit={handleCreateProject} novalidate>
-			<div class="form-grid">
-				<div class="field-group">
-					<label for="create-project-name">Nama Proyek <span class="req">*</span></label>
-					<input
-						id="create-project-name"
-						name="name"
-						type="text"
-						maxlength="120"
-						placeholder="Contoh: Pembangunan Gedung A"
-						bind:value={createName}
-						aria-invalid={createFieldErrors.name ? 'true' : undefined}
-						aria-describedby={createFieldErrors.name ? 'create-name-error' : undefined}
-						disabled={creating}
-						required
-					/>
-					{#if createFieldErrors.name}
-						<p id="create-name-error" class="field-error">{createFieldErrors.name}</p>
-					{/if}
+			<form class="project-form" onsubmit={handleCreateProject} novalidate>
+				<div class="form-grid">
+					<div class="field-group">
+						<label for="create-project-name">Nama proyek <span class="req">*</span></label>
+						<input
+							id="create-project-name"
+							name="name"
+							type="text"
+							maxlength="120"
+							placeholder="Contoh: Pembangunan Gedung A"
+							bind:value={createName}
+							aria-invalid={createFieldErrors.name ? 'true' : undefined}
+							aria-describedby={createFieldErrors.name ? 'create-name-error' : undefined}
+							disabled={creating}
+							required
+						/>
+						{#if createFieldErrors.name}
+							<p id="create-name-error" class="field-error">{createFieldErrors.name}</p>
+						{/if}
+					</div>
+
+					<div class="field-group">
+						<label for="create-project-location">Lokasi</label>
+						<input
+							id="create-project-location"
+							name="location"
+							type="text"
+							maxlength="200"
+							placeholder="Contoh: Malang, Jawa Timur"
+							bind:value={createLocation}
+							aria-invalid={createFieldErrors.location ? 'true' : undefined}
+							aria-describedby={createFieldErrors.location ? 'create-location-error' : undefined}
+							disabled={creating}
+						/>
+						{#if createFieldErrors.location}
+							<p id="create-location-error" class="field-error">{createFieldErrors.location}</p>
+						{/if}
+					</div>
 				</div>
 
 				<div class="field-group">
-					<label for="create-project-location">Lokasi</label>
-					<input
-						id="create-project-location"
-						name="location"
-						type="text"
-						maxlength="200"
-						placeholder="Contoh: Malang, Jawa Timur"
-						bind:value={createLocation}
-						aria-invalid={createFieldErrors.location ? 'true' : undefined}
-						aria-describedby={createFieldErrors.location ? 'create-location-error' : undefined}
+					<label for="create-project-description">Deskripsi proyek</label>
+					<textarea
+						id="create-project-description"
+						name="description"
+						rows="2"
+						maxlength="2000"
+						placeholder="Ringkasan lingkup pekerjaan konstruksi atau catatan lokasi..."
+						bind:value={createDescription}
+						aria-invalid={createFieldErrors.description ? 'true' : undefined}
+						aria-describedby={createFieldErrors.description ? 'create-desc-error' : undefined}
 						disabled={creating}
-					/>
-					{#if createFieldErrors.location}
-						<p id="create-location-error" class="field-error">{createFieldErrors.location}</p>
+					></textarea>
+					{#if createFieldErrors.description}
+						<p id="create-desc-error" class="field-error">{createFieldErrors.description}</p>
 					{/if}
 				</div>
-			</div>
 
-			<div class="field-group">
-				<label for="create-project-description">Deskripsi Proyek</label>
-				<textarea
-					id="create-project-description"
-					name="description"
-					rows="2"
-					maxlength="2000"
-					placeholder="Ringkasan lingkup pekerjaan konstruksi atau catatan lokasi..."
-					bind:value={createDescription}
-					aria-invalid={createFieldErrors.description ? 'true' : undefined}
-					aria-describedby={createFieldErrors.description ? 'create-desc-error' : undefined}
-					disabled={creating}
-				></textarea>
-				{#if createFieldErrors.description}
-					<p id="create-desc-error" class="field-error">{createFieldErrors.description}</p>
-				{/if}
-			</div>
-
-			<div class="form-actions">
-				<button type="submit" class="primary-btn" disabled={creating}>
-					{creating ? 'Menyimpan...' : 'Tambah Proyek'}
-				</button>
-			</div>
-		</form>
-	</section>
+				<div class="form-actions">
+					<button type="submit" class="primary-btn" disabled={creating}>
+						{creating ? 'Menyimpan...' : 'Tambah Proyek'}
+					</button>
+				</div>
+			</form>
+		</section>
+	</details>
 
 	<section class="panel" aria-labelledby="project-list-heading">
 		<div class="list-header">
 			<div>
-				<h2 id="project-list-heading">Daftar Proyek</h2>
-				<p class="panel-desc">
-					Menampilkan proyek tersimpan dari database SQLite lokal. Gunakan pencarian nama atau filter status untuk menyaring daftar.
-				</p>
+				<h2 id="project-list-heading">Daftar proyek</h2>
 			</div>
 		</div>
 
 		<form class="filter-bar" onsubmit={handleFilterSubmit}>
 			<div class="field-group filter-search">
-				<label for="filter-project-q">Cari Nama Proyek</label>
+				<label for="filter-project-q">Cari proyek</label>
 				<input
 					id="filter-project-q"
 					type="search"
@@ -476,7 +474,7 @@
 			</div>
 
 			<div class="field-group">
-				<label for="filter-project-status">Status Proyek</label>
+				<label for="filter-project-status">Status proyek</label>
 				<select
 					id="filter-project-status"
 					bind:value={statusFilter}
@@ -485,23 +483,21 @@
 						void loadProjects();
 					}}
 				>
-					<option value="">Semua Status</option>
-					<option value="active">Aktif (active)</option>
-					<option value="archived">Diarsipkan (archived)</option>
+					<option value="">Semua status</option>
+					<option value="active">Aktif</option>
+					<option value="archived">Diarsipkan</option>
 				</select>
 			</div>
 
 			<div class="filter-buttons">
-				<button type="submit" class="secondary-btn" disabled={loadingList}>
-					Terapkan Filter
-				</button>
+				<button type="submit" class="secondary-btn" disabled={loadingList}> Terapkan </button>
 				<button
 					type="button"
 					class="secondary-btn"
 					onclick={handleResetFilter}
 					disabled={loadingList && !appliedSearch && !statusFilter}
 				>
-					Reset Filter
+					Reset filter
 				</button>
 			</div>
 		</form>
@@ -509,26 +505,24 @@
 		{#if listError}
 			<div class="banner err" role="alert" data-error-kind="backend">
 				<div class="banner-body">
-					<strong>Gagal Memuat Daftar Proyek:</strong>
+					<strong>Gagal Memuat Daftar proyek:</strong>
 					<p>{listError}</p>
 				</div>
-				<button type="button" class="secondary-btn" onclick={loadProjects}>
-					Coba Lagi
-				</button>
+				<button type="button" class="secondary-btn" onclick={loadProjects}> Coba lagi </button>
 			</div>
 		{:else if loadingList}
 			<div class="state-box" role="status" aria-busy="true">
-				<p>Memuat daftar proyek dari server...</p>
+				<p>Memuat proyek...</p>
 			</div>
 		{:else if projects.length === 0}
 			<div class="state-box empty" role="status">
 				{#if appliedSearch || statusFilter}
 					<p>
-						<strong>Tidak ada proyek yang cocok dengan filter pencarian.</strong> Coba ubah kata kunci atau klik <em>Reset Filter</em> untuk melihat seluruh proyek.
+						<strong>Proyek tidak ditemukan.</strong> Ubah pencarian atau reset filter.
 					</p>
 				{:else}
 					<p>
-						<strong>Belum ada proyek konstruksi terdaftar.</strong> Gunakan formulir <em>Tambah Proyek Baru</em> di atas untuk membuat proyek pertama Anda.
+						<strong>Belum ada proyek.</strong> Tambahkan proyek untuk mulai inspeksi.
 					</p>
 				{/if}
 			</div>
@@ -565,14 +559,8 @@
 						</div>
 
 						<div class="project-card-actions">
-							<a href="/projects/{project.id}" class="action-link">
-								Kelola Zona & Detail
-							</a>
-							<button
-								type="button"
-								class="secondary-btn"
-								onclick={() => startEditProject(project)}
-							>
+							<a href="/projects/{project.id}" class="action-link"> Buka proyek </a>
+							<button type="button" class="secondary-btn" onclick={() => startEditProject(project)}>
 								Edit
 							</button>
 							{#if project.status === 'active'}
@@ -596,15 +584,21 @@
 							{/if}
 
 							{#if confirmingDeleteId === project.id}
-								<div class="delete-confirm-inline" role="group" aria-label="Konfirmasi hapus proyek">
-									<span class="confirm-note">Hapus permanen jika belum punya zona?</span>
+								<div
+									class="delete-confirm-inline"
+									role="group"
+									aria-label="Konfirmasi hapus proyek"
+								>
+									<span class="confirm-note"
+										>Hapus proyek ini? Tindakan ini tidak bisa dibatalkan.</span
+									>
 									<button
 										type="button"
 										class="danger-btn"
 										onclick={() => handleDeleteProject(project)}
 										disabled={deletingId === project.id}
 									>
-										{deletingId === project.id ? 'Menghapus...' : 'Konfirmasi Hapus'}
+										{deletingId === project.id ? 'Menghapus...' : 'Hapus'}
 									</button>
 									<button
 										type="button"
@@ -627,29 +621,27 @@
 
 						{#if editingProjectId === project.id}
 							<div class="inline-edit-panel">
-								<h3>Edit Proyek #{project.id} (Target v{editVersion})</h3>
+								<h3>Edit proyek</h3>
 
 								{#if editVersionConflict}
 									<div class="banner warn" role="alert" data-error-kind="version-conflict">
 										<div class="banner-body">
-											<strong>Konflik Versi Terdeteksi (409 VERSION_CONFLICT):</strong>
+											<strong>Data sudah berubah</strong>
 											<p>
-												{editVersionConflict.message} Input Anda yang belum disimpan tetap dipertahankan di bawah.
+												{editVersionConflict.message} Isianmu belum hilang. Ambil data terbaru, lalu
+												simpan lagi.
 											</p>
 										</div>
-										<button
-											type="button"
-											class="primary-btn"
-											onclick={reloadConflictedProject}
-										>
-											Muat Ulang Data Terbaru
+										<button type="button" class="primary-btn" onclick={reloadConflictedProject}>
+											Ambil data terbaru
 										</button>
 									</div>
 								{/if}
 
 								{#if editSessionConflict}
 									<div class="banner err" role="alert" data-error-kind="session-active-conflict">
-										<strong>Konflik Sesi Aktif:</strong> {editSessionConflict}
+										<strong>Inspeksi masih berjalan</strong>
+										{editSessionConflict}
 									</div>
 								{/if}
 
@@ -662,7 +654,9 @@
 								<form class="project-form" onsubmit={handleSaveEditProject} novalidate>
 									<div class="form-grid">
 										<div class="field-group">
-											<label for="edit-project-name-{project.id}">Edit Nama Proyek <span class="req">*</span></label>
+											<label for="edit-project-name-{project.id}"
+												>Edit Nama proyek <span class="req">*</span></label
+											>
 											<input
 												id="edit-project-name-{project.id}"
 												type="text"
@@ -693,20 +687,20 @@
 										</div>
 
 										<div class="field-group">
-											<label for="edit-project-status-{project.id}">Status Proyek</label>
+											<label for="edit-project-status-{project.id}">Status proyek</label>
 											<select
 												id="edit-project-status-{project.id}"
 												bind:value={editStatus}
 												disabled={editSaving}
 											>
-												<option value="active">Aktif (active)</option>
-												<option value="archived">Diarsipkan (archived)</option>
+												<option value="active">Aktif</option>
+												<option value="archived">Diarsipkan</option>
 											</select>
 										</div>
 									</div>
 
 									<div class="field-group">
-										<label for="edit-project-desc-{project.id}">Edit Deskripsi Proyek</label>
+										<label for="edit-project-desc-{project.id}">Edit Deskripsi proyek</label>
 										<textarea
 											id="edit-project-desc-{project.id}"
 											rows="2"
@@ -721,7 +715,7 @@
 
 									<div class="form-actions">
 										<button type="submit" class="primary-btn" disabled={editSaving}>
-											{editSaving ? 'Menyimpan...' : 'Simpan Perubahan Proyek'}
+											{editSaving ? 'Menyimpan...' : 'Simpan proyek'}
 										</button>
 										<button
 											type="button"
@@ -768,6 +762,45 @@
 </div>
 
 <style>
+	.create-disclosure {
+		align-self: stretch;
+	}
+	.create-trigger {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		width: fit-content;
+		margin-left: 0;
+		margin-top: 0;
+		min-height: 40px;
+		padding: 0.55rem 1rem;
+		border-radius: 6px;
+		background: var(--accent-primary);
+		color: #fff;
+		font-size: 0.875rem;
+		font-weight: 600;
+		list-style: none;
+	}
+	.create-trigger::-webkit-details-marker {
+		display: none;
+	}
+	.create-trigger:hover {
+		background: var(--accent-hover);
+	}
+	.create-disclosure[open] .create-trigger {
+		margin-bottom: 1.25rem;
+	}
+	.create-disclosure > .panel {
+		margin-top: 1rem;
+	}
+	@media (max-width: 1100px) {
+		.create-trigger {
+			margin-top: 0;
+			margin-left: 0;
+		}
+	}
+
 	.projects-stack {
 		display: flex;
 		flex-direction: column;
@@ -784,12 +817,6 @@
 		font-size: 1.5rem;
 	}
 
-	.lead {
-		margin: 0;
-		font-size: 0.9375rem;
-		color: var(--ink-secondary);
-	}
-
 	.panel {
 		background: var(--bg-surface);
 		border: 1px solid var(--border-default);
@@ -803,12 +830,6 @@
 	.panel h2 {
 		margin: 0;
 		font-size: 1.125rem;
-	}
-
-	.panel-desc {
-		margin: 0.25rem 0 0 0;
-		font-size: 0.875rem;
-		color: var(--ink-secondary);
 	}
 
 	.banner {
@@ -1043,14 +1064,14 @@
 	}
 
 	.action-link:hover {
-		background: #fed7aa;
+		background: var(--accent-surface);
 	}
 
 	.inline-edit-panel {
 		margin-top: 0.25rem;
 		padding: 1rem;
 		border-radius: 8px;
-		background: var(--bg-subtle);
+		background: var(--bg-surface);
 		border: 1px solid var(--border-strong);
 		display: flex;
 		flex-direction: column;

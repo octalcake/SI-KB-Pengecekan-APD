@@ -38,7 +38,7 @@
 	);
 
 	function revokeCurrentUrl() {
-		if(activeObjectUrl) {
+		if (activeObjectUrl) {
 			URL.revokeObjectURL(activeObjectUrl);
 			activeObjectUrl = null;
 		}
@@ -53,7 +53,7 @@
 
 		try {
 			const { blob } = await fetchProtectedEvidenceBlob(url, controller.signal);
-			if(controller.signal.aborted) return;
+			if (controller.signal.aborted) return;
 			const objUrl = URL.createObjectURL(blob);
 			activeObjectUrl = objUrl;
 			loadStatus = {
@@ -61,8 +61,8 @@
 				objectUrl: objUrl,
 				byteLength: blob.size
 			};
-		} catch(err) {
-			if(controller.signal.aborted) return;
+		} catch (err) {
+			if (controller.signal.aborted) return;
 			const parsed = parseFindingApiError(err, 'Gagal memuat foto bukti asli.');
 			loadStatus = {
 				state: 'error',
@@ -89,7 +89,7 @@
 	});
 
 	function handleKeydown(event: KeyboardEvent) {
-		if(enlarged && event.key === 'Escape') {
+		if (enlarged && event.key === 'Escape') {
 			event.preventDefault();
 			enlarged = false;
 		}
@@ -107,7 +107,6 @@
 		{#if loadStatus.state === 'loading'}
 			<div class="stage-state loading" role="status" aria-live="polite">
 				<span class="state-title">Memuat foto bukti asli...</span>
-				<span class="state-sub">Mengambil frame terproteksi #{finding.id}</span>
 			</div>
 		{:else if loadStatus.state === 'error'}
 			<div
@@ -118,23 +117,19 @@
 				data-error-code={loadStatus.code}
 			>
 				{#if loadStatus.isMissingEvidence}
-					<strong class="state-title">File Bukti Asli Hilang (410 EVIDENCE_MISSING)</strong>
-					<p class="state-desc">
-						{loadStatus.message} Sistem tidak menampilkan foto pengganti agar integritas bukti tetap jujur.
-					</p>
+					<strong class="state-title">Foto bukti tidak ditemukan</strong>
+					<p class="state-desc">{loadStatus.message}</p>
 				{:else if loadStatus.isUnauthorized}
-					<strong class="state-title">Sesi Berakhir (401)</strong>
-					<p class="state-desc">
-						Foto bukti memerlukan sesi petugas aktif. Silakan masuk kembali untuk mengakses bukti.
-					</p>
+					<strong class="state-title">Sesi sudah berakhir</strong>
+					<p class="state-desc">Masuk lagi untuk membuka foto bukti.</p>
 				{:else if loadStatus.isForbidden}
-					<strong class="state-title">Akses Bukti Ditolak (403)</strong>
+					<strong class="state-title">Akses foto ditolak</strong>
 					<p class="state-desc">{loadStatus.message}</p>
 				{:else if loadStatus.isNetworkError}
-					<strong class="state-title">Backend Tidak Terjangkau</strong>
+					<strong class="state-title">Server belum terhubung</strong>
 					<p class="state-desc">{loadStatus.message}</p>
 				{:else}
-					<strong class="state-title">Gagal Memuat Foto Bukti ({loadStatus.code})</strong>
+					<strong class="state-title">Foto belum bisa dimuat</strong>
 					<p class="state-desc">{loadStatus.message}</p>
 				{/if}
 
@@ -144,7 +139,7 @@
 						class="stage-retry-btn"
 						onclick={() => loadEvidence(finding.evidence_url)}
 					>
-						Muat Ulang Bukti
+						Coba lagi
 					</button>
 				{/if}
 			</div>
@@ -160,7 +155,7 @@
 				<div
 					class="bbox-overlay-layer"
 					data-testid={compact ? `finding-thumb-overlay-${finding.id}` : 'finding-bbox-overlay'}
-					aria-label="Overlay kotak deteksi model pada frame asli"
+					aria-label="Kotak deteksi pada foto asli"
 				>
 					{#if personBox}
 						<div
@@ -196,17 +191,15 @@
 		<div class="viewer-toolbar">
 			<div class="toolbar-meta">
 				<span class="meta-chip">
-					Resolusi Asli: <strong>{finding.frame_width} × {finding.frame_height} px</strong>
+					Ukuran foto: <strong>{finding.frame_width} × {finding.frame_height} px</strong>
 				</span>
 				{#if finding.frame_sequence !== null}
 					<span class="meta-chip">
-						Sequence Frame: <strong>#{finding.frame_sequence}</strong>
+						Foto ke- <strong>#{finding.frame_sequence}</strong>
 					</span>
 				{/if}
 				{#if !hasAnyBox}
-					<span class="meta-chip muted">
-						Tanpa koordinat bbox model (pencatatan manual / non-bbox)
-					</span>
+					<span class="meta-chip muted"> Tanpa kotak deteksi </span>
 				{/if}
 			</div>
 
@@ -218,7 +211,7 @@
 						aria-pressed={showOverlay}
 						onclick={() => (showOverlay = !showOverlay)}
 					>
-						{showOverlay ? 'Sembunyikan Overlay' : 'Tampilkan Overlay'}
+						{showOverlay ? 'Sembunyikan kotak' : 'Tampilkan kotak'}
 					</button>
 				{/if}
 				<button
@@ -227,7 +220,7 @@
 					disabled={loadStatus.state !== 'ready'}
 					onclick={() => (enlarged = true)}
 				>
-					Perbesar Bukti
+					Perbesar foto
 				</button>
 			</div>
 		</div>
@@ -235,17 +228,12 @@
 </div>
 
 {#if enlarged && loadStatus.state === 'ready'}
-	<div
-		class="modal-backdrop"
-		role="dialog"
-		aria-modal="true"
-		aria-label="Pratinjau Penuh Foto Bukti"
-	>
+	<div class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Foto bukti">
 		<div class="modal-panel">
 			<header class="modal-header">
 				<div>
 					<h2 class="modal-title">
-						Pratinjau Penuh Foto Bukti Asli — Temuan #{finding.id}
+						Foto temuan #{finding.id}
 					</h2>
 					<p class="modal-subtitle">
 						Frame asli {finding.frame_width}×{finding.frame_height} px • SHA-256:
@@ -260,15 +248,11 @@
 							aria-pressed={showOverlay}
 							onclick={() => (showOverlay = !showOverlay)}
 						>
-							{showOverlay ? 'Sembunyikan Overlay' : 'Tampilkan Overlay'}
+							{showOverlay ? 'Sembunyikan kotak' : 'Tampilkan kotak'}
 						</button>
 					{/if}
-					<button
-						type="button"
-						class="tool-btn close-btn"
-						onclick={() => (enlarged = false)}
-					>
-						Tutup Pratinjau
+					<button type="button" class="tool-btn close-btn" onclick={() => (enlarged = false)}>
+						Tutup foto
 					</button>
 				</div>
 			</header>
@@ -417,7 +401,6 @@
 		font-weight: 700;
 	}
 
-	.state-sub,
 	.state-desc {
 		margin: 0;
 		font-size: 0.8125rem;
@@ -597,6 +580,5 @@
 		.modal-stage-wrap {
 			padding: 0.5rem;
 		}
-
 	}
 </style>

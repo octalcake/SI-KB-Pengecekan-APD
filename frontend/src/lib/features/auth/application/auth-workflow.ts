@@ -1,10 +1,5 @@
 import { isApiError } from '#lib/shared/errors';
-import type {
-	AuthSessionPayload,
-	HealthStatus,
-	SystemStatus,
-	User
-} from '../domain/types';
+import type { AuthSessionPayload, HealthStatus, SystemStatus, User } from '../domain/types';
 
 export interface AuthApiContract {
 	login(username: string, password: string): Promise<AuthSessionPayload>;
@@ -21,36 +16,36 @@ export interface AuthTransportHooks {
 
 export type BootstrapOutcome =
 	| {
-		status: 'authenticated';
-		user: User;
-		csrfToken: string;
-	}
+			status: 'authenticated';
+			user: User;
+			csrfToken: string;
+	  }
 	| {
-		status: 'unauthenticated';
-	}
+			status: 'unauthenticated';
+	  }
 	| {
-		status: 'error';
-		errorMessage: string;
-	};
+			status: 'error';
+			errorMessage: string;
+	  };
 
 export type SystemStatusOutcome =
 	| {
-		ok: true;
-		systemStatus: SystemStatus;
-	}
+			ok: true;
+			systemStatus: SystemStatus;
+	  }
 	| {
-		ok: false;
-		errorMessage: string;
-	};
+			ok: false;
+			errorMessage: string;
+	  };
 
 export type LogoutOutcome =
 	| {
-		cleared: true;
-	}
+			cleared: true;
+	  }
 	| {
-		cleared: false;
-		error: unknown;
-	};
+			cleared: false;
+			error: unknown;
+	  };
 
 export interface AuthWorkflow {
 	readonly hooks: AuthTransportHooks;
@@ -60,10 +55,7 @@ export interface AuthWorkflow {
 	runLogout(beforeLogout: (() => Promise<void>) | null): Promise<LogoutOutcome>;
 }
 
-export function createAuthWorkflow(
-	api: AuthApiContract,
-	hooks: AuthTransportHooks
-): AuthWorkflow {
+export function createAuthWorkflow(api: AuthApiContract, hooks: AuthTransportHooks): AuthWorkflow {
 	return {
 		hooks,
 		async runBootstrap(): Promise<BootstrapOutcome> {
@@ -75,16 +67,14 @@ export function createAuthWorkflow(
 					user: session.user,
 					csrfToken: session.csrf_token
 				};
-			} catch(err) {
+			} catch (err) {
 				hooks.setCsrfToken(null);
-				if(isApiError(err) && err.status === 401) {
+				if (isApiError(err) && err.status === 401) {
 					return { status: 'unauthenticated' };
 				}
 				return {
 					status: 'error',
-					errorMessage: isApiError(err)
-						? err.message
-						: 'Gagal memeriksa sesi ke server backend.'
+					errorMessage: isApiError(err) ? err.message : 'Akun belum bisa diperiksa. Coba lagi.'
 				};
 			}
 		},
@@ -99,18 +89,16 @@ export function createAuthWorkflow(
 			try {
 				const systemStatus = await api.getSystemStatus();
 				return { ok: true, systemStatus };
-			} catch(err) {
+			} catch (err) {
 				return {
 					ok: false,
-					errorMessage: isApiError(err)
-						? err.message
-						: 'Gagal memuat status kesiapan sistem.'
+					errorMessage: isApiError(err) ? err.message : 'Status deteksi belum bisa dimuat.'
 				};
 			}
 		},
 
 		async runLogout(beforeLogout: (() => Promise<void>) | null): Promise<LogoutOutcome> {
-			if(beforeLogout) {
+			if (beforeLogout) {
 				try {
 					await beforeLogout();
 				} catch {
@@ -122,8 +110,8 @@ export function createAuthWorkflow(
 				await api.logout();
 				hooks.setCsrfToken(null);
 				return { cleared: true };
-			} catch(err) {
-				if(isApiError(err) && err.status === 401) {
+			} catch (err) {
+				if (isApiError(err) && err.status === 401) {
 					hooks.setCsrfToken(null);
 					return { cleared: true };
 				}

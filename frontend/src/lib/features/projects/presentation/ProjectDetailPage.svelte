@@ -9,7 +9,7 @@
 		getZoneApi,
 		listZonesApi,
 		updateProjectApi,
-		updateZoneApi,
+		updateZoneApi
 	} from '#lib/app/projects';
 	import { formatIndonesianDateTime, translateFieldError } from './format';
 	import type { Project, RecordStatus, Zone } from '../domain/types';
@@ -122,11 +122,11 @@
 
 	$effect(() => {
 		const id = projectId;
-		if(id !== activeRouteProjectId) {
+		if (id !== activeRouteProjectId) {
 			activeRouteProjectId = id;
 			resetRouteProjectState();
 		}
-		if(Number.isFinite(id) && id > 0) {
+		if (Number.isFinite(id) && id > 0) {
 			void loadAll(id);
 		} else {
 			projectReqSeq++;
@@ -147,15 +147,13 @@
 		projectLoadError = null;
 		try {
 			const loaded = await getProjectApi(id);
-			if(seq !== projectReqSeq || id !== projectId) return;
+			if (seq !== projectReqSeq || id !== projectId) return;
 			project = loaded;
-		} catch(err) {
-			if(seq !== projectReqSeq || id !== projectId) return;
-			projectLoadError = isApiError(err)
-				? err.message
-				: 'Gagal memuat detail proyek dari server.';
+		} catch (err) {
+			if (seq !== projectReqSeq || id !== projectId) return;
+			projectLoadError = isApiError(err) ? err.message : 'Gagal memuat detail proyek dari server.';
 		} finally {
-			if(seq === projectReqSeq && id === projectId) {
+			if (seq === projectReqSeq && id === projectId) {
 				loadingProject = false;
 			}
 		}
@@ -174,21 +172,21 @@
 				page: reqPage,
 				page_size: reqPageSize
 			});
-			if(seq !== zonesReqSeq || id !== projectId) return;
+			if (seq !== zonesReqSeq || id !== projectId) return;
 			zones = res.data;
 			zonesMeta = res.meta;
-		} catch(err) {
-			if(seq !== zonesReqSeq || id !== projectId) return;
+		} catch (err) {
+			if (seq !== zonesReqSeq || id !== projectId) return;
 			zonesLoadError = isApiError(err) ? err.message : 'Gagal memuat daftar zona proyek.';
 		} finally {
-			if(seq === zonesReqSeq && id === projectId) {
+			if (seq === zonesReqSeq && id === projectId) {
 				loadingZones = false;
 			}
 		}
 	}
 
 	function openProjectEdit() {
-		if(!project) return;
+		if (!project) return;
 		editingProject = true;
 		projEditVersion = project.version;
 		projEditName = project.name;
@@ -210,7 +208,7 @@
 
 	async function handleSaveProjectEdit(event: SubmitEvent) {
 		event.preventDefault();
-		if(!project || projEditSaving) return;
+		if (!project || projEditSaving) return;
 
 		actionNotice = null;
 		projEditGeneralError = null;
@@ -218,19 +216,19 @@
 
 		const errs: Record<string, string> = {};
 		const trimmedName = projEditName.trim();
-		if(!trimmedName) {
+		if (!trimmedName) {
 			errs.name = 'Nama wajib diisi.';
-		} else if([...trimmedName].length > 120) {
+		} else if ([...trimmedName].length > 120) {
 			errs.name = 'Nama maksimal 120 karakter.';
 		}
-		if([...projEditLocation.trim()].length > 200) {
+		if ([...projEditLocation.trim()].length > 200) {
 			errs.location = 'Lokasi maksimal 200 karakter.';
 		}
-		if([...projEditDescription.trim()].length > 2000) {
+		if ([...projEditDescription.trim()].length > 2000) {
 			errs.description = 'Deskripsi maksimal 2.000 karakter.';
 		}
 		projEditFieldErrors = errs;
-		if(Object.keys(errs).length > 0) return;
+		if (Object.keys(errs).length > 0) return;
 
 		projEditSaving = true;
 		try {
@@ -244,19 +242,19 @@
 			project = updated;
 			editingProject = false;
 			projVersionConflict = null;
-			actionNotice = `Proyek "${updated.name}" (v${updated.version}) berhasil diperbarui.`;
-		} catch(err) {
-			if(isApiError(err)) {
-				if(err.status === 409 && err.code === 'VERSION_CONFLICT') {
+			actionNotice = `Proyek tersimpan.`;
+		} catch (err) {
+			if (isApiError(err)) {
+				if (err.status === 409 && err.code === 'VERSION_CONFLICT') {
 					projVersionConflict = err.message;
-				} else if(err.status === 409 && err.code === 'SESSION_ACTIVE') {
+				} else if (err.status === 409 && err.code === 'SESSION_ACTIVE') {
 					sessionActiveConflict = {
 						targetName: project.name,
 						message: err.message
 					};
-				} else if(err.status === 422 && Object.keys(err.fields).length > 0) {
+				} else if (err.status === 422 && Object.keys(err.fields).length > 0) {
 					const mapped: Record<string, string> = {};
-					for(const [k, v] of Object.entries(err.fields)) {
+					for (const [k, v] of Object.entries(err.fields)) {
 						mapped[k] = translateFieldError(k, v);
 					}
 					projEditFieldErrors = mapped;
@@ -273,14 +271,14 @@
 	}
 
 	async function reloadConflictedProject() {
-		if(!project) return;
+		if (!project) return;
 		try {
 			const latest = await getProjectApi(project.id);
 			project = latest;
 			projEditVersion = latest.version;
 			projVersionConflict = null;
-			actionNotice = `Versi terbaru proyek (v${latest.version}) telah dimuat dari server. Input Anda tetap dipertahankan.`;
-		} catch(err) {
+			actionNotice = `Data proyek terbaru dimuat. Isianmu belum hilang.`;
+		} catch (err) {
 			projEditGeneralError = isApiError(err)
 				? err.message
 				: 'Gagal memuat ulang versi proyek terbaru.';
@@ -288,7 +286,7 @@
 	}
 
 	async function handleArchiveProject(targetStatus: RecordStatus = 'archived') {
-		if(!project || archivingProject) return;
+		if (!project || archivingProject) return;
 		archivingProject = true;
 		actionNotice = null;
 		sessionActiveConflict = null;
@@ -298,20 +296,18 @@
 				status: targetStatus
 			});
 			project = updated;
-			if(referenceConflict?.kind === 'project') {
+			if (referenceConflict?.kind === 'project') {
 				referenceConflict = null;
 			}
 			actionNotice =
-				targetStatus === 'archived'
-					? `Proyek "${updated.name}" berhasil diarsipkan.`
-					: `Proyek "${updated.name}" berhasil diaktifkan kembali.`;
-		} catch(err) {
-			if(isApiError(err) && err.status === 409 && err.code === 'SESSION_ACTIVE') {
+				targetStatus === 'archived' ? `Proyek diarsipkan.` : `Proyek diaktifkan kembali.`;
+		} catch (err) {
+			if (isApiError(err) && err.status === 409 && err.code === 'SESSION_ACTIVE') {
 				sessionActiveConflict = {
 					targetName: project.name,
 					message: err.message
 				};
-			} else if(isApiError(err) && err.status === 409 && err.code === 'VERSION_CONFLICT') {
+			} else if (isApiError(err) && err.status === 409 && err.code === 'VERSION_CONFLICT') {
 				projVersionConflict = err.message;
 				await loadProject();
 			} else {
@@ -323,7 +319,7 @@
 	}
 
 	async function handleDeleteProject() {
-		if(!project || deletingProject) return;
+		if (!project || deletingProject) return;
 		deletingProject = true;
 		actionNotice = null;
 		referenceConflict = null;
@@ -331,9 +327,9 @@
 		try {
 			await deleteProjectApi(project.id, project.version);
 			await goto('/projects');
-		} catch(err) {
+		} catch (err) {
 			confirmingProjectDelete = false;
-			if(isApiError(err) && err.status === 409 && err.code === 'PROJECT_IN_USE') {
+			if (isApiError(err) && err.status === 409 && err.code === 'PROJECT_IN_USE') {
 				referenceConflict = {
 					kind: 'project',
 					targetId: project.id,
@@ -351,40 +347,40 @@
 
 	async function handleCreateZone(event: SubmitEvent) {
 		event.preventDefault();
-		if(!project || creatingZone) return;
+		if (!project || creatingZone) return;
 
 		actionNotice = null;
 		createZoneError = null;
 		const errs: Record<string, string> = {};
 		const trimmedName = createZoneName.trim();
-		if(!trimmedName) {
+		if (!trimmedName) {
 			errs.name = 'Nama zona wajib diisi.';
-		} else if([...trimmedName].length > 120) {
+		} else if ([...trimmedName].length > 120) {
 			errs.name = 'Nama zona maksimal 120 karakter.';
 		}
-		if([...createZoneDesc.trim()].length > 2000) {
+		if ([...createZoneDesc.trim()].length > 2000) {
 			errs.description = 'Deskripsi zona maksimal 2.000 karakter.';
 		}
 		createZoneFieldErrors = errs;
-		if(Object.keys(errs).length > 0) return;
+		if (Object.keys(errs).length > 0) return;
 
 		creatingZone = true;
 		try {
-			const created = await createZoneApi(project.id, {
+			await createZoneApi(project.id, {
 				name: trimmedName,
 				description: createZoneDesc.trim()
 			});
 			createZoneName = '';
 			createZoneDesc = '';
 			createZoneFieldErrors = {};
-			actionNotice = `Zona "${created.name}" berhasil ditambahkan ke proyek ini.`;
+			actionNotice = `Zona ditambahkan.`;
 			zonePage = 1;
 			await loadZones(project.id);
-		} catch(err) {
-			if(isApiError(err)) {
-				if(err.status === 422 && Object.keys(err.fields).length > 0) {
+		} catch (err) {
+			if (isApiError(err)) {
+				if (err.status === 422 && Object.keys(err.fields).length > 0) {
 					const mapped: Record<string, string> = {};
-					for(const [k, v] of Object.entries(err.fields)) {
+					for (const [k, v] of Object.entries(err.fields)) {
 						mapped[k] = translateFieldError(k, v);
 					}
 					createZoneFieldErrors = mapped;
@@ -419,7 +415,7 @@
 
 	async function handleSaveZoneEdit(event: SubmitEvent) {
 		event.preventDefault();
-		if(editingZoneId === null || zoneEditSaving) return;
+		if (editingZoneId === null || zoneEditSaving) return;
 
 		actionNotice = null;
 		zoneEditError = null;
@@ -427,20 +423,20 @@
 
 		const errs: Record<string, string> = {};
 		const trimmedName = zoneEditName.trim();
-		if(!trimmedName) {
+		if (!trimmedName) {
 			errs.name = 'Nama zona wajib diisi.';
-		} else if([...trimmedName].length > 120) {
+		} else if ([...trimmedName].length > 120) {
 			errs.name = 'Nama zona maksimal 120 karakter.';
 		}
-		if([...zoneEditDesc.trim()].length > 2000) {
+		if ([...zoneEditDesc.trim()].length > 2000) {
 			errs.description = 'Deskripsi zona maksimal 2.000 karakter.';
 		}
 		zoneEditFieldErrors = errs;
-		if(Object.keys(errs).length > 0) return;
+		if (Object.keys(errs).length > 0) return;
 
 		zoneEditSaving = true;
 		try {
-			const updated = await updateZoneApi(editingZoneId, {
+			await updateZoneApi(editingZoneId, {
 				version: zoneEditVersion,
 				name: trimmedName,
 				description: zoneEditDesc.trim(),
@@ -448,20 +444,20 @@
 			});
 			editingZoneId = null;
 			zoneVersionConflict = null;
-			actionNotice = `Zona "${updated.name}" (v${updated.version}) berhasil diperbarui.`;
+			actionNotice = `Zona tersimpan.`;
 			await loadZones();
-		} catch(err) {
-			if(isApiError(err)) {
-				if(err.status === 409 && err.code === 'VERSION_CONFLICT') {
+		} catch (err) {
+			if (isApiError(err)) {
+				if (err.status === 409 && err.code === 'VERSION_CONFLICT') {
 					zoneVersionConflict = err.message;
-				} else if(err.status === 409 && err.code === 'SESSION_ACTIVE') {
+				} else if (err.status === 409 && err.code === 'SESSION_ACTIVE') {
 					sessionActiveConflict = {
 						targetName: zoneEditName,
 						message: err.message
 					};
-				} else if(err.status === 422 && Object.keys(err.fields).length > 0) {
+				} else if (err.status === 422 && Object.keys(err.fields).length > 0) {
 					const mapped: Record<string, string> = {};
-					for(const [k, v] of Object.entries(err.fields)) {
+					for (const [k, v] of Object.entries(err.fields)) {
 						mapped[k] = translateFieldError(k, v);
 					}
 					zoneEditFieldErrors = mapped;
@@ -478,38 +474,39 @@
 	}
 
 	async function reloadConflictedZone() {
-		if(editingZoneId === null) return;
+		if (editingZoneId === null) return;
 		try {
 			const latest = await getZoneApi(editingZoneId);
 			zoneEditVersion = latest.version;
 			zoneVersionConflict = null;
 			zones = zones.map((z) => (z.id === latest.id ? latest : z));
-			actionNotice = `Versi terbaru zona (v${latest.version}) telah dimuat dari server. Input Anda tetap dipertahankan.`;
-		} catch(err) {
+			actionNotice = `Data zona terbaru dimuat. Isianmu belum hilang.`;
+		} catch (err) {
 			zoneEditError = isApiError(err) ? err.message : 'Gagal memuat ulang versi zona terbaru.';
 		}
 	}
 
-	async function handleArchiveZone(zoneId: number, version: number, targetStatus: RecordStatus = 'archived') {
-		if(archivingZoneId !== null) return;
+	async function handleArchiveZone(
+		zoneId: number,
+		version: number,
+		targetStatus: RecordStatus = 'archived'
+	) {
+		if (archivingZoneId !== null) return;
 		archivingZoneId = zoneId;
 		actionNotice = null;
 		sessionActiveConflict = null;
 		try {
-			const updated = await updateZoneApi(zoneId, {
+			await updateZoneApi(zoneId, {
 				version,
 				status: targetStatus
 			});
-			if(referenceConflict?.kind === 'zone' && referenceConflict.targetId === zoneId) {
+			if (referenceConflict?.kind === 'zone' && referenceConflict.targetId === zoneId) {
 				referenceConflict = null;
 			}
-			actionNotice =
-				targetStatus === 'archived'
-					? `Zona "${updated.name}" telah diarsipkan.`
-					: `Zona "${updated.name}" telah diaktifkan kembali.`;
+			actionNotice = targetStatus === 'archived' ? `Zona diarsipkan.` : `Zona diaktifkan kembali.`;
 			await loadZones();
-		} catch(err) {
-			if(isApiError(err) && err.status === 409 && err.code === 'SESSION_ACTIVE') {
+		} catch (err) {
+			if (isApiError(err) && err.status === 409 && err.code === 'SESSION_ACTIVE') {
 				const z = zones.find((item) => item.id === zoneId);
 				sessionActiveConflict = {
 					targetName: z?.name ?? `Zona #${zoneId}`,
@@ -524,7 +521,7 @@
 	}
 
 	async function handleDeleteZone(zone: Zone) {
-		if(deletingZoneId !== null) return;
+		if (deletingZoneId !== null) return;
 		deletingZoneId = zone.id;
 		actionNotice = null;
 		referenceConflict = null;
@@ -532,11 +529,11 @@
 		try {
 			await deleteZoneApi(zone.id, zone.version);
 			confirmingZoneDeleteId = null;
-			actionNotice = `Zona "${zone.name}" berhasil dihapus permanen.`;
+			actionNotice = `Zona dihapus.`;
 			await loadZones();
-		} catch(err) {
+		} catch (err) {
 			confirmingZoneDeleteId = null;
-			if(isApiError(err) && err.status === 409 && err.code === 'ZONE_IN_USE') {
+			if (isApiError(err) && err.status === 409 && err.code === 'ZONE_IN_USE') {
 				referenceConflict = {
 					kind: 'zone',
 					targetId: zone.id,
@@ -553,7 +550,7 @@
 	}
 
 	async function handleZonePageChange(nextPage: number) {
-		if(nextPage < 1 || nextPage > totalZonePages || nextPage === zonePage) return;
+		if (nextPage < 1 || nextPage > totalZonePages || nextPage === zonePage) return;
 		zonePage = nextPage;
 		await loadZones();
 	}
@@ -567,7 +564,7 @@
 
 <div class="detail-stack">
 	<nav class="breadcrumb" aria-label="Breadcrumb">
-		<a href="/projects">← Kembali ke Daftar Proyek</a>
+		<a href="/projects">← Kembali ke Daftar proyek</a>
 	</nav>
 
 	{#if actionNotice}
@@ -582,7 +579,7 @@
 	{#if referenceConflict}
 		<div class="banner warn" role="alert" data-error-kind="reference-conflict">
 			<div class="banner-body">
-				<strong>Penghapusan Ditolak — Gunakan Pengarsipan:</strong>
+				<strong>Data masih digunakan</strong>
 				<p>
 					{referenceConflict.kind === 'project' ? 'Proyek' : 'Zona'}
 					<strong>{referenceConflict.targetName}</strong>: {referenceConflict.message}
@@ -596,7 +593,7 @@
 						onclick={() => handleArchiveProject('archived')}
 						disabled={archivingProject}
 					>
-						{archivingProject ? 'Mengarsipkan...' : 'Arsipkan Sekarang'}
+						{archivingProject ? 'Mengarsipkan...' : 'Arsipkan'}
 					</button>
 				{:else}
 					<button
@@ -611,9 +608,7 @@
 							)}
 						disabled={archivingZoneId === referenceConflict.targetId}
 					>
-						{archivingZoneId === referenceConflict.targetId
-							? 'Mengarsipkan...'
-							: 'Arsipkan Sekarang'}
+						{archivingZoneId === referenceConflict.targetId ? 'Mengarsipkan...' : 'Arsipkan'}
 					</button>
 				{/if}
 				<button type="button" class="secondary-btn" onclick={() => (referenceConflict = null)}>
@@ -626,7 +621,7 @@
 	{#if sessionActiveConflict}
 		<div class="banner err" role="alert" data-error-kind="session-active-conflict">
 			<div class="banner-body">
-				<strong>Konflik Sesi Monitoring Aktif:</strong>
+				<strong>Inspeksi masih berjalan</strong>
 				<p>
 					<strong>{sessionActiveConflict.targetName}</strong>: {sessionActiveConflict.message}
 				</p>
@@ -643,13 +638,11 @@
 		</section>
 	{:else if projectLoadError && !project}
 		<section class="panel" role="alert" data-error-kind="backend">
-			<h1>Gagal Memuat Detail Proyek</h1>
+			<h1>Proyek belum bisa dibuka</h1>
 			<p>{projectLoadError}</p>
 			<div class="form-actions">
-				<button type="button" class="primary-btn" onclick={() => loadAll()}>
-					Coba Lagi
-				</button>
-				<a href="/projects" class="secondary-link">Kembali ke Daftar Proyek</a>
+				<button type="button" class="primary-btn" onclick={() => loadAll()}> Coba lagi </button>
+				<a href="/projects" class="secondary-link">Kembali ke Daftar proyek</a>
 			</div>
 		</section>
 	{:else if project}
@@ -658,10 +651,7 @@
 				<div>
 					<div class="title-row">
 						<h1 id="project-detail-heading">{project.name}</h1>
-						<span
-							class="status-badge"
-							data-tone={project.status === 'active' ? 'ok' : 'neutral'}
-						>
+						<span class="status-badge" data-tone={project.status === 'active' ? 'ok' : 'neutral'}>
 							{project.status === 'active' ? 'Aktif' : 'Diarsipkan'}
 						</span>
 						<span class="version-pill">v{project.version}</span>
@@ -670,7 +660,7 @@
 						<span><strong>ID Proyek:</strong> #{project.id}</span>
 						<span><strong>Lokasi:</strong> {project.location || 'Tidak ditentukan'}</span>
 						<span>
-							<strong>Terakhir Diperbarui:</strong>
+							<strong>Diperbarui:</strong>
 							{formatIndonesianDateTime(project.updated_at)} WIB
 						</span>
 					</div>
@@ -705,14 +695,15 @@
 
 					{#if confirmingProjectDelete}
 						<div class="delete-confirm-inline" role="group" aria-label="Konfirmasi hapus proyek">
-							<span class="confirm-note">Yakin hapus proyek ini?</span>
+							<span class="confirm-note">Hapus proyek ini? Tindakan ini tidak bisa dibatalkan.</span
+							>
 							<button
 								type="button"
 								class="danger-btn"
 								onclick={handleDeleteProject}
 								disabled={deletingProject}
 							>
-								{deletingProject ? 'Menghapus...' : 'Konfirmasi Hapus Proyek'}
+								{deletingProject ? 'Menghapus...' : 'Hapus proyek'}
 							</button>
 							<button
 								type="button"
@@ -742,18 +733,18 @@
 
 			{#if editingProject}
 				<div class="edit-box">
-					<h2>Edit Proyek #{project.id} (Target v{projEditVersion})</h2>
+					<h2>Edit proyek</h2>
 
 					{#if projVersionConflict}
 						<div class="banner warn" role="alert" data-error-kind="version-conflict">
 							<div class="banner-body">
-								<strong>Konflik Versi Terdeteksi (409 VERSION_CONFLICT):</strong>
+								<strong>Data sudah berubah</strong>
 								<p>
-									{projVersionConflict} Input Anda yang belum disimpan tetap dipertahankan pada formulir di bawah.
+									{projVersionConflict} Isianmu belum hilang. Ambil data terbaru, lalu simpan lagi.
 								</p>
 							</div>
 							<button type="button" class="primary-btn" onclick={reloadConflictedProject}>
-								Muat Ulang Data Terbaru
+								Ambil data terbaru
 							</button>
 						</div>
 					{/if}
@@ -767,7 +758,9 @@
 					<form class="form-stack" onsubmit={handleSaveProjectEdit} novalidate>
 						<div class="form-grid">
 							<div class="field-group">
-								<label for="detail-edit-project-name">Edit Nama Proyek <span class="req">*</span></label>
+								<label for="detail-edit-project-name"
+									>Edit Nama proyek <span class="req">*</span></label
+								>
 								<input
 									id="detail-edit-project-name"
 									type="text"
@@ -798,20 +791,20 @@
 							</div>
 
 							<div class="field-group">
-								<label for="detail-edit-project-status">Status Proyek</label>
+								<label for="detail-edit-project-status">Status proyek</label>
 								<select
 									id="detail-edit-project-status"
 									bind:value={projEditStatus}
 									disabled={projEditSaving}
 								>
-									<option value="active">Aktif (active)</option>
-									<option value="archived">Diarsipkan (archived)</option>
+									<option value="active">Aktif</option>
+									<option value="archived">Diarsipkan</option>
 								</select>
 							</div>
 						</div>
 
 						<div class="field-group">
-							<label for="detail-edit-project-desc">Edit Deskripsi Proyek</label>
+							<label for="detail-edit-project-desc">Edit Deskripsi proyek</label>
 							<textarea
 								id="detail-edit-project-desc"
 								rows="2"
@@ -826,7 +819,7 @@
 
 						<div class="form-actions">
 							<button type="submit" class="primary-btn" disabled={projEditSaving}>
-								{projEditSaving ? 'Menyimpan...' : 'Simpan Perubahan Proyek'}
+								{projEditSaving ? 'Menyimpan...' : 'Simpan proyek'}
 							</button>
 							<button
 								type="button"
@@ -843,17 +836,15 @@
 		</section>
 
 		<section class="panel" aria-labelledby="create-zone-heading">
-			<h2 id="create-zone-heading">Tambah Zona pada Proyek Ini</h2>
+			<h2 id="create-zone-heading">Tambah zona</h2>
 			{#if project.status !== 'active'}
 				<div class="banner warn" role="status">
 					<span>
-						<strong>Proyek Berstatus Diarsipkan:</strong> Zona baru hanya dapat dibuat pada proyek aktif. Aktifkan kembali proyek ini jika perlu menambahkan zona pengamatan baru.
+						<strong>Proyek diarsipkan.</strong> Aktifkan lagi untuk menambah zona.
 					</span>
 				</div>
 			{:else}
-				<p class="panel-desc">
-					Setiap zona terikat permanen pada proyek <strong>{project.name}</strong> (#{project.id}) dan memiliki nama unik di dalam proyek ini.
-				</p>
+				<p class="panel-desc">Nama zona harus unik dalam proyek ini.</p>
 
 				{#if createZoneError}
 					<div class="banner err" role="alert">
@@ -864,7 +855,7 @@
 				<form class="form-stack" onsubmit={handleCreateZone} novalidate>
 					<div class="form-grid">
 						<div class="field-group">
-							<label for="create-zone-name">Nama Zona <span class="req">*</span></label>
+							<label for="create-zone-name">Nama zona <span class="req">*</span></label>
 							<input
 								id="create-zone-name"
 								type="text"
@@ -881,7 +872,7 @@
 						</div>
 
 						<div class="field-group">
-							<label for="create-zone-desc">Deskripsi Zona</label>
+							<label for="create-zone-desc">Deskripsi zona</label>
 							<input
 								id="create-zone-desc"
 								type="text"
@@ -910,13 +901,11 @@
 			<div class="zone-list-header">
 				<div>
 					<h2 id="zone-list-heading">Daftar Zona Proyek ({zonesMeta.total})</h2>
-					<p class="panel-desc">
-						Zona yang telah memiliki riwayat sesi monitoring tidak dapat dihapus permanen dan wajib diarsipkan.
-					</p>
+					<p class="panel-desc">Zona dengan riwayat inspeksi hanya bisa diarsipkan.</p>
 				</div>
 
 				<div class="field-group">
-					<label for="filter-zone-status">Status Zona</label>
+					<label for="filter-zone-status">Status zona</label>
 					<select
 						id="filter-zone-status"
 						bind:value={zoneStatusFilter}
@@ -925,9 +914,9 @@
 							void loadZones();
 						}}
 					>
-						<option value="">Semua Status</option>
-						<option value="active">Aktif (active)</option>
-						<option value="archived">Diarsipkan (archived)</option>
+						<option value="">Semua status</option>
+						<option value="active">Aktif</option>
+						<option value="archived">Diarsipkan</option>
 					</select>
 				</div>
 			</div>
@@ -936,12 +925,12 @@
 				<div class="banner err" role="alert" data-error-kind="backend">
 					<span>{zonesLoadError}</span>
 					<button type="button" class="secondary-btn" onclick={() => loadZones()}>
-						Coba Lagi
+						Coba lagi
 					</button>
 				</div>
 			{:else if loadingZones}
 				<div class="state-box" role="status" aria-busy="true">
-					<p>Memuat daftar zona proyek...</p>
+					<p>Memuat zona...</p>
 				</div>
 			{:else if zones.length === 0}
 				<div class="state-box" role="status">
@@ -949,7 +938,8 @@
 						<p>Tidak ada zona dengan status <strong>{zoneStatusFilter}</strong> pada proyek ini.</p>
 					{:else}
 						<p>
-							<strong>Belum ada zona terdaftar pada proyek ini.</strong> Tambahkan minimal satu zona aktif agar proyek dapat dipilih pada sesi monitoring kamera.
+							<strong>Belum ada zona terdaftar pada proyek ini.</strong> Tambahkan minimal satu zona
+							aktif agar proyek dapat dipilih pada sesi monitoring kamera.
 						</p>
 					{/if}
 				</div>
@@ -984,11 +974,7 @@
 							</div>
 
 							<div class="zone-actions">
-								<button
-									type="button"
-									class="secondary-btn"
-									onclick={() => startEditZone(zone)}
-								>
+								<button type="button" class="secondary-btn" onclick={() => startEditZone(zone)}>
 									Edit Zona
 								</button>
 
@@ -1013,15 +999,21 @@
 								{/if}
 
 								{#if confirmingZoneDeleteId === zone.id}
-									<div class="delete-confirm-inline" role="group" aria-label="Konfirmasi hapus zona">
-										<span class="confirm-note">Hapus zona ini?</span>
+									<div
+										class="delete-confirm-inline"
+										role="group"
+										aria-label="Konfirmasi hapus zona"
+									>
+										<span class="confirm-note"
+											>Hapus zona ini? Tindakan ini tidak bisa dibatalkan.</span
+										>
 										<button
 											type="button"
 											class="danger-btn"
 											onclick={() => handleDeleteZone(zone)}
 											disabled={deletingZoneId === zone.id}
 										>
-											{deletingZoneId === zone.id ? 'Menghapus...' : 'Konfirmasi Hapus'}
+											{deletingZoneId === zone.id ? 'Menghapus...' : 'Hapus'}
 										</button>
 										<button
 											type="button"
@@ -1044,22 +1036,18 @@
 
 							{#if editingZoneId === zone.id}
 								<div class="edit-box">
-									<h3>Edit Zona #{zone.id} (Target v{zoneEditVersion})</h3>
+									<h3>Edit zona</h3>
 
 									{#if zoneVersionConflict}
 										<div class="banner warn" role="alert" data-error-kind="version-conflict">
 											<div class="banner-body">
-												<strong>Konflik Versi Zona (409 VERSION_CONFLICT):</strong>
+												<strong>Zona sudah diubah</strong>
 												<p>
-													{zoneVersionConflict} Input Anda tetap dipertahankan di bawah.
+													{zoneVersionConflict} Isianmu belum hilang.
 												</p>
 											</div>
-											<button
-												type="button"
-												class="primary-btn"
-												onclick={reloadConflictedZone}
-											>
-												Muat Ulang Data Terbaru
+											<button type="button" class="primary-btn" onclick={reloadConflictedZone}>
+												Ambil data terbaru
 											</button>
 										</div>
 									{/if}
@@ -1073,7 +1061,9 @@
 									<form class="form-stack" onsubmit={handleSaveZoneEdit} novalidate>
 										<div class="form-grid">
 											<div class="field-group">
-												<label for="edit-zone-name-{zone.id}">Edit Nama Zona <span class="req">*</span></label>
+												<label for="edit-zone-name-{zone.id}"
+													>Edit Nama zona <span class="req">*</span></label
+												>
 												<input
 													id="edit-zone-name-{zone.id}"
 													type="text"
@@ -1089,20 +1079,20 @@
 											</div>
 
 											<div class="field-group">
-												<label for="edit-zone-status-{zone.id}">Status Zona</label>
+												<label for="edit-zone-status-{zone.id}">Status zona</label>
 												<select
 													id="edit-zone-status-{zone.id}"
 													bind:value={zoneEditStatus}
 													disabled={zoneEditSaving}
 												>
-													<option value="active">Aktif (active)</option>
-													<option value="archived">Diarsipkan (archived)</option>
+													<option value="active">Aktif</option>
+													<option value="archived">Diarsipkan</option>
 												</select>
 											</div>
 										</div>
 
 										<div class="field-group">
-											<label for="edit-zone-desc-{zone.id}">Edit Deskripsi Zona</label>
+											<label for="edit-zone-desc-{zone.id}">Edit Deskripsi zona</label>
 											<textarea
 												id="edit-zone-desc-{zone.id}"
 												rows="2"
@@ -1117,7 +1107,7 @@
 
 										<div class="form-actions">
 											<button type="submit" class="primary-btn" disabled={zoneEditSaving}>
-												{zoneEditSaving ? 'Menyimpan...' : 'Simpan Perubahan Zona'}
+												{zoneEditSaving ? 'Menyimpan...' : 'Simpan zona'}
 											</button>
 											<button
 												type="button"

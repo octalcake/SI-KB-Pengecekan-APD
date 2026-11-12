@@ -1,6 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
-import { classifyMonitoringError, shouldStopSamplingOnError } from '../src/lib/features/monitoring/presentation/errors';
-import { computeAspectPreservingSize, scaleNormalizedBBox } from '../src/lib/features/monitoring/domain/geometry';
+import {
+	classifyMonitoringError,
+	shouldStopSamplingOnError
+} from '../src/lib/features/monitoring/presentation/errors';
+import {
+	computeAspectPreservingSize,
+	scaleNormalizedBBox
+} from '../src/lib/features/monitoring/domain/geometry';
 import { createMonitoringApi } from '../src/lib/features/monitoring/infrastructure/http-adapter';
 import { createCaptureLoop, DEFAULT_CAMERA_CONSTRAINTS } from '../src/lib/app/monitoring';
 
@@ -82,9 +88,9 @@ async function installFakeCamera(page: Page) {
 async function loginAndPrepareProjectZone(page: Page) {
 	await page.goto('/');
 	await expect(page).toHaveURL(/\/login$/);
-	await expect(page.getByRole('heading', { name: /Masuk Petugas K3/i })).toBeVisible();
-	await page.getByLabel(/Username/i).fill(TEST_USERNAME);
-	await page.getByLabel(/Password/i).fill(TEST_PASSWORD);
+	await expect(page.getByRole('heading', { name: /Masuk/i })).toBeVisible();
+	await page.getByLabel('Nama pengguna', { exact: true }).fill(TEST_USERNAME);
+	await page.getByLabel('Kata sandi', { exact: true }).fill(TEST_PASSWORD);
 	await page.getByRole('button', { name: /Masuk/i }).click();
 	await expect(page).toHaveURL(/\/$/);
 
@@ -255,20 +261,20 @@ test('browser /monitoring journey: real Go project/zone lookup, truthful 503 AI_
 	await monitoringNavLink.click();
 	await expect(page).toHaveURL(/\/monitoring$/);
 	await expect(monitoringNavLink).toHaveAttribute('aria-current', 'page');
-	await expect(page.getByRole('heading', { name: /Monitoring Kamera & Sesi Inspeksi/i })).toBeVisible();
+	await expect(page.getByRole('heading', { name: /Monitoring/i })).toBeVisible();
 
 	// 1. Verify persisted project & zone choices loaded from real Go SQLite
-	const projectSelect = page.getByLabel(/Proyek Aktif/i);
-	const zoneSelect = page.getByLabel(/Zona Inspeksi Aktif/i);
+	const projectSelect = page.getByLabel(/Proyek/i);
+	const zoneSelect = page.getByLabel(/Zona/i);
 	await expect(projectSelect).toContainText('Proyek Gedung Utama K3');
 	await expect(zoneSelect).toContainText('Area Struktur Lantai 2');
 
 	// 2. Verify actual server readiness (Go reports mode=real, ai_ready=false because Python /internal/v1/* is unimplemented)
 	await expect(page.getByTestId('monitoring-mode-value')).toHaveText('NYATA');
 	await expect(page.getByTestId('ai-not-ready-banner')).toBeVisible();
-	await expect(page.getByTestId('ai-not-ready-banner')).toContainText(/AI_UNAVAILABLE/i);
+	await expect(page.getByTestId('ai-not-ready-banner')).toContainText(/Hubungi operator/i);
 
-	// 3. Click "Mulai Monitoring" against real unchanged Go backend:
+	// 3. Click "Mulai inspeksi" against real unchanged Go backend:
 	//    - Requests video-only getUserMedia (audio: false)
 	//    - Go returns 503 AI_UNAVAILABLE because Python inference endpoints do not exist
 	//    - Frontend truthfully shows AI_UNAVAILABLE, releases camera track immediately, and never switches to simulation
@@ -277,7 +283,7 @@ test('browser /monitoring journey: real Go project/zone lookup, truthful 503 AI_
 	const errorAlert = page.getByTestId('monitoring-error-alert');
 	await expect(errorAlert).toBeVisible();
 	await expect(errorAlert).toHaveAttribute('data-error-code', 'AI_UNAVAILABLE');
-	await expect(errorAlert).toContainText(/Layanan AI Tidak Tersedia/i);
+	await expect(errorAlert).toContainText(/Deteksi belum tersedia/i);
 	await expect(page.getByTestId('monitoring-mode-value')).toHaveText('NYATA');
 	await expect(page.getByTestId('simulated-mode-banner')).toHaveCount(0);
 
@@ -316,7 +322,7 @@ test('browser /monitoring journey: real Go project/zone lookup, truthful 503 AI_
 
 	await page.getByTestId('start-monitoring-btn').click();
 	await expect(errorAlert).toHaveAttribute('data-error-code', 'CAMERA_BUSY');
-	await expect(errorAlert).toContainText(/Sesi Kamera Sedang Aktif/i);
+	await expect(errorAlert).toContainText(/Kamera sedang dipakai/i);
 	await expect(errorAlert).toContainText(/req-busy-409/i);
 	await page.unroute('/api/v1/monitoring/sessions');
 
@@ -532,7 +538,7 @@ test('browser /monitoring journey: real Go project/zone lookup, truthful 503 AI_
 	// Verify normalized bbox overlay is rendered on the inferred JPEG snapshot stage for both tracks
 	await expect(page.locator('[data-testid="snapshot-overlay-layer"] .person-bbox')).toHaveCount(2);
 	await expect(page.locator('[data-testid="snapshot-overlay-layer"] .obs-bbox')).toHaveCount(2);
-	await expect(page.getByTestId('snapshot-meta-bar')).toContainText('Sequence: #1');
+	await expect(page.getByTestId('snapshot-meta-bar')).toContainText(/Foto ke-\s*#1/);
 
 	// Verify captured event cards (#105 and #106) do NOT guess unassociated trackKey or detectedViolation
 	const card105 = page.getByTestId('captured-finding-105');
@@ -553,7 +559,7 @@ test('browser /monitoring journey: real Go project/zone lookup, truthful 503 AI_
 	const thumbErr106 = page.getByTestId('capture-thumb-error-106');
 	await expect(thumbErr106).toBeVisible();
 	await expect(thumbErr106).toHaveAttribute('data-error-code', 'EVIDENCE_MISSING');
-	await expect(thumbErr106).toContainText(/410 EVIDENCE_MISSING/i);
+	await expect(thumbErr106).toContainText(/Foto bukti tidak ditemukan/i);
 	await expect(page.getByTestId('capture-thumb-img-106')).toHaveCount(0);
 
 	const findingLink = page.getByTestId('open-finding-link-105');
@@ -587,7 +593,7 @@ test('browser /monitoring journey: real Go project/zone lookup, truthful 503 AI_
 	});
 
 	await expect(page.getByTestId('start-monitoring-btn')).toBeVisible();
-	await expect(page.getByTestId('monitoring-status-banner')).toContainText(/tab disembunyikan/i);
+	await expect(page.getByTestId('monitoring-status-banner')).toContainText(/tab ditinggalkan/i);
 	expect(receivedStops.some((s) => s.reason === 'page_hidden')).toBe(true);
 
 	// Restore visibilityState to 'visible'
@@ -617,7 +623,7 @@ test('browser /monitoring journey: real Go project/zone lookup, truthful 503 AI_
 	await page.getByTestId('start-monitoring-btn').click();
 	await expect(errorAlert).toBeVisible();
 	await expect(errorAlert).toHaveAttribute('data-error-code', 'TRACKER_RESET');
-	await expect(errorAlert).toContainText(/State Tracker AI Direset/i);
+	await expect(errorAlert).toContainText(/Pelacakan terputus/i);
 	await expect(page.getByTestId('start-monitoring-btn')).toBeVisible();
 
 	// 9. Verify active-camera logout ordering & failure recovery (Spec #4):

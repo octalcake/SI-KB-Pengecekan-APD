@@ -16,9 +16,9 @@ function findDisposableTestDbByProjectName(projectName: string): string {
 		if (!fs.existsSync(candidate)) continue;
 		try {
 			const db = new DatabaseSync(candidate, { open: true });
-			const row = db
-				.prepare('SELECT id FROM projects WHERE name = ? LIMIT 1')
-				.get(projectName) as { id?: number } | undefined;
+			const row = db.prepare('SELECT id FROM projects WHERE name = ? LIMIT 1').get(projectName) as
+				| { id?: number }
+				| undefined;
 			db.close();
 			if (row?.id) {
 				return candidate;
@@ -36,8 +36,8 @@ test('P0-02 master data CRUD, conflict recovery, and mode-separated dashboard su
 	// 1. Sign in as seeded officer
 	await page.goto('/');
 	await expect(page).toHaveURL(/\/login$/);
-	await page.getByLabel(/Username/i).fill(TEST_USERNAME);
-	await page.getByLabel(/Password/i).fill(TEST_PASSWORD);
+	await page.getByLabel('Nama pengguna', { exact: true }).fill(TEST_USERNAME);
+	await page.getByLabel('Kata sandi', { exact: true }).fill(TEST_PASSWORD);
 	await page.getByRole('button', { name: /Masuk/i }).click();
 	await expect(page).toHaveURL(/\/$/);
 
@@ -48,7 +48,7 @@ test('P0-02 master data CRUD, conflict recovery, and mode-separated dashboard su
 	await expect(projectsNavLink).toBeVisible();
 	await projectsNavLink.click();
 	await expect(page).toHaveURL(/\/projects$/);
-	await expect(page.getByRole('heading', { name: /Manajemen Proyek & Zona/i })).toBeVisible();
+	await expect(page.getByRole('heading', { name: /Proyek & zona/i })).toBeVisible();
 
 	// 3. Create projects and verify validation + persistence after reload
 	const uniqueSuffix = Date.now().toString().slice(-6);
@@ -58,6 +58,8 @@ test('P0-02 master data CRUD, conflict recovery, and mode-separated dashboard su
 	const projectACard = page.locator('[data-testid="project-item"]', { hasText: projectAName });
 	const projectBCard = page.locator('[data-testid="project-item"]', { hasText: projectBName });
 
+	if (!(await page.getByLabel(/^Nama Proyek/i).isVisible()))
+		await page.locator('summary.create-trigger').click();
 	await page.getByLabel(/^Nama Proyek/i).fill(projectAName);
 	await page.getByLabel(/Lokasi/i).fill('Malang');
 	await page.getByLabel(/Deskripsi Proyek/i).fill('Proyek konstruksi gedung utama 5 lantai.');
@@ -65,6 +67,8 @@ test('P0-02 master data CRUD, conflict recovery, and mode-separated dashboard su
 
 	await expect(projectACard).toBeVisible();
 
+	if (!(await page.getByLabel(/^Nama Proyek/i).isVisible()))
+		await page.locator('summary.create-trigger').click();
 	await page.getByLabel(/^Nama Proyek/i).fill(projectBName);
 	await page.getByLabel(/Lokasi/i).fill('Surabaya');
 	await page.getByLabel(/Deskripsi Proyek/i).fill('Proyek gudang penyimpanan peralatan.');
@@ -78,8 +82,8 @@ test('P0-02 master data CRUD, conflict recovery, and mode-separated dashboard su
 	await expect(projectBCard).toBeVisible();
 
 	// Search filter
-	await page.getByLabel(/Cari Nama Proyek/i).fill('Gudang Logistik');
-	await page.getByRole('button', { name: /Terapkan Filter/i }).click();
+	await page.getByLabel(/Cari proyek/i).fill('Gudang Logistik');
+	await page.getByRole('button', { name: /Terapkan/i }).click();
 	await expect(projectBCard).toBeVisible();
 	await expect(projectACard).toHaveCount(0);
 
@@ -90,11 +94,11 @@ test('P0-02 master data CRUD, conflict recovery, and mode-separated dashboard su
 
 	// Unused project B can be hard-deleted
 	await projectBCard.getByRole('button', { name: /^Hapus$/i }).click();
-	await projectBCard.getByRole('button', { name: /Konfirmasi Hapus/i }).click();
+	await projectBCard.getByRole('button', { name: /Hapus/i }).click();
 	await expect(projectBCard).toHaveCount(0);
 
 	// 4. Open Project A detail and create zones
-	await projectACard.getByRole('link', { name: /Kelola Zona|Detail/i }).click();
+	await projectACard.getByRole('link', { name: /Buka proyek/i }).click();
 	await expect(page).toHaveURL(/\/projects\/\d+$/);
 	await expect(page.getByRole('heading', { name: projectAName })).toBeVisible();
 
@@ -120,12 +124,12 @@ test('P0-02 master data CRUD, conflict recovery, and mode-separated dashboard su
 
 	// Unused zone2 can be deleted
 	await zone2Card.getByRole('button', { name: /^Hapus Zona$/i }).click();
-	await zone2Card.getByRole('button', { name: /Konfirmasi Hapus/i }).click();
+	await zone2Card.getByRole('button', { name: /Hapus/i }).click();
 	await expect(zone2Card).toHaveCount(0);
 
 	// 5. Attempting to delete Project A (which now has zone1) returns 409 PROJECT_IN_USE and explains archival
 	await page.getByRole('button', { name: /Hapus Proyek/i }).click();
-	await page.getByRole('button', { name: /Konfirmasi Hapus Proyek/i }).click();
+	await page.getByRole('button', { name: /Hapus proyek/i }).click();
 	const projectConflictAlert = page.locator('[data-error-kind="reference-conflict"]');
 	await expect(projectConflictAlert).toBeVisible();
 	await expect(projectConflictAlert).toContainText(/Proyek masih memiliki zona/i);
@@ -154,7 +158,7 @@ test('P0-02 master data CRUD, conflict recovery, and mode-separated dashboard su
 	);
 
 	// Officer clicks save -> 409 VERSION_CONFLICT
-	await page.getByRole('button', { name: /Simpan Perubahan Proyek/i }).click();
+	await page.getByRole('button', { name: /Simpan proyek/i }).click();
 	const versionAlert = page.locator('[data-error-kind="version-conflict"]');
 	await expect(versionAlert).toBeVisible();
 	await expect(versionAlert).toContainText(/Data telah diubah oleh proses lain/i);
@@ -163,9 +167,9 @@ test('P0-02 master data CRUD, conflict recovery, and mode-separated dashboard su
 	await expect(editNameInput).toHaveValue(projectAName);
 
 	// Reload latest version while preserving unsaved input, then save successfully
-	await versionAlert.getByRole('button', { name: /Muat Ulang Data Terbaru/i }).click();
+	await versionAlert.getByRole('button', { name: /Ambil data terbaru/i }).click();
 	await expect(editLocationInput).toHaveValue(unsavedLocation);
-	await page.getByRole('button', { name: /Simpan Perubahan Proyek/i }).click();
+	await page.getByRole('button', { name: /Simpan proyek/i }).click();
 	await expect(page.getByText(unsavedLocation)).toBeVisible();
 
 	// 7. Active session blocks archiving zone & project (409 SESSION_ACTIVE), and referenced zone blocks hard delete (409 ZONE_IN_USE)
@@ -184,7 +188,7 @@ test('P0-02 master data CRUD, conflict recovery, and mode-separated dashboard su
 
 	// Try deleting Zone 1 (which has a session) -> 409 ZONE_IN_USE explains archival
 	await zone1Card.getByRole('button', { name: /^Hapus Zona$/i }).click();
-	await zone1Card.getByRole('button', { name: /Konfirmasi Hapus/i }).click();
+	await zone1Card.getByRole('button', { name: /Hapus/i }).click();
 	await expect(page.locator('[data-error-kind="reference-conflict"]')).toContainText(
 		/Zona sudah dipakai sesi monitoring\. Arsipkan zona sebagai gantinya/i
 	);
@@ -314,11 +318,14 @@ test('P0-02 master data CRUD, conflict recovery, and mode-separated dashboard su
 	db.close();
 
 	// Now archiving Zone 1 succeeds since no session is active
-	await page.locator('[data-error-kind="reference-conflict"]').getByRole('button', { name: /Arsipkan Sekarang/i }).click();
+	await page
+		.locator('[data-error-kind="reference-conflict"]')
+		.getByRole('button', { name: /^Arsipkan$/i })
+		.click();
 	await expect(zone1Card).toContainText(/Diarsipkan/i);
 
-	// 8. Navigate to Dashboard ('/') and verify mode-separated counts, filters, timezone, and finding count unit
-	await page.getByRole('link', { name: /^Dashboard$/i }).click();
+	// 8. Navigate to Beranda ('/') and verify mode-separated counts, filters, timezone, and finding count unit
+	await page.getByRole('link', { name: /^Beranda$/i }).click();
 	await expect(page).toHaveURL(/\/$/);
 
 	await expect(page.getByTestId('metric-sessions')).toHaveText('1');
@@ -332,32 +339,38 @@ test('P0-02 master data CRUD, conflict recovery, and mode-separated dashboard su
 	await expect(page.getByTestId('dashboard-summary-meta')).toContainText(/bukan jumlah pekerja/i);
 
 	// Switch mode to 'simulated' -> shows simulated counts separately, never mixed with real
-	await page.getByLabel(/Mode Data/i).selectOption('simulated');
+	await page.getByLabel(/Jenis data/i).selectOption('simulated');
 	await expect(page.getByTestId('metric-sessions')).toHaveText('1');
 	await expect(page.getByTestId('metric-findings-pending')).toHaveText('1');
 	await expect(page.getByTestId('metric-findings-confirmed')).toHaveText('0');
 
 	// Switch mode to 'manual' -> 0 sessions, 0 findings
-	await page.getByLabel(/Mode Data/i).selectOption('manual');
+	await page.getByLabel(/Jenis data/i).selectOption('manual');
 	await expect(page.getByTestId('metric-sessions')).toHaveText('0');
 	await expect(page.getByTestId('metric-findings-pending')).toHaveText('0');
 
 	// Switch back to 'real' and filter by Project A + Zone 1 + local date 2026-11-11
-	await page.getByLabel(/Mode Data/i).selectOption('real');
-	await page.getByLabel(/Filter Proyek/i).selectOption(String(projRow.id));
-	await page.getByLabel(/Filter Zona/i).selectOption(String(zoneRow.id));
+	await page.getByLabel(/Jenis data/i).selectOption('real');
+	await page.getByLabel(/Proyek/i).selectOption(String(projRow.id));
+	await page.getByLabel(/Zona/i).selectOption(String(zoneRow.id));
+	if (!(await page.getByLabel(/Dari Tanggal/i).isVisible()))
+		await page.locator('summary.period-trigger').click();
 	await page.getByLabel(/Dari Tanggal/i).fill('2026-11-11');
 	await page.getByLabel(/Sampai Tanggal/i).fill('2026-11-11');
 	await expect(page.getByTestId('metric-sessions')).toHaveText('1');
 	await expect(page.getByTestId('metric-findings-confirmed')).toHaveText('2');
 
 	// Filter to a different date (2026-11-12) -> 0 counts
+	if (!(await page.getByLabel(/Dari Tanggal/i).isVisible()))
+		await page.locator('summary.period-trigger').click();
 	await page.getByLabel(/Dari Tanggal/i).fill('2026-11-12');
 	await page.getByLabel(/Sampai Tanggal/i).fill('2026-11-12');
 	await expect(page.getByTestId('metric-sessions')).toHaveText('0');
 	await expect(page.getByTestId('metric-findings-confirmed')).toHaveText('0');
 
 	// Date validation error state (fromDate > toDate)
+	if (!(await page.getByLabel(/Dari Tanggal/i).isVisible()))
+		await page.locator('summary.period-trigger').click();
 	await page.getByLabel(/Dari Tanggal/i).fill('2026-11-15');
 	await page.getByLabel(/Sampai Tanggal/i).fill('2026-11-11');
 	await expect(page.locator('[data-error-kind="validation"]')).toContainText(
@@ -371,7 +384,7 @@ test('P0-02 master data CRUD, conflict recovery, and mode-separated dashboard su
 	await page.getByRole('button', { name: /Reset Filter/i }).click();
 	const summaryBackendErr = page.locator('[data-error-kind="backend"]');
 	await expect(summaryBackendErr).toBeVisible();
-	await expect(summaryBackendErr).toContainText(/Gagal Memuat Ringkasan Dashboard/i);
+	await expect(summaryBackendErr).toContainText(/Ringkasan belum bisa dimuat/i);
 
 	await page.unroute('/api/v1/dashboard/summary*');
 	await summaryBackendErr.getByRole('button', { name: /Coba Lagi/i }).click();
@@ -385,6 +398,8 @@ test('P0-02 master data CRUD, conflict recovery, and mode-separated dashboard su
 	await expect(page).toHaveURL(/\/projects$/);
 
 	// Field validation error when submitting empty project name
+	if (!(await page.getByLabel(/^Nama Proyek/i).isVisible()))
+		await page.locator('summary.create-trigger').click();
 	await page.getByLabel(/^Nama Proyek/i).fill('   ');
 	await page.getByRole('button', { name: /Tambah Proyek/i }).click();
 	await expect(page.getByText(/Nama wajib diisi/i)).toBeVisible();
@@ -403,20 +418,24 @@ test('P0-02 master data CRUD, conflict recovery, and mode-separated dashboard su
 	// 9. Standards #B regression: delayed dashboard summary & project->zones lookup responses do not overwrite latest filter selection
 	await page.getByLabel(/Status Proyek/i).selectOption('');
 	const projectCName = `Menara Inspeksi ${uniqueSuffix}`;
+	if (!(await page.getByLabel(/^Nama Proyek/i).isVisible()))
+		await page.locator('summary.create-trigger').click();
 	await page.getByLabel(/^Nama Proyek/i).fill(projectCName);
 	await page.getByLabel(/Lokasi/i).fill('Sidoarjo');
-	await page.getByLabel(/Deskripsi Proyek/i).fill('Proyek kedua untuk uji transisi rute dan filter.');
+	await page
+		.getByLabel(/Deskripsi Proyek/i)
+		.fill('Proyek kedua untuk uji transisi rute dan filter.');
 	await page.getByRole('button', { name: /Tambah Proyek/i }).click();
 	const projectCCard = page.locator('[data-testid="project-item"]', { hasText: projectCName });
 	await expect(projectCCard).toBeVisible();
 
 	const dbForC = new DatabaseSync(dbPath);
-	const projCRow = dbForC
-		.prepare('SELECT id FROM projects WHERE name = ?')
-		.get(projectCName) as { id: number };
+	const projCRow = dbForC.prepare('SELECT id FROM projects WHERE name = ?').get(projectCName) as {
+		id: number;
+	};
 	dbForC.close();
 
-	await page.getByRole('link', { name: /^Dashboard$/i }).click();
+	await page.getByRole('link', { name: /^Beranda$/i }).click();
 	await expect(page).toHaveURL(/\/$/);
 	await expect(page.getByTestId('metric-sessions')).toHaveText('1');
 
@@ -434,19 +453,19 @@ test('P0-02 master data CRUD, conflict recovery, and mode-separated dashboard su
 	});
 
 	// Trigger simulated summary (delayed) then immediately switch to manual (fast, 0 sessions/0 findings)
-	await page.getByLabel(/Mode Data/i).selectOption('simulated');
-	await page.getByLabel(/Mode Data/i).selectOption('manual');
+	await page.getByLabel(/Jenis data/i).selectOption('simulated');
+	await page.getByLabel(/Jenis data/i).selectOption('manual');
 
 	// Trigger Project A zones lookup (delayed) then immediately clear back to Semua Proyek ('')
-	await page.getByLabel(/Filter Proyek/i).selectOption(String(projRow.id));
-	await page.getByLabel(/Filter Proyek/i).selectOption('');
+	await page.getByLabel(/Proyek/i).selectOption(String(projRow.id));
+	await page.getByLabel(/Proyek/i).selectOption('');
 
 	// Wait longer than the 350ms delay and verify the delayed simulated summary & Project A zones did NOT overwrite the latest selection
 	await new Promise((r) => setTimeout(r, 500));
-	await expect(page.getByLabel(/Mode Data/i)).toHaveValue('manual');
+	await expect(page.getByLabel(/Jenis data/i)).toHaveValue('manual');
 	await expect(page.getByTestId('metric-sessions')).toHaveText('0');
 	await expect(page.getByTestId('metric-findings-pending')).toHaveText('0');
-	await expect(page.getByLabel(/Filter Zona/i)).toBeDisabled();
+	await expect(page.getByLabel(/Zona/i)).toBeDisabled();
 
 	await page.unroute('/api/v1/dashboard/summary*');
 	await page.unroute(`/api/v1/projects/${projRow.id}/zones*`);
@@ -482,4 +501,3 @@ test('P0-02 master data CRUD, conflict recovery, and mode-separated dashboard su
 	await page.unroute(`/api/v1/projects/${projRow.id}*`);
 	await page.unroute(`/api/v1/projects/${projCRow.id}`);
 });
-

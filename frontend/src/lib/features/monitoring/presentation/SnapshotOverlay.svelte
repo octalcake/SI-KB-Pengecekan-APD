@@ -14,30 +14,30 @@
 	let showBoxes = $state(true);
 
 	const resultAgeSec = $derived.by(() => {
-		if(!snapshot) return null;
+		if (!snapshot) return null;
 		const diffMs = Math.max(0, nowMonotonicMs - snapshot.completedAtMonotonicMs);
 		return (diffMs / 1000).toFixed(1).replace('.', ',');
 	});
 
 	const isStaleResult = $derived.by(() => {
-		if(!snapshot) return false;
+		if (!snapshot) return false;
 		return nowMonotonicMs - snapshot.completedAtMonotonicMs >= 3000;
 	});
 
 	function formatModeLabel(mode: string): string {
-		if(mode === 'real') return 'NYATA';
-		if(mode === 'simulated') return 'SIMULASI';
-		if(mode === 'manual') return 'MANUAL';
+		if (mode === 'real') return 'NYATA';
+		if (mode === 'simulated') return 'SIMULASI';
+		if (mode === 'manual') return 'MANUAL';
 		return mode.toUpperCase();
 	}
 
 	function formatObservationLabel(obs: PPEObservation): string {
 		const category = obs.type === 'NO_HELMET' ? 'Tanpa Helm' : 'Tanpa Rompi';
-		if(obs.state === 'positive') {
+		if (obs.state === 'positive') {
 			const score = obs.confidence !== null ? ` (${(obs.confidence * 100).toFixed(0)}%)` : '';
 			return `Indikasi ${category}${score}`;
 		}
-		if(obs.state === 'negative') {
+		if (obs.state === 'negative') {
 			return `APD Terlihat (${obs.type === 'NO_HELMET' ? 'Helm' : 'Rompi'})`;
 		}
 		return `${category}: Tidak Pasti (Unknown)`;
@@ -51,10 +51,10 @@
 	function getTrackSummary(track: TrackView): string {
 		const pos = track.observations.filter((o) => o.state === 'positive');
 		const unk = track.observations.filter((o) => o.state === 'unknown');
-		if(pos.length > 0) {
+		if (pos.length > 0) {
 			return pos.map((o) => formatObservationLabel(o)).join(', ');
 		}
-		if(unk.length > 0) {
+		if (unk.length > 0) {
 			return 'Observasi belum meyakinkan (unknown — bukan bukti pelanggaran maupun jaminan aman)';
 		}
 		return 'Tidak ada indikasi pelanggaran positif pada frame ini';
@@ -64,18 +64,15 @@
 <section class="snapshot-card" aria-labelledby="snapshot-heading">
 	<div class="snapshot-header">
 		<div>
-			<h2 id="snapshot-heading">Snapshot Inferensi Terakhir</h2>
-			<p class="snapshot-sub">
-				Kotak deteksi digambar hanya pada foto JPEG asli yang diinferensi, terpisah dari video
-				live.
-			</p>
+			<h2 id="snapshot-heading">Hasil deteksi terakhir</h2>
+			<p class="snapshot-sub">Hasil dari satu foto, bukan tampilan video langsung.</p>
 		</div>
 
 		{#if snapshot}
 			<div class="snapshot-controls">
 				<label class="toggle-label">
 					<input type="checkbox" bind:checked={showBoxes} />
-					<span>Tampilkan Overlay BBox</span>
+					<span>Tampilkan kotak deteksi</span>
 				</label>
 			</div>
 		{/if}
@@ -84,36 +81,29 @@
 	{#if !snapshot}
 		<div class="snapshot-empty" role="status">
 			{#if !modelReady}
-				<p class="empty-title">Snapshot Inferensi Belum Tersedia (Model Belum Siap)</p>
-				<p class="empty-desc">
-					Layanan inferensi belum mengembalikan hasil. Kondisi ini bukan status lokasi aman.
-				</p>
+				<p class="empty-title">Model belum siap</p>
+				<p class="empty-desc">Belum ada hasil. Kondisi lokasi belum bisa dinilai.</p>
 			{:else if sessionActive}
-				<p class="empty-title">Menunggu Respons Inferensi Frame Pertama...</p>
-				<p class="empty-desc">
-					Sampel JPEG dikirim maksimum 1 frame per detik tanpa antrean frame lama.
-				</p>
+				<p class="empty-title">Menunggu hasil deteksi pertama...</p>
+				<p class="empty-desc">Hasil akan muncul setelah kamera mengirim gambar pertama.</p>
 			{:else}
-				<p class="empty-title">Belum Ada Snapshot Inferensi</p>
-				<p class="empty-desc">
-					Mulai sesi monitoring untuk melihat foto JPEG yang diinferensi beserta koordinat
-					bounding box terverifikasi.
-				</p>
+				<p class="empty-title">Belum ada hasil deteksi</p>
+				<p class="empty-desc">Mulai inspeksi untuk melihat hasil deteksi.</p>
 			{/if}
 		</div>
 	{:else}
 		<div class="snapshot-meta-bar" data-testid="snapshot-meta-bar">
 			<span class="meta-chip">
-				Sequence: <strong>#{snapshot.sequence}</strong>
+				Foto ke- <strong>#{snapshot.sequence}</strong>
 			</span>
 			<span class="meta-chip" data-stale={isStaleResult}>
-				Usia hasil: <strong>{resultAgeSec} dtk</strong>
+				Diambil <strong>{resultAgeSec} dtk</strong>
 				{#if isStaleResult}
-					<em class="stale-tag">(Hasil Tertunda)</em>
+					<em class="stale-tag">(terlambat)</em>
 				{/if}
 			</span>
 			<span class="meta-chip">
-				Latensi AI: <strong>{snapshot.inferenceMs} ms</strong>
+				Waktu proses: <strong>{snapshot.inferenceMs} ms</strong>
 			</span>
 			<span class="meta-chip" data-mode={snapshot.mode}>
 				Mode: <strong>{formatModeLabel(snapshot.mode)}</strong>
@@ -130,7 +120,7 @@
 			<div class="snapshot-stage" data-testid="inference-snapshot-stage">
 				<img
 					src={snapshot.jpegUrl}
-					alt={`Snapshot JPEG inferensi sequence ${snapshot.sequence}`}
+					alt={`Foto deteksi ke-${snapshot.sequence}`}
 					width={snapshot.width}
 					height={snapshot.height}
 					class="snapshot-img"
@@ -151,11 +141,7 @@
 
 							{#each track.observations as obs, idx (`${track.track_key}-${obs.type}-${idx}`)}
 								{#if obs.bbox}
-									<div
-										class="bbox obs-bbox"
-										data-state={obs.state}
-										style={getBoxStyle(obs.bbox)}
-									>
+									<div class="bbox obs-bbox" data-state={obs.state} style={getBoxStyle(obs.bbox)}>
 										<span class="bbox-tag obs-tag" data-state={obs.state}>
 											{formatObservationLabel(obs)}
 										</span>
@@ -169,11 +155,10 @@
 		</div>
 
 		<div class="tracks-summary" aria-label="Ringkasan observasi frame">
-			<h3>Observasi pada Frame #{snapshot.sequence}</h3>
+			<h3>Deteksi pada foto #{snapshot.sequence}</h3>
 			{#if snapshot.tracks.length === 0}
 				<p class="no-tracks-note">
-					Tidak ada objek Person terdeteksi pada frame ini. Hasil kosong bukan jaminan kepatuhan
-					K3 menyeluruh.
+					Tidak ada orang terdeteksi di foto ini. Hasil kosong bukan jaminan lokasi aman.
 				</p>
 			{:else}
 				<ul class="track-list">
@@ -182,7 +167,7 @@
 							<div class="track-id-group">
 								<span class="track-badge">Track sementara {track.track_key}</span>
 								<span class="track-conf">
-									Skor Person: {(track.person_confidence * 100).toFixed(0)}%
+									Skor orang: {(track.person_confidence * 100).toFixed(0)}%
 								</span>
 							</div>
 							<p class="track-obs-text">{getTrackSummary(track)}</p>
@@ -191,8 +176,7 @@
 				</ul>
 			{/if}
 			<p class="disclaimer-note">
-				ID track hanya referensi episode sementara (bukan identitas pekerja). Skor confidence
-				adalah keluaran model, bukan bukti pelanggaran final sebelum diverifikasi petugas.
+				ID deteksi bukan identitas pekerja. Periksa foto sebelum mengonfirmasi hasil.
 			</p>
 		</div>
 	{/if}
@@ -202,7 +186,7 @@
 	.snapshot-card {
 		background: var(--bg-surface, #ffffff);
 		border: 1px solid var(--border-default, #dcd7cb);
-		border-radius: 10px;
+		border-radius: 12px;
 		padding: 1.125rem;
 		display: flex;
 		flex-direction: column;
@@ -244,7 +228,7 @@
 	}
 
 	.snapshot-empty {
-		border: 1px dashed var(--border-strong, #c9c3b6);
+		border: 0;
 		border-radius: 8px;
 		padding: 1.5rem 1rem;
 		background: var(--bg-canvas, #f5f3ee);

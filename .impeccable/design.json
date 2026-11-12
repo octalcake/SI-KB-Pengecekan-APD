@@ -1,0 +1,373 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-11T15:39:21.777173+00:00",
+  "title": "Design System: Inspeksi K3",
+  "extensions": {
+    "colorMeta": {
+      "action": {
+        "role": "primary",
+        "displayName": "Action",
+        "canonical": "#245be0",
+        "tonalRamp": [
+          "oklch(15% 0.068 265)",
+          "oklch(25% 0.150 265)",
+          "oklch(35% 0.150 265)",
+          "oklch(45% 0.150 265)",
+          "oklch(60% 0.150 265)",
+          "oklch(75% 0.150 265)",
+          "oklch(88% 0.105 265)",
+          "oklch(96% 0.068 265)"
+        ]
+      },
+      "action-hover": {
+        "role": "primary",
+        "displayName": "Action hover",
+        "canonical": "#1948bd",
+        "tonalRamp": [
+          "oklch(15% 0.068 265)",
+          "oklch(25% 0.150 265)",
+          "oklch(35% 0.150 265)",
+          "oklch(45% 0.150 265)",
+          "oklch(60% 0.150 265)",
+          "oklch(75% 0.150 265)",
+          "oklch(88% 0.105 265)",
+          "oklch(96% 0.068 265)"
+        ]
+      },
+      "action-surface": {
+        "role": "primary",
+        "displayName": "Action surface",
+        "canonical": "#edf3ff",
+        "tonalRamp": [
+          "oklch(15% 0.068 265)",
+          "oklch(25% 0.150 265)",
+          "oklch(35% 0.150 265)",
+          "oklch(45% 0.150 265)",
+          "oklch(60% 0.150 265)",
+          "oklch(75% 0.150 265)",
+          "oklch(88% 0.105 265)",
+          "oklch(96% 0.068 265)"
+        ]
+      },
+      "navigation": {
+        "role": "neutral",
+        "displayName": "Navigation",
+        "canonical": "#142f3c",
+        "tonalRamp": [
+          "oklch(15% 0.016 250)",
+          "oklch(25% 0.035 250)",
+          "oklch(35% 0.035 250)",
+          "oklch(45% 0.035 250)",
+          "oklch(60% 0.035 250)",
+          "oklch(75% 0.035 250)",
+          "oklch(88% 0.025 250)",
+          "oklch(96% 0.016 250)"
+        ]
+      },
+      "navigation-text": {
+        "role": "neutral",
+        "displayName": "Navigation text",
+        "canonical": "#bacbd4",
+        "tonalRamp": [
+          "oklch(15% 0.016 250)",
+          "oklch(25% 0.035 250)",
+          "oklch(35% 0.035 250)",
+          "oklch(45% 0.035 250)",
+          "oklch(60% 0.035 250)",
+          "oklch(75% 0.035 250)",
+          "oklch(88% 0.025 250)",
+          "oklch(96% 0.016 250)"
+        ]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Canvas",
+        "canonical": "#f5f7f9",
+        "tonalRamp": [
+          "oklch(15% 0.016 250)",
+          "oklch(25% 0.035 250)",
+          "oklch(35% 0.035 250)",
+          "oklch(45% 0.035 250)",
+          "oklch(60% 0.035 250)",
+          "oklch(75% 0.035 250)",
+          "oklch(88% 0.025 250)",
+          "oklch(96% 0.016 250)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "oklch(15% 0.016 250)",
+          "oklch(25% 0.035 250)",
+          "oklch(35% 0.035 250)",
+          "oklch(45% 0.035 250)",
+          "oklch(60% 0.035 250)",
+          "oklch(75% 0.035 250)",
+          "oklch(88% 0.025 250)",
+          "oklch(96% 0.016 250)"
+        ]
+      },
+      "subtle": {
+        "role": "neutral",
+        "displayName": "Subtle",
+        "canonical": "#eef2f5",
+        "tonalRamp": [
+          "oklch(15% 0.016 250)",
+          "oklch(25% 0.035 250)",
+          "oklch(35% 0.035 250)",
+          "oklch(45% 0.035 250)",
+          "oklch(60% 0.035 250)",
+          "oklch(75% 0.035 250)",
+          "oklch(88% 0.025 250)",
+          "oklch(96% 0.016 250)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Border",
+        "canonical": "#dfe6eb",
+        "tonalRamp": [
+          "oklch(15% 0.016 250)",
+          "oklch(25% 0.035 250)",
+          "oklch(35% 0.035 250)",
+          "oklch(45% 0.035 250)",
+          "oklch(60% 0.035 250)",
+          "oklch(75% 0.035 250)",
+          "oklch(88% 0.025 250)",
+          "oklch(96% 0.016 250)"
+        ]
+      },
+      "control-border": {
+        "role": "neutral",
+        "displayName": "Control border",
+        "canonical": "#bdc9d1",
+        "tonalRamp": [
+          "oklch(15% 0.016 250)",
+          "oklch(25% 0.035 250)",
+          "oklch(35% 0.035 250)",
+          "oklch(45% 0.035 250)",
+          "oklch(60% 0.035 250)",
+          "oklch(75% 0.035 250)",
+          "oklch(88% 0.025 250)",
+          "oklch(96% 0.016 250)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#20323f",
+        "tonalRamp": [
+          "oklch(15% 0.016 250)",
+          "oklch(25% 0.035 250)",
+          "oklch(35% 0.035 250)",
+          "oklch(45% 0.035 250)",
+          "oklch(60% 0.035 250)",
+          "oklch(75% 0.035 250)",
+          "oklch(88% 0.025 250)",
+          "oklch(96% 0.016 250)"
+        ]
+      },
+      "secondary-ink": {
+        "role": "neutral",
+        "displayName": "Secondary ink",
+        "canonical": "#526572",
+        "tonalRamp": [
+          "oklch(15% 0.016 250)",
+          "oklch(25% 0.035 250)",
+          "oklch(35% 0.035 250)",
+          "oklch(45% 0.035 250)",
+          "oklch(60% 0.035 250)",
+          "oklch(75% 0.035 250)",
+          "oklch(88% 0.025 250)",
+          "oklch(96% 0.016 250)"
+        ]
+      },
+      "muted-ink": {
+        "role": "neutral",
+        "displayName": "Muted ink",
+        "canonical": "#5e707c",
+        "tonalRamp": [
+          "oklch(15% 0.016 250)",
+          "oklch(25% 0.035 250)",
+          "oklch(35% 0.035 250)",
+          "oklch(45% 0.035 250)",
+          "oklch(60% 0.035 250)",
+          "oklch(75% 0.035 250)",
+          "oklch(88% 0.025 250)",
+          "oklch(96% 0.016 250)"
+        ]
+      },
+      "success": {
+        "role": "neutral",
+        "displayName": "Success",
+        "canonical": "#226747",
+        "tonalRamp": [
+          "oklch(15% 0.041 155)",
+          "oklch(25% 0.090 155)",
+          "oklch(35% 0.090 155)",
+          "oklch(45% 0.090 155)",
+          "oklch(60% 0.090 155)",
+          "oklch(75% 0.090 155)",
+          "oklch(88% 0.063 155)",
+          "oklch(96% 0.041 155)"
+        ]
+      },
+      "warning": {
+        "role": "neutral",
+        "displayName": "Warning",
+        "canonical": "#83550e",
+        "tonalRamp": [
+          "oklch(15% 0.045 75)",
+          "oklch(25% 0.100 75)",
+          "oklch(35% 0.100 75)",
+          "oklch(45% 0.100 75)",
+          "oklch(60% 0.100 75)",
+          "oklch(75% 0.100 75)",
+          "oklch(88% 0.070 75)",
+          "oklch(96% 0.045 75)"
+        ]
+      },
+      "error": {
+        "role": "neutral",
+        "displayName": "Error",
+        "canonical": "#ac3833",
+        "tonalRamp": [
+          "oklch(15% 0.063 27)",
+          "oklch(25% 0.140 27)",
+          "oklch(35% 0.140 27)",
+          "oklch(45% 0.140 27)",
+          "oklch(60% 0.140 27)",
+          "oklch(75% 0.140 27)",
+          "oklch(88% 0.098 27)",
+          "oklch(96% 0.063 27)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Page heading",
+        "purpose": "The page task."
+      },
+      "title": {
+        "displayName": "Section title",
+        "purpose": "A work area or field group."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Readable operational content."
+      },
+      "label": {
+        "displayName": "Field label",
+        "purpose": "Name the input or state."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "state-transition",
+        "value": "150ms ease",
+        "purpose": "Background and color changes; disabled for reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact-navigation",
+        "value": "900px"
+      },
+      {
+        "name": "compact-desktop",
+        "value": "1100px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The primary task action.",
+      "html": "<button class=\"ds-primary\">Mulai inspeksi</button>",
+      "css": ".ds-primary{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:40px;padding:.55rem .95rem;border-radius:6px;font-family:'Public Sans','Segoe UI',sans-serif;font-size:.875rem;font-weight:600;cursor:pointer;transition:background-color 150ms;background:var(--accent-primary);color:#fff;border:1px solid var(--accent-primary)}.ds-primary:hover{background:var(--accent-hover)}.ds-primary:focus-visible{outline:2px solid var(--focus-ring);outline-offset:3px;}.ds-primary:active{background:var(--accent-hover)}.ds-primary:disabled{opacity:.55;cursor:not-allowed}"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "A secondary action or recovery step.",
+      "html": "<button class=\"ds-secondary\">Coba lagi</button>",
+      "css": ".ds-secondary{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:40px;padding:.55rem .95rem;border-radius:6px;font-family:'Public Sans','Segoe UI',sans-serif;font-size:.875rem;font-weight:600;cursor:pointer;transition:background-color 150ms;background:var(--bg-surface);color:var(--ink-primary);border:1px solid var(--border-strong)}.ds-secondary:hover{background:var(--bg-subtle)}.ds-secondary:focus-visible{outline:2px solid var(--focus-ring);outline-offset:3px;}.ds-secondary:disabled{opacity:.55;cursor:not-allowed}"
+    },
+    {
+      "name": "Quiet action",
+      "kind": "button",
+      "description": "Low-emphasis refresh or reset action.",
+      "html": "<button class=\"ds-quiet\">Reset filter</button>",
+      "css": ".ds-quiet{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:40px;padding:.55rem .95rem;border-radius:6px;font-family:'Public Sans','Segoe UI',sans-serif;font-size:.875rem;font-weight:600;cursor:pointer;transition:background-color 150ms;background:transparent;color:var(--ink-secondary);border:1px solid transparent}.ds-quiet:hover{background:var(--bg-subtle)}.ds-quiet:focus-visible{outline:2px solid var(--focus-ring);outline-offset:3px;}"
+    },
+    {
+      "name": "Labeled input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Standard labeled text entry.",
+      "html": "<label class=\"ds-field\">Nama proyek<input placeholder=\"Masukkan nama proyek\" /></label>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:.35rem;font-family:Public Sans,Segoe UI,sans-serif;font-size:.8rem;color:var(--ink-secondary)}.ds-field input{box-sizing:border-box;width:100%;min-height:40px;padding:.5rem .7rem;border:1px solid var(--border-strong);border-radius:6px;background:var(--bg-surface);color:var(--ink-primary);font:inherit;font-size:.875rem}.ds-field input::placeholder{color:var(--ink-muted)}.ds-field input:focus-visible{outline:2px solid var(--focus-ring);outline-offset:3px;}.ds-field input:disabled{background:var(--bg-subtle)}"
+    },
+    {
+      "name": "Primary navigation",
+      "kind": "nav",
+      "description": "Current destination in the desktop navigation.",
+      "html": "<nav class=\"ds-nav\"><a href=\"#dashboard\" aria-current=\"page\">Dashboard</a><a href=\"#monitoring\">Monitoring</a></nav>",
+      "css": ".ds-nav{background:var(--nav-ground);padding:1rem;font-family:Public Sans,Segoe UI,sans-serif}.ds-nav a{display:block;padding:.7rem .8rem;min-height:44px;box-sizing:border-box;border-radius:6px;text-decoration:none;color:var(--nav-text);font-size:.875rem}.ds-nav a[aria-current]{color:#fff;background:#2b4b5b;font-weight:600}.ds-nav a:hover{background:#203e4b;color:#fff}.ds-nav a:focus-visible{outline:2px solid #adc6ff;outline-offset:2px}"
+    },
+    {
+      "name": "Readiness label",
+      "kind": "chip",
+      "description": "A factual state with a text label and status dot.",
+      "html": "<span class=\"ds-status\"><span aria-hidden=\"true\"></span>Belum siap</span>",
+      "css": ".ds-status{display:inline-flex;align-items:center;gap:.35rem;color:var(--status-warn-ink);font-family:Public Sans,Segoe UI,sans-serif;font-size:.75rem}.ds-status>span{width:6px;height:6px;border-radius:50%;background:currentColor}"
+    },
+    {
+      "name": "Work surface",
+      "kind": "card",
+      "refersTo": "work-surface",
+      "description": "A distinct task area, without decorative elevation.",
+      "html": "<section class=\"ds-panel\"><h2>Kesiapan sistem</h2><p>Periksa kesiapan sebelum memulai inspeksi.</p></section>",
+      "css": ".ds-panel{padding:1.5rem;border:1px solid var(--border-default);border-radius:12px;background:var(--bg-surface);font-family:Public Sans,Segoe UI,sans-serif;color:var(--ink-primary)}.ds-panel h2{font-size:1.05rem;font-weight:650;line-height:1.3;letter-spacing:-.025em;margin:0 0 1rem}.ds-panel p{color:var(--ink-secondary);font-size:.875rem;line-height:1.65;margin:0}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Site Briefing",
+    "overview": "A restrained professional interface for officers working through inspections and evidence. Deep petrol navigation anchors cool white work surfaces. Hierarchy comes from alignment, space, and readable typography rather than decoration.",
+    "keyCharacteristics": [
+      "Persistent, familiar navigation.",
+      "Compact controls and explicit actions.",
+      "Plain Indonesian task language.",
+      "Evidence and provenance remain visible."
+    ],
+    "rules": [
+      {
+        "name": "The Action Rule",
+        "body": "Reserve cobalt for actions, links, focus, and selection; do not use it to decorate inactive content.",
+        "section": "colors"
+      },
+      {
+        "name": "The Reading Rule",
+        "body": "Touch-screen form inputs use at least 16px text; compact metadata must retain readable contrast.",
+        "section": "typography"
+      }
+    ],
+    "dos": [
+      "Do lead with the officer's task and its next action.",
+      "Do preserve evidence, provenance, error recovery, and protected states.",
+      "Do use native forms, disclosures, and familiar navigation.",
+      "Do check desktop, narrow portrait, and touch landscape layouts."
+    ],
+    "donts": [
+      "Don't put implementation instructions in routine task copy.",
+      "Don't invent inspection statistics or imply safety from missing data.",
+      "Don't use decorative gradients, module eyebrows, or icon tiles as page structure."
+    ]
+  }
+}

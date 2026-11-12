@@ -47,16 +47,16 @@ export async function apiRequest<T>(
 	const url = normalizedPath.startsWith(API_BASE) ? normalizedPath : `${API_BASE}${normalizedPath}`;
 
 	const headers = new Headers(options.headers);
-	if(MUTATING_METHODS.has(method) && !options.skipCsrf && currentCsrfToken) {
+	if (MUTATING_METHODS.has(method) && !options.skipCsrf && currentCsrfToken) {
 		headers.set('X-CSRF-Token', currentCsrfToken);
 	}
 
 	let bodyInit: BodyInit | undefined;
-	if(options.body !== undefined && options.body !== null) {
-		if(isBinaryOrFormBody(options.body)) {
+	if (options.body !== undefined && options.body !== null) {
+		if (isBinaryOrFormBody(options.body)) {
 			bodyInit = options.body;
 		} else {
-			if(!headers.has('Content-Type')) {
+			if (!headers.has('Content-Type')) {
 				headers.set('Content-Type', 'application/json');
 			}
 			bodyInit = JSON.stringify(options.body);
@@ -76,20 +76,19 @@ export async function apiRequest<T>(
 		throw new ApiError({
 			status: 0,
 			code: 'BACKEND_UNREACHABLE',
-			message:
-				'Layanan backend tidak dapat dihubungi. Pastikan server Go berjalan lalu coba lagi.',
+			message: 'Server belum terhubung. Coba lagi; kalau masih gagal, hubungi operator.',
 			isNetworkError: true
 		});
 	}
 
-	if(response.ok && responseType === 'blob') {
+	if (response.ok && responseType === 'blob') {
 		return {
 			blob: await response.blob(),
 			requestId: response.headers.get('X-Request-ID')
 		} as T;
 	}
 
-	if(response.status === 204) {
+	if (response.status === 204) {
 		return undefined as T;
 	}
 
@@ -99,7 +98,7 @@ export async function apiRequest<T>(
 	const retryAfter = retryAfterHeader ? Number.parseInt(retryAfterHeader, 10) : null;
 
 	let parsed: unknown = null;
-	if(rawText.length > 0) {
+	if (rawText.length > 0) {
 		try {
 			parsed = JSON.parse(rawText);
 		} catch {
@@ -107,13 +106,13 @@ export async function apiRequest<T>(
 		}
 	}
 
-	if(!response.ok) {
+	if (!response.ok) {
 		const errEnvelope =
 			parsed && typeof parsed === 'object' && 'error' in parsed
 				? (parsed as ApiErrorEnvelope).error
 				: undefined;
 
-		if(
+		if (
 			response.status === 401 &&
 			!options.skipAuthInvalidation &&
 			normalizedPath !== '/auth/login'
@@ -122,7 +121,7 @@ export async function apiRequest<T>(
 			unauthorizedListener?.();
 		}
 
-		if(errEnvelope && typeof errEnvelope.code === 'string') {
+		if (errEnvelope && typeof errEnvelope.code === 'string') {
 			throw new ApiError({
 				status: response.status,
 				code: errEnvelope.code,
@@ -139,7 +138,7 @@ export async function apiRequest<T>(
 			status: response.status,
 			code: isProxyOrBackendDown ? 'BACKEND_UNREACHABLE' : `HTTP_${response.status}`,
 			message: isProxyOrBackendDown
-				? 'Layanan backend tidak dapat dihubungi. Pastikan server Go berjalan lalu coba lagi.'
+				? 'Server belum terhubung. Coba lagi; kalau masih gagal, hubungi operator.'
 				: `Layanan mengembalikan kesalahan HTTP ${response.status}.`,
 			requestId: headerRequestId,
 			retryAfter: Number.isFinite(retryAfter) ? retryAfter : null,
@@ -147,7 +146,7 @@ export async function apiRequest<T>(
 		});
 	}
 
-	if(parsed === null) {
+	if (parsed === null) {
 		throw new ApiError({
 			status: response.status,
 			code: 'INVALID_RESPONSE',
