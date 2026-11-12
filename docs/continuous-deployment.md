@@ -10,8 +10,9 @@ The manual **Run workflow** button also requires passing push CI for current `ma
 The host `malwildan-MacBookAir` checks GitHub every two minutes with
 `sibk-update.timer`. It uses outbound HTTPS and public release downloads, so no SSH
 key, personal access token, production secret, or self-hosted Actions runner is
-needed in GitHub. CD success means the release was published; it does not claim
-the host has activated it yet.
+needed in GitHub. After publication, CD waits for the host's public revision and
+checks the rendered login in Chromium for disappearing content, JavaScript errors,
+and accidental development-client resources. CD succeeds only after that check.
 The host independently requires an Actions-authored release and assets, verifies
 that the tag resolves to its named commit on `main`, and checks successful push
 CI for that exact commit before staging it.
@@ -26,7 +27,9 @@ CI for that exact commit before staging it.
 - Python dependencies reuse the original virtualenv when the pinned lock is
   unchanged. A changed lock gets its own virtualenv under `.deploy/venvs`.
 - Frontend dependencies use `bun install --frozen-lockfile`; a frontend build must
-  pass before activation. The existing Vite service and ports are retained.
+  pass before activation. The web service runs `bun run preview` on the same port,
+  serving compiled, hashed assets and preserving Vite's same-origin API proxy.
+  CI also exercises the compiled frontend in its browser suite.
 - After staging, the updater stops only the three `sibk-*` app services, backs up
   SQLite through its backup API, runs dbmate migrations, switches `current`, and
   restarts. It checks API/database health, frontend proxy health, public HTTPS,
@@ -65,8 +68,10 @@ the snapshot taken while writers were stopped; it is not a backup of later user 
    `scripts/sibk-update.*` units to `~/.config/systemd/user/`.
 2. Create `.deploy/current` as a symlink to the original app directory. Back up
    the three original SIBK units, then add drop-ins pointing their working
-   directories and executable paths into `.deploy/current`. Keep their existing
-   `EnvironmentFile` paths and web/API environment settings.
+   directories and executable paths into `.deploy/current`. Install
+   `scripts/sibk-web.conf` as `sibk-web.service.d/10-deploy-current.conf` so the web
+   unit serves the compiled frontend. Keep existing `EnvironmentFile` paths and
+   web/API environment settings.
 3. Reload user units and enable `sibk-update.timer`. Start the updater once and
    verify its journal, status file, public revision, and application health.
 

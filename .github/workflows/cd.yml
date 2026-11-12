@@ -96,4 +96,18 @@ jobs:
             gh release edit "$tag" --draft=false --latest
           fi
           echo "### Release: [$tag](https://github.com/$GH_REPO/releases/tag/$tag)" >> "$GITHUB_STEP_SUMMARY"
-          echo 'The host checks for releases every two minutes. This job confirms publication; activation is recorded in the host updater journal and .deploy/status.json.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'The host checks for releases every two minutes. The browser check below waits for activation and verifies the visible public login.' >> "$GITHUB_STEP_SUMMARY"
+      - uses: oven-sh/setup-bun@v2
+        if: steps.gate.outputs.current == 'true'
+        with:
+          bun-version-file: frontend/package.json
+      - name: Install browser smoke dependencies
+        if: steps.gate.outputs.current == 'true'
+        working-directory: frontend
+        run: |
+          bun install --frozen-lockfile
+          bunx --no-install playwright install --with-deps chromium
+      - name: Verify the active public frontend in Chromium
+        if: steps.gate.outputs.current == 'true'
+        working-directory: frontend
+        run: bun scripts/deployment-smoke.mjs

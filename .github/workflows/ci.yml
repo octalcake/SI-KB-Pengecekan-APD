@@ -23,6 +23,7 @@ jobs:
         working-directory: frontend
     env:
       CI: 'true'
+      TEST_WEB_MODE: preview
       GOMAXPROCS: '2'
       GOFLAGS: '-p=2'
       PLAYWRIGHT_HTML_OPEN: never

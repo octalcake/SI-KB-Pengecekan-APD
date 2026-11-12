@@ -99,7 +99,7 @@ const apiProc = spawn(apiBin, [], {
 const viteCli = path.join(frontendDir, 'node_modules', 'vite', 'bin', 'vite.js');
 const webProc = spawn(
 	process.execPath,
-	[viteCli, 'dev', '--host', 'localhost', '--port', String(webPort), '--strictPort'],
+	[viteCli, process.env.TEST_WEB_MODE ?? 'dev', '--host', 'localhost', '--port', String(webPort), '--strictPort'],
 	{
 		cwd: frontendDir,
 		env: {

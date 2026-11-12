@@ -113,10 +113,10 @@ def prepare(candidate, root, deploy):
     api = candidate / "backend/bin/api"
     api.chmod(0o755)
     frontend = candidate / "frontend"
-    run("bun", "install", "--frozen-lockfile", cwd=frontend)
-    run("bun", "run", "build", cwd=frontend)
     write_json(frontend / "static/deployment.json",
                {"revision": (candidate / "REVISION").read_text().strip()})
+    run("bun", "install", "--frozen-lockfile", cwd=frontend)
+    run("bun", "run", "build", cwd=frontend)
 
 
 def copy_database(source, destination):
