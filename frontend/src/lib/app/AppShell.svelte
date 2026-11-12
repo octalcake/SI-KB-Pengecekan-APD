@@ -199,7 +199,7 @@
 		align-items: center;
 		gap: 0.65rem;
 		margin: 0 0.6rem 3rem;
-		color: #f4f8fa;
+		color: var(--ink-primary);
 		text-decoration: none;
 	}
 	.brand strong {
@@ -210,7 +210,7 @@
 		line-height: 1.25;
 	}
 	.brand-dot {
-		color: #7ba5ff;
+		color: var(--accent-clay);
 	}
 	.nav-list {
 		list-style: none;
@@ -239,17 +239,17 @@
 			background-color 150ms;
 	}
 	.nav-link:hover {
-		background: #203e4b;
-		color: #fff;
+		background: var(--nav-hover);
+		color: var(--ink-primary);
 	}
 	.nav-link.active {
-		background: #2b4b5b;
-		color: #fff;
+		background: var(--nav-selected);
+		color: var(--accent-hover);
 		font-weight: 600;
 	}
 	.nav-link:focus-visible,
 	.brand:focus-visible {
-		outline-color: #adc6ff;
+		outline-color: var(--focus-ring);
 	}
 	.nav-link:disabled {
 		opacity: 0.5;
@@ -289,8 +289,8 @@
 		width: 34px;
 		height: 34px;
 		border-radius: 50%;
-		background: #e7edf1;
-		color: #355366;
+		background: var(--accent-surface);
+		color: var(--accent-hover);
 		font-size: 0.875rem;
 		font-weight: 600;
 	}

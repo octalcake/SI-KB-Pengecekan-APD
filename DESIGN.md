@@ -2,19 +2,22 @@
 name: Inspeksi K3
 description: A precise operational workspace for construction safety inspections.
 colors:
-  action: "#245be0"
-  action-hover: "#1948bd"
-  action-surface: "#edf3ff"
-  navigation: "#142f3c"
-  navigation-text: "#bacbd4"
-  canvas: "#f5f7f9"
-  surface: "#ffffff"
-  subtle: "#eef2f5"
-  border: "#dfe6eb"
-  control-border: "#bdc9d1"
-  ink: "#20323f"
-  secondary-ink: "#526572"
-  muted-ink: "#5e707c"
+  action: "#a24e35"
+  action-hover: "#91462f"
+  action-surface: "#f6e7df"
+  clay: "#d97757"
+  navigation: "#f0eee6"
+  navigation-text: "#5e5a52"
+  navigation-hover: "#e8e3d9"
+  navigation-selected: "#ebd9cc"
+  canvas: "#faf9f5"
+  surface: "#fffefb"
+  subtle: "#f0eee6"
+  border: "#e2ddd3"
+  control-border: "#948c80"
+  ink: "#292824"
+  secondary-ink: "#5e5a52"
+  muted-ink: "#716b62"
   success: "#226747"
   warning: "#83550e"
   error: "#ac3833"
@@ -78,7 +81,7 @@ components:
 
 **Creative North Star: "The Site Briefing"**
 
-A restrained professional interface for officers working through inspections and evidence. Deep petrol navigation anchors cool white work surfaces. Hierarchy comes from alignment, space, and readable typography rather than decoration.
+A restrained professional interface for officers working through inspections and evidence. A Claude-inspired palette pairs ivory work surfaces and a cream navigation rail with charcoal text and muted clay accents. Hierarchy comes from alignment, space, and readable typography rather than decoration.
 
 **Key Characteristics:**
 - Persistent, familiar navigation.
@@ -88,11 +91,11 @@ A restrained professional interface for officers working through inspections and
 
 ## Colors
 
-Cobalt identifies primary actions and selected controls. Deep petrol belongs to the navigation and login identity. Mineral neutrals separate the canvas, work surfaces, and controls.
+Deep terracotta identifies primary actions, links, focus, and selected controls. Lighter clay marks the brand, while warm ivory, cream, and oat neutrals separate the canvas, work surfaces, and controls. Navigation and the login introduction use a light cream ground with charcoal headings. The deeper action shade preserves readable white button labels.
 
 Success, warning, and error colors describe actual states. A zero count, missing result, or unavailable model must never receive a safe-state treatment.
 
-**The Action Rule.** Reserve cobalt for actions, links, focus, and selection; do not use it to decorate inactive content.
+**The Action Rule.** Reserve deep terracotta for actions, links, focus, and selection; keep clay accents sparse.
 
 ## Typography
 
@@ -112,7 +115,7 @@ Creation forms and advanced filters open inline through standard disclosures. Pr
 
 ## Elevation & Depth
 
-The shared system uses white surfaces and quiet borders, without decorative shadows. Tonal layers indicate the workspace, field state, or grouped information. Evidence viewers and protected confirmation flows retain their functional overlays.
+The shared system uses warm ivory surfaces and quiet borders, without decorative shadows. Tonal layers indicate the workspace, field state, or grouped information. Evidence viewers and protected confirmation flows retain their functional overlays.
 
 ## Shapes
 
@@ -120,7 +123,7 @@ Controls have compact corners; work surfaces use the larger radius token. Small 
 
 ## Components
 
-Primary buttons have a cobalt fill and white text. Secondary buttons use a white surface and a clear border; quiet actions use text and a hover surface. Standard controls are at least 40px high, increasing to 44px on narrow or coarse-pointer devices.
+Primary buttons have a deep terracotta fill and white text. Secondary buttons use an ivory surface and a clear border; quiet actions use text and a hover surface. Standard controls are at least 40px high, increasing to 44px on narrow or coarse-pointer devices.
 
 Inputs have visible labels, a quiet border, clear invalid states, and a contrasting focus outline. Disabled fields use the subtle neutral surface. Password visibility is an explicit toggle.
 

@@ -6,20 +6,23 @@
 	font-display: swap;
 }
 :root {
-	--bg-canvas: #f5f7f9;
-	--bg-surface: #fff;
-	--bg-subtle: #eef2f5;
-	--border-strong: #bdc9d1;
-	--border-default: #dfe6eb;
-	--ink-primary: #20323f;
-	--ink-secondary: #526572;
-	--ink-muted: #5e707c;
-	--accent-primary: #245be0;
-	--accent-hover: #1948bd;
-	--accent-surface: #edf3ff;
-	--accent-border: #b9cdfb;
-	--nav-ground: #142f3c;
-	--nav-text: #bacbd4;
+	--bg-canvas: #faf9f5;
+	--bg-surface: #fffefb;
+	--bg-subtle: #f0eee6;
+	--border-strong: #948c80;
+	--border-default: #e2ddd3;
+	--ink-primary: #292824;
+	--ink-secondary: #5e5a52;
+	--ink-muted: #716b62;
+	--accent-primary: #a24e35;
+	--accent-hover: #91462f;
+	--accent-surface: #f6e7df;
+	--accent-border: #d3a58e;
+	--accent-clay: #d97757;
+	--nav-ground: #f0eee6;
+	--nav-text: #5e5a52;
+	--nav-hover: #e8e3d9;
+	--nav-selected: #ebd9cc;
 	--status-ok-bg: #edf7f2;
 	--status-ok-ink: #226747;
 	--status-ok-border: #bcdfcd;
@@ -29,7 +32,7 @@
 	--status-err-bg: #fff1f0;
 	--status-err-ink: #ac3833;
 	--status-err-border: #edc3bf;
-	--focus-ring: #245be0;
+	--focus-ring: #a24e35;
 	--radius: 12px;
 	color-scheme: light;
 	font-family: 'Public Sans', 'Segoe UI', sans-serif;
@@ -52,8 +55,8 @@ body {
 	min-width: 320px;
 }
 ::selection {
-	background: #dce8ff;
-	color: #173a84;
+	background: var(--nav-selected);
+	color: var(--ink-primary);
 }
 :focus-visible {
 	outline: 2px solid var(--focus-ring);

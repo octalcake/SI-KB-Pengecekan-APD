@@ -223,7 +223,7 @@
 	}
 	.login-intro {
 		background: var(--nav-ground);
-		color: #d3e0e8;
+		color: var(--ink-secondary);
 		padding: 3rem 3.5rem;
 		display: flex;
 		flex-direction: column;
@@ -234,7 +234,7 @@
 		display: flex;
 		gap: 0.85rem;
 		align-items: center;
-		color: #fff;
+		color: var(--ink-primary);
 		text-decoration: none;
 	}
 	.login-brand > span {
@@ -244,7 +244,7 @@
 		line-height: 1.3;
 	}
 	.brand-dot {
-		color: #8bb3ff;
+		color: var(--accent-clay);
 	}
 	.intro-content {
 		padding-bottom: 2rem;
@@ -253,7 +253,7 @@
 		font-size: 2.6rem;
 		line-height: 1.25;
 		font-weight: 500;
-		color: #fff;
+		color: var(--ink-primary);
 		margin: 0 0 1.5rem;
 	}
 	.intro-content p {
