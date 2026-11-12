@@ -1,12 +1,10 @@
 <script lang="ts">
+	import { page } from '$app/state';
+	import Icon from '#lib/shared/presentation/Icon.svelte';
 	import { onMount } from 'svelte';
 	import FindingEvidenceViewer from './FindingEvidenceViewer.svelte';
 	import ManualFindingForm from './ManualFindingForm.svelte';
-	import {
-		listFindingsApi,
-		loadGalleryLookups,
-		listZonesLookupApi
-	} from '#lib/app/findings';
+	import { listFindingsApi, loadGalleryLookups, listZonesLookupApi } from '#lib/app/findings';
 	import {
 		formatActionStatusLabel,
 		formatJakartaDateTime,
@@ -54,11 +52,11 @@
 	let errorState = $state<ParsedFindingError | null>(null);
 
 	const availableZones = $derived.by(() => {
-		if(filterProjectId > 0) {
+		if (filterProjectId > 0) {
 			return zonesByProject[filterProjectId] ?? [];
 		}
 		const all: ZoneLookup[] = [];
-		for(const list of Object.values(zonesByProject)) {
+		for (const list of Object.values(zonesByProject)) {
 			all.push(...list);
 		}
 		return all;
@@ -66,8 +64,8 @@
 
 	const availableSessions = $derived.by(() => {
 		return sessions.filter((s) => {
-			if(filterProjectId > 0 && s.project_id !== filterProjectId) return false;
-			if(filterZoneId > 0 && s.zone_id !== filterZoneId) return false;
+			if (filterProjectId > 0 && s.project_id !== filterProjectId) return false;
+			if (filterZoneId > 0 && s.zone_id !== filterZoneId) return false;
 			return true;
 		});
 	});
@@ -86,7 +84,7 @@
 	}
 
 	async function ensureZonesLoaded(projectId: number): Promise<void> {
-		if(projectId <= 0 || zonesByProject[projectId]) return;
+		if (projectId <= 0 || zonesByProject[projectId]) return;
 		try {
 			const res = await listZonesLookupApi(projectId, 100);
 			zonesByProject = {
@@ -137,11 +135,8 @@
 			findings = res.data;
 			pageMeta = res.meta;
 			currentPage = res.meta.page;
-		} catch(err) {
-			errorState = parseFindingApiError(
-				err,
-				'Gagal memuat daftar temuan dari server Go.'
-			);
+		} catch (err) {
+			errorState = parseFindingApiError(err, 'Gagal memuat daftar temuan dari server Go.');
 		} finally {
 			loading = false;
 		}
@@ -153,7 +148,7 @@
 		filterProjectId = pid;
 		filterZoneId = 0;
 		filterSessionId = 0;
-		if(pid > 0) {
+		if (pid > 0) {
 			await ensureZonesLoaded(pid);
 		}
 	}
@@ -185,7 +180,7 @@
 	}
 
 	async function goToPage(pageNumber: number) {
-		if(pageNumber < 1 || pageNumber > totalPages || pageNumber === currentPage) return;
+		if (pageNumber < 1 || pageNumber > totalPages || pageNumber === currentPage) return;
 		currentPage = pageNumber;
 		await loadFindings(pageNumber);
 	}
@@ -200,6 +195,10 @@
 	}
 
 	onMount(async () => {
+		const verification = page.url.searchParams.get('verification_status');
+		if (verification === 'pending' || verification === 'confirmed' || verification === 'rejected') {
+			filterVerificationStatus = verification;
+		}
 		await Promise.all([loadLookups(), loadFindings(1)]);
 	});
 </script>
@@ -207,15 +206,11 @@
 <div class="findings-workspace">
 	<header class="page-header">
 		<div>
-			<p class="eyebrow">MODUL VERIFIKASI &amp; TINDAK LANJUT BUKTI</p>
-			<h1>Daftar Temuan Inspeksi</h1>
-			<p class="subtitle">
-				Tinjau foto bukti asli full-frame, periksa indikasi model beserta referensi track sementara, tetapkan keputusan verifikasi manusia, dan catat tindak lanjut lapangan.
-			</p>
+			<h1>Temuan</h1>
 		</div>
 		<div class="summary-chip" role="status" aria-live="polite">
-			Total Temuan Terfilter: <strong data-testid="findings-total-count">{pageMeta.total}</strong>
-			<span class="unit-note">(satuan temuan, bukan jumlah pekerja unik)</span>
+			Total: <strong data-testid="findings-total-count">{pageMeta.total}</strong>
+			<span class="unit-note">temuan, bukan pekerja unik</span>
 		</div>
 	</header>
 
@@ -237,98 +232,99 @@
 					{/each}
 				</select>
 			</div>
-
-			<div class="filter-field">
-				<label for="filter-zone">Zona</label>
-				<select
-					id="filter-zone"
-					name="zone_id"
-					value={filterZoneId}
-					onchange={handleZoneFilterChange}
-				>
-					<option value={0}>Semua Zona</option>
-					{#each availableZones as z (z.id)}
-						<option value={z.id}>
-							{z.name} ({projectName(z.project_id)})
-						</option>
-					{/each}
-				</select>
-			</div>
-
-			<div class="filter-field">
-				<label for="filter-session">Sesi Monitoring</label>
-				<select id="filter-session" name="session_id" bind:value={filterSessionId}>
-					<option value={0}>Semua Sesi</option>
-					{#each availableSessions as sess (sess.id)}
-						<option value={sess.id}>
-							Sesi #{sess.id} ({formatModeLabel(sess.mode)} • {sess.status})
-						</option>
-					{/each}
-				</select>
-			</div>
-
 			<div class="filter-field">
 				<label for="filter-violation">Kategori APD</label>
 				<select id="filter-violation" name="violation_type" bind:value={filterViolationType}>
-					<option value="">Semua Kategori</option>
-					<option value="NO_HELMET">Tanpa Helm (NO_HELMET)</option>
-					<option value="NO_VEST">Tanpa Rompi (NO_VEST)</option>
+					<option value="">Semua</option>
+					<option value="NO_HELMET">Tanpa helm</option>
+					<option value="NO_VEST">Tanpa rompi</option>
 				</select>
 			</div>
-
 			<div class="filter-field">
-				<label for="filter-verification">Status Verifikasi</label>
+				<label for="filter-verification">Status pemeriksaan</label>
 				<select
 					id="filter-verification"
 					name="verification_status"
 					bind:value={filterVerificationStatus}
 				>
-					<option value="">Semua Verifikasi</option>
-					<option value="pending">Menunggu Verifikasi (pending)</option>
-					<option value="confirmed">Terkonfirmasi (confirmed)</option>
-					<option value="rejected">Ditolak (rejected)</option>
-				</select>
-			</div>
-
-			<div class="filter-field">
-				<label for="filter-action">Status Tindak Lanjut</label>
-				<select id="filter-action" name="action_status" bind:value={filterActionStatus}>
-					<option value="">Semua Tindak Lanjut</option>
-					<option value="pending">Belum Ditindaklanjuti (pending)</option>
-					<option value="in_progress">Sedang Ditindaklanjuti (in_progress)</option>
-					<option value="completed">Selesai (completed)</option>
-				</select>
-			</div>
-
-			<div class="filter-field">
-				<label for="filter-from">Dari Tanggal (WIB)</label>
-				<input id="filter-from" name="from" type="date" bind:value={filterFromDate} />
-			</div>
-
-			<div class="filter-field">
-				<label for="filter-to">Sampai Tanggal (WIB)</label>
-				<input id="filter-to" name="to" type="date" bind:value={filterToDate} />
-			</div>
-
-			<div class="filter-field">
-				<label for="filter-sort">Urutan</label>
-				<select id="filter-sort" name="sort" bind:value={filterSort}>
-					<option value="id">ID Terbaru (Default)</option>
-					<option value="captured_at">Waktu Capture Terbaru</option>
+					<option value="">Semua</option>
+					<option value="pending">Menunggu</option>
+					<option value="confirmed">Terkonfirmasi</option>
+					<option value="rejected">Ditolak</option>
 				</select>
 			</div>
 		</div>
+		<details class="advanced-filters">
+			<summary
+				><Icon name="filter" size={16} />Filter lanjutan{filterZoneId ||
+				filterSessionId ||
+				filterActionStatus ||
+				filterFromDate ||
+				filterToDate ||
+				filterSort !== 'id'
+					? ' (aktif)'
+					: ''}</summary
+			>
+			<div class="filter-grid">
+				<div class="filter-field">
+					<label for="filter-zone">Zona</label>
+					<select
+						id="filter-zone"
+						name="zone_id"
+						value={filterZoneId}
+						onchange={handleZoneFilterChange}
+					>
+						<option value={0}>Semua Zona</option>
+						{#each availableZones as z (z.id)}
+							<option value={z.id}>
+								{z.name} ({projectName(z.project_id)})
+							</option>
+						{/each}
+					</select>
+				</div>
+				<div class="filter-field">
+					<label for="filter-session">Sesi inspeksi</label>
+					<select id="filter-session" name="session_id" bind:value={filterSessionId}>
+						<option value={0}>Semua Sesi</option>
+						{#each availableSessions as sess (sess.id)}
+							<option value={sess.id}>
+								Sesi #{sess.id} ({formatModeLabel(sess.mode)} • {sess.status})
+							</option>
+						{/each}
+					</select>
+				</div>
+				<div class="filter-field">
+					<label for="filter-action">Status tindak lanjut</label>
+					<select id="filter-action" name="action_status" bind:value={filterActionStatus}>
+						<option value="">Semua Tindak Lanjut</option>
+						<option value="pending">Belum ditindaklanjuti</option>
+						<option value="in_progress">Dalam proses</option>
+						<option value="completed">Selesai</option>
+					</select>
+				</div>
+				<div class="filter-field">
+					<label for="filter-from">Dari Tanggal (WIB)</label>
+					<input id="filter-from" name="from" type="date" bind:value={filterFromDate} />
+				</div>
+				<div class="filter-field">
+					<label for="filter-to">Sampai Tanggal (WIB)</label>
+					<input id="filter-to" name="to" type="date" bind:value={filterToDate} />
+				</div>
+				<div class="filter-field">
+					<label for="filter-sort">Urutan</label>
+					<select id="filter-sort" name="sort" bind:value={filterSort}>
+						<option value="id">Terbaru dicatat</option>
+						<option value="captured_at">Terbaru difoto</option>
+					</select>
+				</div>
+			</div>
+		</details>
 
 		<div class="filter-actions">
-			<span class="tz-hint">
-				Batas tanggal lokal menggunakan zona waktu <strong>Asia/Jakarta (WIB)</strong> dan dikonversi ke UTC RFC3339.
-			</span>
 			<div class="action-buttons">
-				<button type="button" class="btn-reset" onclick={handleResetFilters}>
-					Reset Filter
-				</button>
+				<button type="button" class="btn-reset" onclick={handleResetFilters}> Reset filter </button>
 				<button type="submit" class="btn-apply" disabled={loading}>
-					{loading ? 'Memuat...' : 'Terapkan Filter'}
+					{loading ? 'Memuat...' : 'Terapkan'}
 				</button>
 			</div>
 		</div>
@@ -352,32 +348,29 @@
 		>
 			<div class="banner-top">
 				<strong>{errorState.title}</strong>
-				<span class="code-badge">{errorState.code}</span>
 			</div>
 			<p>{errorState.message}</p>
 			<div class="banner-actions">
 				<button type="button" class="btn-retry" onclick={() => loadFindings(currentPage)}>
-					Coba Muat Ulang
+					Coba lagi
 				</button>
 				{#if errorState.isUnauthorized}
-					<a href="/login" class="btn-link">Ke Halaman Login</a>
+					<a href="/login" class="btn-link">Masuk lagi</a>
 				{/if}
 			</div>
 		</section>
 	{:else if loading}
 		<section class="state-banner loading" role="status" aria-live="polite">
-			<strong>Memuat galeri temuan...</strong>
-			<p>Mengambil data temuan terpersisten dari server Go (/api/v1/findings).</p>
+			<strong>Memuat temuan...</strong>
 		</section>
 	{:else if findings.length === 0}
 		<section class="state-banner empty" role="status" data-testid="findings-empty-state">
-			<strong>Tidak ada temuan yang sesuai dengan filter saat ini.</strong>
-			<p>
-				Ubah filter pencarian di atas, jalankan sesi monitoring kamera untuk menangkap indikasi baru, atau gunakan formulir pencatatan manual bila mode fallback manual aktif.
-			</p>
+			<Icon name="findings" size={30} />
+			<strong>Belum ada temuan</strong>
+			<p>Coba ubah filter atau mulai inspeksi baru. Hasil kosong bukan jaminan lokasi aman.</p>
 			<div class="banner-actions">
 				<button type="button" class="btn-reset" onclick={handleResetFilters}>
-					Tampilkan Semua Temuan
+					Tampilkan semua
 				</button>
 			</div>
 		</section>
@@ -414,7 +407,8 @@
 
 						{#if item.detected_violation && item.detected_violation !== item.violation_type}
 							<p class="correction-note">
-								Indikasi awal model: <code>{item.detected_violation}</code> → Dikoreksi petugas menjadi
+								Indikasi awal model: <code>{item.detected_violation}</code> → Dikoreksi petugas
+								menjadi
 								<strong>{item.violation_type}</strong>
 							</p>
 						{/if}
@@ -429,11 +423,11 @@
 								<dd>Sesi #{item.session_id} • {formatSourceLabel(item.source)}</dd>
 							</div>
 							<div>
-								<dt>Waktu Capture</dt>
+								<dt>Waktu foto</dt>
 								<dd>{formatJakartaDateTime(item.captured_at)}</dd>
 							</div>
 							<div>
-								<dt>Track &amp; Skor Model</dt>
+								<dt>Hasil deteksi</dt>
 								<dd>
 									{#if item.track_key}
 										Track sementara <code>{item.track_key}</code>
@@ -442,9 +436,9 @@
 									{/if}
 									•
 									{#if item.confidence !== null && item.confidence !== undefined}
-										Confidence {(item.confidence * 100).toFixed(0)}%
+										Skor {(item.confidence * 100).toFixed(0)}%
 									{:else}
-										Confidence —
+										Skor tidak tersedia
 									{/if}
 								</dd>
 							</div>
@@ -452,7 +446,8 @@
 
 						{#if item.notes}
 							<p class="card-notes">
-								<strong>Catatan:</strong> {item.notes}
+								<strong>Catatan:</strong>
+								{item.notes}
 							</p>
 						{/if}
 
@@ -498,6 +493,68 @@
 </div>
 
 <style>
+	.filter-actions {
+		grid-column: 2;
+		justify-self: end;
+	}
+	@media (max-width: 720px) {
+		.filter-bar .filter-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.filter-bar > .filter-grid > .filter-field:first-child {
+			grid-column: 1 / -1;
+		}
+		.filter-bar {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.filter-actions {
+			grid-column: 1;
+			width: 100%;
+		}
+	}
+	.advanced-filters {
+		margin-top: 0;
+		font-size: 0.8rem;
+		color: var(--ink-secondary);
+	}
+	.advanced-filters summary {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+		min-height: 36px;
+		width: fit-content;
+		list-style: none;
+	}
+	.advanced-filters summary::-webkit-details-marker {
+		display: none;
+	}
+	.advanced-filters summary:hover {
+		color: var(--accent-primary);
+	}
+	.advanced-filters[open] {
+		grid-column: 1 / -1;
+	}
+	.advanced-filters[open] .filter-grid {
+		margin-top: 0.75rem;
+	}
+	.state-banner.empty {
+		text-align: center;
+		padding: 3rem 1.5rem;
+		display: flex;
+		align-items: center;
+		flex-direction: column;
+		gap: 0.85rem;
+	}
+	.state-banner.empty > :global(svg) {
+		color: var(--ink-muted);
+		margin-bottom: 0.35rem;
+	}
+	.state-banner.empty p {
+		margin: 0;
+		max-width: 55ch;
+		font-size: 0.875rem;
+	}
+
 	.findings-workspace {
 		display: flex;
 		flex-direction: column;
@@ -514,31 +571,14 @@
 		border-bottom: 1px solid var(--border-default, #dcd7cb);
 	}
 
-	.eyebrow {
-		margin: 0 0 0.25rem 0;
-		font-size: 0.75rem;
-		font-weight: 700;
-		letter-spacing: 0.06em;
-		color: var(--accent-primary, #9a3412);
-	}
-
 	.page-header h1 {
 		margin: 0;
 		font-size: 1.5rem;
 	}
 
-	.subtitle {
-		margin: 0.35rem 0 0 0;
-		font-size: 0.9rem;
-		color: var(--ink-secondary, #4a453d);
-	}
-
 	.summary-chip {
-		background: var(--bg-surface, #ffffff);
-		border: 1px solid var(--border-strong, #c9c3b6);
-		border-radius: 8px;
-		padding: 0.55rem 0.85rem;
-		font-size: 0.85rem;
+		font-size: 0.8rem;
+		color: var(--ink-secondary);
 		display: flex;
 		flex-direction: column;
 		gap: 0.15rem;
@@ -550,19 +590,20 @@
 	}
 
 	.filter-bar {
-		background: var(--bg-surface, #ffffff);
-		border: 1px solid var(--border-strong, #c9c3b6);
-		border-radius: 10px;
+		background: var(--bg-surface);
+		border: 1px solid var(--border-default);
+		border-radius: 12px;
 		padding: 1.1rem 1.25rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.9rem;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 0.75rem;
 		min-width: 0;
 	}
 
 	.filter-grid {
+		grid-column: 1 / -1;
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(min(100%, 195px), 1fr));
+		grid-template-columns: repeat(3, minmax(0, 1fr));
 		gap: 0.8rem;
 	}
 
@@ -598,11 +639,6 @@
 		gap: 0.75rem;
 		padding-top: 0.65rem;
 		border-top: 1px solid var(--border-default, #dcd7cb);
-	}
-
-	.tz-hint {
-		font-size: 0.78rem;
-		color: var(--ink-muted, #655e53);
 	}
 
 	.action-buttons {
@@ -658,14 +694,6 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.5rem;
-	}
-
-	.code-badge {
-		font-family: monospace;
-		font-size: 0.75rem;
-		padding: 0.15rem 0.45rem;
-		border-radius: 4px;
-		background: rgba(0, 0, 0, 0.08);
 	}
 
 	.banner-actions {
@@ -881,7 +909,14 @@
 
 	@media (max-width: 640px) {
 		.filter-bar {
-			padding: 0.9rem;
+			background: var(--bg-surface);
+			border: 1px solid var(--border-default);
+			border-radius: 12px;
+			padding: 1.1rem 1.25rem;
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto;
+			gap: 0.75rem;
+			min-width: 0;
 		}
 
 		.action-buttons {
@@ -911,6 +946,16 @@
 
 		.page-controls > button {
 			flex: 1 1 120px;
+		}
+	}
+	@media (max-width: 720px) {
+		.advanced-filters .filter-grid {
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+	@media (max-width: 360px) {
+		.filter-bar > .filter-grid {
+			grid-template-columns: minmax(0, 1fr);
 		}
 	}
 </style>

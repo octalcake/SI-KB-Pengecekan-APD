@@ -25,48 +25,46 @@ export async function requestUserCameraStream(
 		? navigator.mediaDevices
 		: undefined
 ): Promise<MediaStream> {
-	if(!mediaDevices || typeof mediaDevices.getUserMedia !== 'function') {
+	if (!mediaDevices || typeof mediaDevices.getUserMedia !== 'function') {
 		throw {
 			status: 0,
 			code: 'CAMERA_UNSUPPORTED',
 			message:
-				'Browser tidak mendukung akses kamera (getUserMedia). Gunakan konteks aman (localhost/HTTPS) pada browser modern.'
+				'Kamera belum bisa diakses. Buka aplikasi lewat HTTPS di browser terbaru, lalu coba lagi.'
 		};
 	}
 
 	try {
 		return await mediaDevices.getUserMedia(DEFAULT_CAMERA_CONSTRAINTS);
-	} catch(err) {
+	} catch (err) {
 		const domErr = err as { name?: string; message?: string };
 		const name = domErr?.name ?? '';
-		if(name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+		if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
 			throw {
 				status: 0,
 				code: 'CAMERA_DENIED',
-				message:
-					'Izin akses kamera ditolak oleh pengguna atau pengaturan browser. Izinkan kamera untuk memulai sesi monitoring.'
+				message: 'Izinkan akses kamera di pengaturan browser, lalu mulai inspeksi lagi.'
 			};
 		}
-		if(name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+		if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
 			throw {
 				status: 0,
 				code: 'CAMERA_NOT_FOUND',
-				message:
-					'Perangkat kamera tidak ditemukan. Pastikan webcam terpasang dengan benar lalu coba lagi.'
+				message: 'Kamera tidak ditemukan. Periksa sambungan kamera, lalu coba lagi.'
 			};
 		}
-		if(name === 'NotReadableError' || name === 'TrackStartError') {
+		if (name === 'NotReadableError' || name === 'TrackStartError') {
 			throw {
 				status: 0,
 				code: 'CAMERA_DEVICE_BUSY',
 				message:
-					'Kamera sedang digunakan oleh aplikasi lain atau mengalami gangguan perangkat keras.'
+					'Kamera belum bisa dipakai. Tutup aplikasi lain yang memakai kamera, lalu coba lagi.'
 			};
 		}
 		throw {
 			status: 0,
 			code: 'CAMERA_ERROR',
-			message: domErr?.message || 'Gagal membuka perangkat kamera.'
+			message: 'Kamera belum bisa dibuka. Periksa kamera dan izinnya, lalu coba lagi.'
 		};
 	}
 }
@@ -78,8 +76,8 @@ export function releaseMediaStream(
 	stream: MediaStream | null | undefined,
 	videoEl?: HTMLVideoElement | null
 ): void {
-	if(stream) {
-		for(const track of stream.getTracks()) {
+	if (stream) {
+		for (const track of stream.getTracks()) {
 			try {
 				track.stop();
 			} catch {
@@ -87,7 +85,7 @@ export function releaseMediaStream(
 			}
 		}
 	}
-	if(videoEl) {
+	if (videoEl) {
 		try {
 			videoEl.pause();
 			videoEl.srcObject = null;
@@ -115,15 +113,15 @@ export async function sampleVideoElementJpeg(
 	);
 
 	const canvas = canvasEl ?? document.createElement('canvas');
-	if(canvas.width !== width) canvas.width = width;
-	if(canvas.height !== height) canvas.height = height;
+	if (canvas.width !== width) canvas.width = width;
+	if (canvas.height !== height) canvas.height = height;
 
 	const ctx = canvas.getContext('2d');
-	if(!ctx) {
+	if (!ctx) {
 		throw {
 			status: 0,
 			code: 'CANVAS_UNAVAILABLE',
-			message: 'Tidak dapat menginisialisasi konteks canvas 2D untuk sampling JPEG.'
+			message: 'Browser belum bisa mengambil foto. Muat ulang halaman, lalu coba lagi.'
 		};
 	}
 
@@ -135,13 +133,13 @@ export async function sampleVideoElementJpeg(
 	const blob = await new Promise<Blob>((resolve, reject) => {
 		canvas.toBlob(
 			(b) => {
-				if(b) {
+				if (b) {
 					resolve(b);
 				} else {
 					reject({
 						status: 0,
 						code: 'JPEG_ENCODE_FAILED',
-						message: 'Gagal mengenkode frame video ke format image/jpeg.'
+						message: 'Foto belum bisa diproses. Mulai inspeksi lagi.'
 					});
 				}
 			},

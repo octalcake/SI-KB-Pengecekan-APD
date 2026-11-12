@@ -1,4 +1,7 @@
-import { isApiError as isReportApiError, type ApiError as SharedApiErrorLike } from '#lib/shared/errors';
+import {
+	isApiError as isReportApiError,
+	type ApiError as SharedApiErrorLike
+} from '#lib/shared/errors';
 import type {
 	ActionStatus,
 	ReportGeneratedBy,
@@ -9,20 +12,20 @@ import type {
 } from '../domain/types';
 
 export function formatReportStatusLabel(status: ReportStatus | string): string {
-	switch(status) {
+	switch (status) {
 		case 'draft':
-			return 'Draft (Belum Disetujui)';
+			return 'Draf';
 		case 'approved':
-			return 'Disetujui (Terkunci)';
+			return 'Disetujui · terkunci';
 		default:
 			return String(status);
 	}
 }
 
 export function formatReportStatusShortLabel(status: ReportStatus | string): string {
-	switch(status) {
+	switch (status) {
 		case 'draft':
-			return 'Draft';
+			return 'Draf';
 		case 'approved':
 			return 'Disetujui';
 		default:
@@ -31,20 +34,20 @@ export function formatReportStatusShortLabel(status: ReportStatus | string): str
 }
 
 export function formatGeneratedByLabel(generatedBy: ReportGeneratedBy | string): string {
-	switch(generatedBy) {
+	switch (generatedBy) {
 		case 'gemini':
-			return 'Dihasilkan Gemini (Teks Terkonfirmasi Ter-sanitasi)';
+			return 'Gemini';
 		case 'template':
-			return 'Draft Template Aplikasi (Bukan Output Gemini)';
+			return 'Templat aplikasi';
 		case 'manual':
-			return 'Draft Manual Petugas (Bukan Output Gemini)';
+			return 'Ditulis petugas';
 		default:
 			return String(generatedBy);
 	}
 }
 
 export function formatGeneratedByShortLabel(generatedBy: ReportGeneratedBy | string): string {
-	switch(generatedBy) {
+	switch (generatedBy) {
 		case 'gemini':
 			return 'GEMINI';
 		case 'template':
@@ -57,7 +60,7 @@ export function formatGeneratedByShortLabel(generatedBy: ReportGeneratedBy | str
 }
 
 export function formatModeLabel(mode: SystemMode | string): string {
-	switch(mode) {
+	switch (mode) {
 		case 'real':
 			return 'NYATA';
 		case 'simulated':
@@ -70,31 +73,31 @@ export function formatModeLabel(mode: SystemMode | string): string {
 }
 
 export function formatSessionStatusLabel(status: SessionStatus | string): string {
-	switch(status) {
+	switch (status) {
 		case 'active':
-			return 'Aktif (Belum Ditutup)';
+			return 'Masih berjalan';
 		case 'stopped':
-			return 'Selesai Ditutup (Stopped)';
+			return 'Selesai';
 		case 'interrupted':
-			return 'Terhenti (Interrupted)';
+			return 'Terhenti';
 		default:
 			return String(status);
 	}
 }
 
 export function formatViolationLabel(type: ViolationType | string | null | undefined): string {
-	if(type === 'NO_HELMET') return 'Indikasi Tanpa Helm (NO_HELMET)';
-	if(type === 'NO_VEST') return 'Indikasi Tanpa Rompi (NO_VEST)';
-	if(!type) return 'Tidak diketahui';
+	if (type === 'NO_HELMET') return 'Indikasi tanpa helm';
+	if (type === 'NO_VEST') return 'Indikasi tanpa rompi';
+	if (!type) return 'Tidak diketahui';
 	return String(type);
 }
 
 export function formatActionStatusLabel(status: ActionStatus | string): string {
-	switch(status) {
+	switch (status) {
 		case 'pending':
-			return 'Belum Ditindaklanjuti';
+			return 'Belum ditindaklanjuti';
 		case 'in_progress':
-			return 'Sedang Ditindaklanjuti';
+			return 'Dalam proses';
 		case 'completed':
 			return 'Selesai';
 		default:
@@ -114,40 +117,40 @@ const jakartaFormatter = new Intl.DateTimeFormat('id-ID', {
 });
 
 export function formatJakartaDateTime(iso: string | null | undefined): string {
-	if(!iso) return '—';
+	if (!iso) return '—';
 	const date = new Date(iso);
-	if(Number.isNaN(date.getTime())) return iso;
+	if (Number.isNaN(date.getTime())) return iso;
 	return `${jakartaFormatter.format(date)} WIB`;
 }
 
 export function translateReportFieldError(field: string, reason: string): string {
 	const r = reason.trim().toLowerCase();
-	if(field === 'session_id') {
-		return 'Sesi monitoring yang sudah ditutup dan memiliki temuan terkonfirmasi wajib dipilih.';
+	if (field === 'session_id') {
+		return 'Pilih sesi yang sudah selesai dan punya temuan terkonfirmasi.';
 	}
-	if(field === 'request_key') {
-		return 'Kunci operasi (request_key) harus berupa UUID v4 yang valid.';
+	if (field === 'request_key') {
+		return 'Permintaan belum lengkap. Coba ulang dari halaman Laporan.';
 	}
-	if(field === 'title') {
-		if(r.includes('max') || r.includes('200')) {
+	if (field === 'title') {
+		if (r.includes('max') || r.includes('200')) {
 			return 'Judul laporan wajib diisi (1–200 karakter).';
 		}
 		return `Judul laporan wajib diisi (1–200 karakter).`;
 	}
-	if(field === 'content') {
-		if(r.includes('max') || r.includes('20000')) {
-			return 'Isi narasi laporan wajib diisi (1–20.000 karakter).';
+	if (field === 'content') {
+		if (r.includes('max') || r.includes('20000')) {
+			return 'Isi laporan wajib diisi (1–20.000 karakter).';
 		}
-		return 'Isi narasi laporan wajib diisi (1–20.000 karakter).';
+		return 'Isi laporan wajib diisi (1–20.000 karakter).';
 	}
-	if(field === 'use_template') {
-		return 'Pembuatan draft template tidak boleh digabungkan dengan input judul/isi manual.';
+	if (field === 'use_template') {
+		return 'Pilih templat atau tulis manual.';
 	}
-	if(field === 'review_acknowledged') {
-		return 'Anda wajib mencentang pernyataan bahwa narasi dan snapshot temuan telah ditinjau sebelum menyetujui laporan.';
+	if (field === 'review_acknowledged') {
+		return 'Centang pernyataan setelah memeriksa isi laporan dan temuannya.';
 	}
-	if(field === 'version') {
-		return 'Versi laporan (version) wajib disertakan untuk mencegah konflik perubahan.';
+	if (field === 'version') {
+		return 'Data laporan belum lengkap. Ambil data terbaru, lalu coba lagi.';
 	}
 	return `${field}: ${reason}`;
 }
@@ -179,11 +182,11 @@ export function parseReportApiError(
 	err: unknown,
 	fallbackMessage = 'Terjadi kesalahan saat memproses permintaan laporan.'
 ): ParsedReportError {
-	if(!isReportApiError(err)) {
+	if (!isReportApiError(err)) {
 		return {
 			status: 0,
 			code: 'UNKNOWN_ERROR',
-			title: 'Kesalahan Aplikasi',
+			title: 'Ada masalah di aplikasi',
 			message: err instanceof Error && err.message ? err.message : fallbackMessage,
 			fieldErrors: {},
 			requestId: null,
@@ -206,8 +209,8 @@ export function parseReportApiError(
 
 	const apiErr: SharedApiErrorLike = err;
 	const fieldErrors: Record<string, string> = {};
-	if(apiErr.fields) {
-		for(const [key, val] of Object.entries(apiErr.fields)) {
+	if (apiErr.fields) {
+		for (const [key, val] of Object.entries(apiErr.fields)) {
 			fieldErrors[key] = translateReportFieldError(key, val);
 		}
 	}
@@ -233,78 +236,57 @@ export function parseReportApiError(
 	let title = 'Permintaan Gagal';
 	let message = apiErr.message || fallbackMessage;
 
-	if(isNetworkError) {
-		title = 'Layanan Backend Tidak Terjangkau / Respons Hilang';
+	if (isNetworkError) {
+		title = 'Respons belum diterima';
 		message =
-			apiErr.message ||
-			'Tidak dapat menerima respons dari server Go (/api/v1). Perubahan yang belum disimpan tetap ada di layar; kunci operasi (request_key) dipertahankan untuk pemulihan tanpa duplikasi.';
-	} else if(isUnauthorized) {
-		title = 'Sesi Autentikasi Berakhir (401)';
+			'Cek koneksi, lalu coba lagi. Isianmu belum hilang dan permintaan yang sama tidak akan membuat laporan ganda.';
+	} else if (isUnauthorized) {
+		title = 'Sesi sudah berakhir';
+		message = 'Masuk lagi untuk melanjutkan. Perubahanmu masih ada di halaman ini.';
+	} else if (isForbidden) {
+		title = 'Akses ditolak';
+		message = 'Masuk lagi, lalu coba ulang. Kalau masih ditolak, hubungi operator.';
+	} else if (isSessionStillActive) {
+		title = 'Inspeksi masih berjalan';
+		message = 'Akhiri inspeksi ini dulu, lalu buat laporan.';
+	} else if (isNoConfirmedFindings) {
+		title = 'Belum ada temuan terkonfirmasi';
 		message =
-			'Sesi login Anda telah berakhir. Perubahan narasi yang belum disimpan tetap dipertahankan di layar; silakan masuk kembali.';
-	} else if(isForbidden) {
-		title = 'Akses Ditolak (403)';
+			'Periksa dan konfirmasi minimal satu temuan, lalu akhiri sesi sebelum membuat laporan.';
+	} else if (isReportExists) {
+		title = 'Laporan sudah dibuat';
+		message = 'Buka laporan yang sudah ada. Satu sesi hanya bisa memiliki satu laporan aktif.';
+	} else if (isGeminiUnavailable) {
+		title = 'Gemini belum tersedia';
+		message = 'Coba lagi nanti, gunakan templat, atau tulis manual. Draf yang ada tidak berubah.';
+	} else if (isInvalidGeminiOutput) {
+		title = 'Hasil Gemini belum bisa dipakai';
+		message = 'Coba lagi, gunakan templat, atau tulis manual. Draf sebelumnya tetap tersimpan.';
+	} else if (isSourceChanged) {
+		title = 'Temuan sumber berubah';
 		message =
-			apiErr.message ||
-			'Permintaan ditolak oleh server (token CSRF tidak cocok atau akses tidak diizinkan).';
-	} else if(isSessionStillActive) {
-		title = 'Sesi Monitoring Masih Aktif (409 SESSION_STILL_ACTIVE)';
+			'Temuan berubah saat draf sedang dibuat. Ambil data terbaru, lalu coba lagi. Draf sebelumnya tetap tersimpan.';
+	} else if (isIdempotencyConflict) {
+		title = 'Permintaan sudah berubah';
+		message = 'Data permintaan berubah. Pilih ulang sesi atau ambil data terbaru, lalu coba lagi.';
+	} else if (isRequestKeyExpired) {
+		title = 'Ada permintaan yang lebih baru';
 		message =
-			apiErr.message ||
-			'Hentikan sesi monitoring terlebih dahulu sebelum membuat laporan untuk sesi ini.';
-	} else if(isNoConfirmedFindings) {
-		title = 'Belum Ada Temuan Terkonfirmasi (422 NO_CONFIRMED_FINDINGS)';
+			'Draf sudah dibuat ulang dari tempat lain. Ambil laporan terbaru sebelum melanjutkan.';
+	} else if (isVersionConflict) {
+		title = 'Laporan sudah diubah';
 		message =
-			apiErr.message ||
-			'Laporan hanya dapat dibuat dari sesi tertutup yang memiliki minimal 1 temuan berstatus Terkonfirmasi petugas.';
-	} else if(isReportExists) {
-		title = 'Laporan untuk Sesi Ini Sudah Ada (409 REPORT_EXISTS)';
-		message =
-			apiErr.message ||
-			'Sesi ini sudah memiliki laporan aktif. Satu sesi hanya boleh memiliki satu laporan aktif; buka laporan yang sudah ada.';
-	} else if(isGeminiUnavailable) {
-		title = 'Layanan Gemini Tidak Tersedia (503 GEMINI_UNAVAILABLE)';
-		message =
-			apiErr.message ||
-			'Layanan Gemini tidak tersedia atau belum dikonfigurasi pada server. Draft yang ada tetap aman; Anda dapat mencoba lagi atau membuat draft Template / Manual secara eksplisit.';
-	} else if(isInvalidGeminiOutput) {
-		title = 'Output Gemini Tidak Valid (502 INVALID_GEMINI_OUTPUT)';
-		message =
-			apiErr.message ||
-			'Output dari layanan Gemini tidak memenuhi struktur atau referensi temuan yang diwajibkan. Draft lama tetap dipertahankan; coba lagi atau gunakan draft Template / Manual.';
-	} else if(isSourceChanged) {
-		title = 'Sumber Temuan Berubah Saat Pembuatan Draft (409 SOURCE_CHANGED)';
-		message =
-			apiErr.message ||
-			'Data temuan sumber berubah selama proses pembuatan narasi berlangsung. Draft lama dipertahankan; muat ulang dan coba lagi dengan kunci operasi baru.';
-	} else if(isIdempotencyConflict) {
-		title = 'Konflik Kunci Operasi Idempotensi (409 IDEMPOTENCY_CONFLICT)';
-		message =
-			apiErr.message ||
-			'request_key sudah pernah digunakan dengan payload/input yang berbeda. Gunakan kunci operasi baru.';
-	} else if(isRequestKeyExpired) {
-		title = 'Kunci Operasi Sudah Digantikan (409 REQUEST_KEY_EXPIRED)';
-		message =
-			apiErr.message ||
-			'request_key lama sudah digantikan oleh proses regenerate yang lebih baru. Muat ulang laporan terbaru.';
-	} else if(isVersionConflict) {
-		title = 'Konflik Versi Laporan (409 VERSION_CONFLICT)';
-		message =
-			'Laporan ini telah diubah di tab atau proses lain. Suntingan narasi Anda tetap dipertahankan di formulir; muat ulang versi terbaru sebelum menyimpan kembali.';
-	} else if(isStaleReport) {
-		title = 'Sumber Temuan Sudah Berubah / Stale (409 STALE_REPORT)';
-		message =
-			apiErr.message ||
-			'Data temuan sumber pada sesi ini telah berubah sejak snapshot laporan dibuat. Laporan yang stale tidak dapat disetujui; lakukan Regenerate atau buat ulang draft terlebih dahulu.';
-	} else if(isReportLocked) {
-		title = 'Laporan Sudah Disetujui dan Terkunci (409 REPORT_LOCKED)';
-		message =
-			apiErr.message ||
-			'Laporan yang telah disetujui bersifat permanen (immutable) dan tidak dapat diubah, di-regenerate, atau dihapus.';
-	} else if(apiErr.status === 422 || code === 'VALIDATION_ERROR') {
-		title = 'Validasi Input Laporan Gagal (422)';
+			'Laporan diubah dari tempat lain. Ambil data terbaru, lalu simpan lagi. Isianmu belum hilang.';
+	} else if (isStaleReport) {
+		title = 'Temuan sumber berubah';
+		message = 'Temuan berubah sejak draf dibuat. Buat ulang draf sebelum menyetujuinya.';
+	} else if (isReportLocked) {
+		title = 'Laporan terkunci';
+		message = 'Laporan sudah disetujui. Laporan tidak bisa diubah, dibuat ulang, atau dihapus.';
+	} else if (apiErr.status === 422 || code === 'VALIDATION_ERROR') {
+		title = 'Periksa isian laporan';
 		const firstFieldMsg = Object.values(fieldErrors)[0];
-		if(firstFieldMsg) {
+		if (firstFieldMsg) {
 			message = firstFieldMsg;
 		}
 	}

@@ -52,104 +52,97 @@ export function classifyMonitoringError(err: unknown): MonitoringErrorState {
 				? 1
 				: null;
 
-	switch(code) {
+	switch (code) {
 		case 'CAMERA_BUSY':
 			return {
 				code,
-				title: 'Sesi Kamera Sedang Aktif',
-				message: rawMessage,
+				title: 'Kamera sedang dipakai',
+				message: 'Masih ada inspeksi yang berjalan.',
 				status,
 				requestId,
 				retryAfterSec: null,
 				terminal: true,
-				recoveryHint:
-					'Hanya satu sesi monitoring kamera aktif yang diizinkan secara global. Hentikan sesi aktif di tab lain atau muat ulang riwayat sesi.'
+				recoveryHint: 'Akhiri inspeksi di tab lain sebelum memulai sesi baru.'
 			};
 		case 'MODEL_NOT_READY':
 			return {
 				code,
-				title: 'Model AI Belum Siap',
-				message: rawMessage,
+				title: 'Model belum siap',
+				message: 'Deteksi otomatis belum bisa dimulai.',
 				status,
 				requestId,
 				retryAfterSec: null,
 				terminal: true,
-				recoveryHint:
-					'Server menolak memulai sesi karena model pada mode aktif belum siap. Sistem tidak beralih diam-diam ke mode simulasi.'
+				recoveryHint: 'Hubungi operator untuk menyiapkan model, lalu coba lagi.'
 			};
 		case 'AI_UNAVAILABLE':
 		case 'AI_TIMEOUT':
 			return {
 				code,
-				title: 'Layanan AI Tidak Tersedia',
-				message: rawMessage,
+				title: 'Deteksi belum tersedia',
+				message: 'Layanan deteksi belum bisa dihubungi.',
 				status,
 				requestId,
 				retryAfterSec: null,
 				terminal: true,
-				recoveryHint:
-					'Pipeline inferensi Python FastAPI (/internal/v1/*) tidak merespons atau belum tersedia. Sampling dihentikan agar tidak menampilkan status aman palsu.'
+				recoveryHint: 'Hubungi operator untuk memeriksa layanan deteksi, lalu mulai inspeksi lagi.'
 			};
 		case 'TRACKER_RESET':
 			return {
 				code,
-				title: 'State Tracker AI Direset',
-				message: rawMessage,
+				title: 'Pelacakan terputus',
+				message: 'Layanan deteksi dimulai ulang.',
 				status,
 				requestId,
 				retryAfterSec: null,
 				terminal: true,
-				recoveryHint:
-					'Proses layanan AI dimulai ulang di tengah sesi sehingga riwayat episode tracker tidak lagi kompatibel. Mulai sesi monitoring baru.'
+				recoveryHint: 'Mulai inspeksi baru untuk melanjutkan.'
 			};
 		case 'SESSION_NOT_ACTIVE':
 			return {
 				code,
-				title: 'Sesi Tidak Lagi Aktif',
-				message: rawMessage,
+				title: 'Inspeksi sudah berakhir',
+				message: 'Sesi ini sudah ditutup.',
 				status,
 				requestId,
 				retryAfterSec: null,
 				terminal: true,
-				recoveryHint:
-					'Sesi telah dihentikan atau diinterupsi oleh batas waktu idle server (15 detik). Mulai sesi baru untuk melanjutkan inspeksi.'
+				recoveryHint: 'Mulai inspeksi baru untuk melanjutkan.'
 			};
 		case 'STORAGE_ERROR':
 			return {
 				code,
-				title: 'Gagal Menyimpan Bukti',
-				message: rawMessage,
+				title: 'Foto belum tersimpan',
+				message: 'Foto bukti gagal disimpan.',
 				status,
 				requestId,
 				retryAfterSec: null,
 				terminal: true,
-				recoveryHint:
-					'Server gagal menyimpan foto bukti atau temuan dan telah menghentikan sesi agar bukti tidak ambigu.'
+				recoveryHint: 'Inspeksi dihentikan. Hubungi operator sebelum mencoba lagi.'
 			};
 		case 'FRAME_TOO_FAST':
 			return {
 				code,
-				title: 'Sampling Terlalu Cepat (HTTP 429)',
-				message: rawMessage,
+				title: 'Pengiriman terlalu cepat',
+				message: 'Pengiriman foto dijeda sebentar.',
 				status,
 				requestId,
 				retryAfterSec: retryAfterSec ?? 1,
 				terminal: false,
-				recoveryHint: `Pengiriman frame ditunda selama ${retryAfterSec ?? 1} detik sesuai batas Retry-After tanpa menumpuk antrean frame lama.`
+				recoveryHint: `Pengiriman dilanjutkan dalam ${retryAfterSec ?? 1} detik.`
 			};
 		case 'FRAME_SEQUENCE_CONFLICT':
 		case 'FRAME_TOO_OLD':
 		case 'FRAME_STALE':
 			return {
 				code,
-				title: 'Urutan atau Waktu Frame Ditolak',
-				message: rawMessage,
+				title: 'Foto terlambat diterima',
+				message: 'Foto ini tidak digunakan.',
 				status,
 				requestId,
 				retryAfterSec: null,
 				terminal: false,
-				recoveryHint:
-					'Frame tersebut dilewati oleh server karena urutan atau keterlambatan melebihi batas. Tick berikutnya akan mengirim sampel baru.'
+				recoveryHint: 'Foto ini dilewati. Foto berikutnya akan dikirim otomatis.'
 			};
 		case 'UNSUPPORTED_MEDIA_TYPE':
 		case 'INVALID_IMAGE':
@@ -157,55 +150,60 @@ export function classifyMonitoringError(err: unknown): MonitoringErrorState {
 		case 'IMAGE_TOO_LARGE':
 			return {
 				code,
-				title: 'Format atau Ukuran Frame Tidak Valid',
-				message: rawMessage,
+				title: 'Foto tidak bisa diproses',
+				message: 'Ukuran atau format foto tidak sesuai.',
 				status,
 				requestId,
 				retryAfterSec: null,
 				terminal: true,
 				recoveryHint:
-					'Pastikan kamera menghasilkan JPEG valid maksimal 640×480 (≤ 1 MiB). Sampling dihentikan untuk mencegah pengiriman berulang yang gagal.'
+					'Kamera harus mengirim foto JPEG maksimal 640 x 480 piksel dan 1 MiB. Hubungi operator untuk memeriksanya.'
 			};
 		case 'MODEL_ERROR':
 		case 'INVALID_AI_OUTPUT':
 			return {
 				code,
-				title: 'Inferensi Frame Gagal',
-				message: rawMessage,
+				title: 'Deteksi foto gagal',
+				message: 'Hasil deteksi foto ini tidak bisa digunakan.',
 				status,
 				requestId,
 				retryAfterSec: null,
 				terminal: false,
-				recoveryHint:
-					'Hasil AI untuk frame ini tidak valid dan tidak dihitung sebagai observasi. Sesi tetap dapat mencoba sampel berikutnya.'
+				recoveryHint: 'Hasil foto ini tidak digunakan. Kamera akan mencoba foto berikutnya.'
 			};
 		case 'UNAUTHORIZED':
 		case 'FORBIDDEN':
 		case 'CSRF_INVALID':
 			return {
 				code,
-				title: 'Sesi Autentikasi atau Hak Akses Tidak Valid',
-				message: rawMessage,
+				title: 'Akses kamera ditolak',
+				message: 'Akun ini belum bisa memakai sesi kamera.',
 				status,
 				requestId,
 				retryAfterSec: null,
 				terminal: true,
-				recoveryHint:
-					'Kamera telah dilepaskan. Silakan masuk kembali atau periksa kepemilikan sesi.'
+				recoveryHint: 'Masuk lagi dan pastikan sesi ini milik akunmu.'
 			};
 		default: {
-			const isNetwork = Boolean(candidate.isNetworkError) || status === 0 || code === 'BACKEND_UNREACHABLE';
+			const isNetwork =
+				Boolean(candidate.isNetworkError) || status === 0 || code === 'BACKEND_UNREACHABLE';
 			return {
 				code,
-				title: isNetwork ? 'Koneksi ke Server Terputus' : 'Kesalahan Operasi Monitoring',
+				title: code.startsWith('CAMERA_')
+					? 'Kamera belum bisa dibuka'
+					: isNetwork
+						? 'Koneksi ke server terputus'
+						: 'Inspeksi mengalami kendala',
 				message: rawMessage,
 				status,
 				requestId,
 				retryAfterSec: null,
 				terminal: isNetwork || TERMINAL_ERROR_CODES.has(code) || status === 401 || status === 403,
-				recoveryHint: isNetwork
-					? 'Koneksi ke backend Go terputus. Sampling dihentikan dan kamera dilepaskan.'
-					: 'Periksa pesan kesalahan di atas lalu coba mulai ulang sesi bila diperlukan.'
+				recoveryHint: code.startsWith('CAMERA_')
+					? 'Periksa kamera dan izinnya, lalu coba lagi.'
+					: isNetwork
+						? 'Inspeksi dihentikan. Cek koneksi, lalu mulai lagi.'
+						: 'Coba mulai inspeksi lagi. Kalau masih gagal, hubungi operator.'
 			};
 		}
 	}

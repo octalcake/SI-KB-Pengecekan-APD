@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/shared/presentation/Icon.svelte';
 	import { beforeNavigate } from '$app/navigation';
 	import { onDestroy, onMount } from 'svelte';
 	import { authSession } from '#lib/app/auth';
@@ -19,7 +20,7 @@
 		requestUserCameraStream,
 		sampleVideoElementJpeg,
 		SERVER_IDLE_TIMEOUT_SECONDS,
-		TARGET_SAMPLE_FPS,
+		TARGET_SAMPLE_FPS
 	} from '#lib/app/monitoring';
 	import type { CaptureLoopState } from '../application/capture-workflow';
 	import type {
@@ -28,7 +29,7 @@
 		MonitoringErrorState,
 		MonitoringProject,
 		MonitoringSession,
-		MonitoringZone,
+		MonitoringZone
 	} from '../domain/types';
 
 	// Master data selection state
@@ -70,25 +71,25 @@
 		| { state: 'loading' }
 		| { state: 'ready'; objectUrl: string }
 		| {
-			state: 'error';
-			code: string;
-			message: string;
-			isMissingEvidence: boolean;
-			isUnauthorized: boolean;
-			isForbidden: boolean;
-			isNetworkError: boolean;
-		};
+				state: 'error';
+				code: string;
+				message: string;
+				isMissingEvidence: boolean;
+				isUnauthorized: boolean;
+				isForbidden: boolean;
+				isNetworkError: boolean;
+		  };
 
 	let thumbStates = $state<Record<number, CaptureThumbState>>({});
 	const thumbControllers = new Map<number, AbortController>();
 	const thumbObjectUrls = new Map<number, string>();
 
 	function revokeAllThumbUrls() {
-		for(const ctrl of thumbControllers.values()) {
+		for (const ctrl of thumbControllers.values()) {
 			ctrl.abort();
 		}
 		thumbControllers.clear();
-		for(const objUrl of thumbObjectUrls.values()) {
+		for (const objUrl of thumbObjectUrls.values()) {
 			try {
 				URL.revokeObjectURL(objUrl);
 			} catch {
@@ -101,7 +102,7 @@
 
 	async function loadCaptureThumb(item: CapturedEventItem) {
 		const id = item.findingId;
-		if(thumbStates[id] || thumbControllers.has(id)) return;
+		if (thumbStates[id] || thumbControllers.has(id)) return;
 
 		const ctrl = new AbortController();
 		thumbControllers.set(id, ctrl);
@@ -110,15 +111,15 @@
 		try {
 			const targetUrl = item.evidenceUrl || `/api/v1/findings/${id}/evidence`;
 			const { blob } = await fetchProtectedEvidenceBlob(targetUrl, ctrl.signal);
-			if(ctrl.signal.aborted) return;
+			if (ctrl.signal.aborted) return;
 			const objUrl = URL.createObjectURL(blob);
 			thumbObjectUrls.set(id, objUrl);
 			thumbStates[id] = {
 				state: 'ready',
 				objectUrl: objUrl
 			};
-		} catch(err) {
-			if(ctrl.signal.aborted) return;
+		} catch (err) {
+			if (ctrl.signal.aborted) return;
 			const code = isApiError(err) ? err.code || `HTTP_${err.status}` : 'UNKNOWN_ERROR';
 			const status = isApiError(err) ? err.status : 0;
 			const message = isApiError(err) ? err.message : 'Gagal memuat foto bukti.';
@@ -132,7 +133,7 @@
 				isNetworkError: Boolean(isApiError(err) && (err.isNetworkError || status === 0))
 			};
 		} finally {
-			if(thumbControllers.get(id) === ctrl) {
+			if (thumbControllers.get(id) === ctrl) {
 				thumbControllers.delete(id);
 			}
 		}
@@ -147,17 +148,17 @@
 
 	const modeLabel = $derived.by(() => {
 		const mode: SystemMode | undefined = activeSession?.mode ?? effectiveSystemStatus?.mode;
-		if(mode === 'real') return 'NYATA';
-		if(mode === 'simulated') return 'SIMULASI';
-		if(mode === 'manual') return 'MANUAL';
+		if (mode === 'real') return 'NYATA';
+		if (mode === 'simulated') return 'SIMULASI';
+		if (mode === 'manual') return 'MANUAL';
 		return 'MEMERIKSA';
 	});
 
 	const supportedCategories = $derived<ViolationType[]>(
 		activeSession?.supported_violations ??
-		activeSession?.config?.supported_violations ??
-		effectiveSystemStatus?.supported_violations ??
-		[]
+			activeSession?.config?.supported_violations ??
+			effectiveSystemStatus?.supported_violations ??
+			[]
 	);
 
 	const isHelmetSupported = $derived(supportedCategories.includes('NO_HELMET'));
@@ -169,10 +170,10 @@
 
 	const canStartMonitoring = $derived(
 		!isSessionActive &&
-		!startingSession &&
-		!stoppingSession &&
-		selectedProjectId > 0 &&
-		selectedZoneId > 0
+			!startingSession &&
+			!stoppingSession &&
+			selectedProjectId > 0 &&
+			selectedZoneId > 0
 	);
 
 	async function loadSystemReadiness() {
@@ -180,10 +181,10 @@
 		systemStatusError = null;
 		try {
 			const st = await authSession.refreshSystemStatus();
-			if(st) {
+			if (st) {
 				localSystemStatus = st;
 			}
-		} catch(err) {
+		} catch (err) {
 			const classified = classifyMonitoringError(err);
 			systemStatusError = classified.message;
 		} finally {
@@ -197,15 +198,15 @@
 		try {
 			const list = await monitoringApi.listActiveProjects();
 			projects = list;
-			if(list.length > 0 && !list.some((p) => p.id === selectedProjectId)) {
+			if (list.length > 0 && !list.some((p) => p.id === selectedProjectId)) {
 				selectedProjectId = list[0].id;
 				await loadZonesForProject(selectedProjectId);
-			} else if(list.length === 0) {
+			} else if (list.length === 0) {
 				selectedProjectId = 0;
 				zones = [];
 				selectedZoneId = 0;
 			}
-		} catch(err) {
+		} catch (err) {
 			lookupError = classifyMonitoringError(err).message;
 		} finally {
 			loadingProjects = false;
@@ -213,7 +214,7 @@
 	}
 
 	async function loadZonesForProject(projectId: number) {
-		if(!projectId || projectId <= 0) {
+		if (!projectId || projectId <= 0) {
 			zones = [];
 			selectedZoneId = 0;
 			return;
@@ -223,12 +224,12 @@
 		try {
 			const list = await monitoringApi.listActiveZones(projectId);
 			zones = list;
-			if(list.length > 0 && !list.some((z) => z.id === selectedZoneId)) {
+			if (list.length > 0 && !list.some((z) => z.id === selectedZoneId)) {
 				selectedZoneId = list[0].id;
-			} else if(list.length === 0) {
+			} else if (list.length === 0) {
 				selectedZoneId = 0;
 			}
-		} catch(err) {
+		} catch (err) {
 			lookupError = classifyMonitoringError(err).message;
 			zones = [];
 			selectedZoneId = 0;
@@ -238,7 +239,7 @@
 	}
 
 	async function loadRecentSessions() {
-		if(authSession.status !== 'authenticated') return;
+		if (authSession.status !== 'authenticated') return;
 		loadingSessions = true;
 		try {
 			const res = await monitoringApi.listSessions({
@@ -264,21 +265,20 @@
 	}
 
 	function attachTrackEndedListeners(stream: MediaStream) {
-		for(const track of stream.getVideoTracks()) {
+		for (const track of stream.getVideoTracks()) {
 			track.addEventListener(
 				'ended',
 				() => {
-					if(captureController && captureController.getState().active) {
+					if (captureController && captureController.getState().active) {
 						errorState = {
 							code: 'CAMERA_DISCONNECTED',
-							title: 'Perangkat Kamera Terputus',
-							message: 'Aliran video webcam berhenti atau perangkat kamera dicabut.',
+							title: 'Kamera terputus',
+							message: 'Video berhenti atau sambungan kamera terlepas.',
 							status: 0,
 							requestId: null,
 							retryAfterSec: null,
 							terminal: true,
-							recoveryHint:
-								'Sampling telah dihentikan dan sesi ditutup. Sambungkan kembali kamera lalu mulai sesi baru.'
+							recoveryHint: 'Sambungkan kembali kamera, lalu mulai inspeksi baru.'
 						};
 						void stopMonitoringSession('user_stop', true);
 					}
@@ -289,7 +289,7 @@
 	}
 
 	async function handleStartMonitoring() {
-		if(!canStartMonitoring) return;
+		if (!canStartMonitoring) return;
 		const myStartToken = ++startSequenceToken;
 		startingSession = true;
 		errorState = null;
@@ -298,22 +298,22 @@
 		const currentMode = effectiveSystemStatus?.mode ?? 'real';
 
 		// In manual fallback mode (SRS §9.5), startSession creates a closed manual_entry session without webcam streaming
-		if(currentMode === 'manual') {
+		if (currentMode === 'manual') {
 			try {
 				const session = await monitoringApi.startSession({
 					project_id: selectedProjectId,
 					zone_id: selectedZoneId,
 					source: 'manual_entry'
 				});
-				if(myStartToken !== startSequenceToken) return;
+				if (myStartToken !== startSequenceToken) return;
 				activeSession = session;
-				statusBannerMessage = `Sesi pencatatan manual #${session.id} berhasil dibuat (status: ${session.status}). Gunakan halaman Temuan untuk mengunggah foto bukti manual.`;
+				statusBannerMessage = `Sesi manual #${session.id} dibuat. Tambahkan foto di halaman Temuan.`;
 				await loadRecentSessions();
-			} catch(err) {
-				if(myStartToken !== startSequenceToken) return;
+			} catch (err) {
+				if (myStartToken !== startSequenceToken) return;
 				errorState = classifyMonitoringError(err);
 			} finally {
-				if(myStartToken === startSequenceToken) {
+				if (myStartToken === startSequenceToken) {
 					startingSession = false;
 				}
 			}
@@ -324,13 +324,13 @@
 		try {
 			// 1. User-initiated getUserMedia (video-only, no audio) BEFORE creating active server session (SRS §5.4)
 			stream = await requestUserCameraStream();
-			if(myStartToken !== startSequenceToken) {
+			if (myStartToken !== startSequenceToken) {
 				releaseMediaStream(stream, videoElement);
 				return;
 			}
 			mediaStream = stream;
 
-			if(videoElement) {
+			if (videoElement) {
 				videoElement.srcObject = stream;
 				try {
 					await videoElement.play();
@@ -346,10 +346,10 @@
 				source: 'browser_webcam'
 			});
 
-			if(myStartToken !== startSequenceToken) {
+			if (myStartToken !== startSequenceToken) {
 				releaseMediaStream(stream, videoElement);
 				mediaStream = null;
-				if(session.status === 'active') {
+				if (session.status === 'active') {
 					try {
 						await monitoringApi.stopSession(session.id, 'user_stop');
 					} catch {
@@ -365,7 +365,7 @@
 			latestSnapshot = null;
 			attachTrackEndedListeners(stream);
 
-			if(!samplingCanvas && typeof document !== 'undefined') {
+			if (!samplingCanvas && typeof document !== 'undefined') {
 				samplingCanvas = document.createElement('canvas');
 			}
 
@@ -375,7 +375,7 @@
 				videoEl: videoElement,
 				targetFps: session.config?.sample_fps ?? TARGET_SAMPLE_FPS,
 				sampleJpeg: async () => {
-					if(!videoElement) {
+					if (!videoElement) {
 						throw {
 							status: 0,
 							code: 'VIDEO_ELEMENT_MISSING',
@@ -388,7 +388,7 @@
 				stopSession: (sessionId, reason) => monitoringApi.stopSession(sessionId, reason),
 				onStateChange: (nextState) => {
 					captureState = nextState;
-					if(nextState.lastError) {
+					if (nextState.lastError) {
 						errorState = nextState.lastError;
 					}
 				},
@@ -396,19 +396,19 @@
 					latestSnapshot = snapshot;
 				},
 				onEvents: (newItems) => {
-					if(captureController) {
+					if (captureController) {
 						capturedEvents = captureController.getState().capturedEvents;
 					}
-					for(const item of newItems) {
+					for (const item of newItems) {
 						void loadCaptureThumb(item);
 					}
 				},
 				onTerminalStop: (_code, terminalErr) => {
-					if(terminalErr) {
+					if (terminalErr) {
 						errorState = terminalErr;
 					}
 					mediaStream = null;
-					if(activeSession) {
+					if (activeSession) {
 						activeSession = { ...activeSession, status: 'interrupted' };
 					}
 					void loadRecentSessions();
@@ -420,16 +420,16 @@
 			captureState = loop.getState();
 			loop.startTimer();
 			await loadRecentSessions();
-		} catch(err) {
+		} catch (err) {
 			// Release camera immediately if backend rejected start (e.g. 503 MODEL_NOT_READY or 409 CAMERA_BUSY)
 			releaseMediaStream(stream, videoElement);
 			mediaStream = null;
-			if(myStartToken === startSequenceToken) {
+			if (myStartToken === startSequenceToken) {
 				errorState = classifyMonitoringError(err);
 				await loadSystemReadiness();
 			}
 		} finally {
-			if(myStartToken === startSequenceToken) {
+			if (myStartToken === startSequenceToken) {
 				startingSession = false;
 			}
 		}
@@ -444,52 +444,52 @@
 		startSequenceToken += 1;
 		startingSession = false;
 
-		if(!captureController && (!activeSession || activeSession.status !== 'active')) {
+		if (!captureController && (!activeSession || activeSession.status !== 'active')) {
 			releaseMediaStream(mediaStream, videoElement);
 			mediaStream = null;
 			return;
 		}
 
 		stoppingSession = true;
-		if(!keepError) {
+		if (!keepError) {
 			statusBannerMessage =
 				reason === 'page_hidden'
-					? 'Monitoring dihentikan otomatis karena tab disembunyikan atau halaman ditinggalkan (sampling latar belakang tidak didukung).'
-					: 'Sesi monitoring telah dihentikan dan kamera dilepaskan.';
+					? 'Inspeksi dihentikan karena tab ditinggalkan. Mulai lagi untuk melanjutkan.'
+					: 'Inspeksi dihentikan. Kamera sudah mati.';
 		}
 
 		try {
-			if(captureController) {
+			if (captureController) {
 				await captureController.stop(reason, true);
-			} else if(activeSession && activeSession.status === 'active') {
+			} else if (activeSession && activeSession.status === 'active') {
 				releaseMediaStream(mediaStream, videoElement);
 				await monitoringApi.stopSession(activeSession.id, reason);
 			}
-			if(activeSession) {
+			if (activeSession) {
 				activeSession = {
 					...activeSession,
 					status: 'stopped',
 					end_reason: reason
 				};
 			}
-		} catch(err) {
-			if(!keepError) {
+		} catch (err) {
+			if (!keepError) {
 				errorState = classifyMonitoringError(err);
 			}
 		} finally {
 			releaseMediaStream(mediaStream, videoElement);
 			mediaStream = null;
 			stoppingSession = false;
-			if(!skipRefresh && authSession.status === 'authenticated') {
+			if (!skipRefresh && authSession.status === 'authenticated') {
 				await loadRecentSessions();
 			}
 		}
 	}
 
 	function formatJakartaTime(utcIso: string | null | undefined): string {
-		if(!utcIso) return '-';
+		if (!utcIso) return '-';
 		const d = new Date(utcIso);
-		if(Number.isNaN(d.getTime())) return utcIso;
+		if (Number.isNaN(d.getTime())) return utcIso;
 		return (
 			new Intl.DateTimeFormat('id-ID', {
 				timeZone: 'Asia/Jakarta',
@@ -507,10 +507,10 @@
 	// React to unexpected unauthenticated transition (e.g. 401 session expiry during capture)
 	$effect(() => {
 		const authStatus = authSession.status;
-		if(authStatus === 'unauthenticated' && (captureController?.getState().active || mediaStream)) {
+		if (authStatus === 'unauthenticated' && (captureController?.getState().active || mediaStream)) {
 			startSequenceToken += 1;
 			startingSession = false;
-			if(captureController) {
+			if (captureController) {
 				void captureController.stop('user_stop', false);
 			} else {
 				releaseMediaStream(mediaStream, videoElement);
@@ -520,7 +520,7 @@
 	});
 
 	beforeNavigate(() => {
-		if(captureController?.getState().active || mediaStream || startingSession) {
+		if (captureController?.getState().active || mediaStream || startingSession) {
 			void stopMonitoringSession('page_hidden', true, true);
 		}
 	});
@@ -536,7 +536,7 @@
 		void loadRecentSessions();
 
 		const unregisterBeforeLogout = authSession.registerBeforeLogout(async () => {
-			if(
+			if (
 				captureController?.getState().active ||
 				(activeSession && activeSession.status === 'active') ||
 				mediaStream ||
@@ -547,32 +547,32 @@
 		});
 
 		const handleVisibilityChange = () => {
-			if(typeof document !== 'undefined' && document.visibilityState === 'hidden') {
-				if(captureController?.getState().active || mediaStream || startingSession) {
+			if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+				if (captureController?.getState().active || mediaStream || startingSession) {
 					void stopMonitoringSession('page_hidden', false);
 				}
 			}
 		};
 
 		const handlePageHide = () => {
-			if(captureController?.getState().active || mediaStream || startingSession) {
+			if (captureController?.getState().active || mediaStream || startingSession) {
 				void stopMonitoringSession('page_hidden', true, true);
 			}
 		};
 
-		if(typeof document !== 'undefined') {
+		if (typeof document !== 'undefined') {
 			document.addEventListener('visibilitychange', handleVisibilityChange);
 		}
-		if(typeof window !== 'undefined') {
+		if (typeof window !== 'undefined') {
 			window.addEventListener('pagehide', handlePageHide);
 		}
 
 		return () => {
 			unregisterBeforeLogout();
-			if(typeof document !== 'undefined') {
+			if (typeof document !== 'undefined') {
 				document.removeEventListener('visibilitychange', handleVisibilityChange);
 			}
-			if(typeof window !== 'undefined') {
+			if (typeof window !== 'undefined') {
 				window.removeEventListener('pagehide', handlePageHide);
 			}
 		};
@@ -580,12 +580,12 @@
 
 	onDestroy(() => {
 		startSequenceToken += 1;
-		if(ageTicker) {
+		if (ageTicker) {
 			clearInterval(ageTicker);
 			ageTicker = null;
 		}
 		revokeAllThumbUrls();
-		if(captureController) {
+		if (captureController) {
 			void captureController.stop('page_hidden', true);
 			captureController.destroy();
 		} else {
@@ -597,13 +597,7 @@
 <div class="monitoring-workspace" data-testid="monitoring-workspace">
 	<header class="workspace-header">
 		<div class="title-block">
-			<p class="eyebrow">MODUL MONITORING & BUKTI OTOMATIS</p>
-			<h1>Monitoring Kamera & Sesi Inspeksi</h1>
-			<p class="subtitle">
-				Pilih proyek dan zona aktif, jalankan pratinjau video tanpa audio, dan kirim sampel JPEG
-				(maks. {MAX_JPEG_WIDTH}×{MAX_JPEG_HEIGHT}, kualitas {JPEG_QUALITY}, target {TARGET_SAMPLE_FPS}
-				FPS) untuk evaluasi konfirmasi temporal 2-dari-3 di Go.
-			</p>
+			<h1>Monitoring</h1>
 		</div>
 
 		<div class="header-actions">
@@ -617,39 +611,27 @@
 				}}
 				disabled={loadingSystemStatus || loadingProjects}
 			>
-				Segarkan Status & Master
+				Perbarui status
 			</button>
 		</div>
 	</header>
 
 	{#if effectiveSystemStatus?.mode === 'simulated' || activeSession?.mode === 'simulated'}
 		<section class="provenance-banner simulated" role="status" data-testid="simulated-mode-banner">
-			<strong>MODE SIMULASI AKTIF</strong> — Seluruh observasi dan temuan pada sesi ini berasal
-			dari fixture deterministik simulasi dan diberi label permanen <code>simulated</code>. Hasil
-			ini tidak membuktikan kesiapan inferensi model nyata.
+			<strong>Sesi simulasi.</strong> Temuan sesi ini bukan hasil deteksi kamera nyata.
 		</section>
 	{:else if effectiveSystemStatus?.mode === 'manual' || activeSession?.mode === 'manual'}
 		<section class="provenance-banner manual" role="status" data-testid="manual-mode-banner">
-			<strong>MODE PENCATATAN MANUAL AKTIF</strong> — Server dikonfigurasi pada mode
-			<code>manual</code> tanpa inferensi webcam otomatis. Anda dapat membuat sesi manual tertutup
-			lalu mengunggah bukti foto manual pada halaman Temuan.
+			<strong>Sesi manual.</strong> Tambahkan foto melalui halaman Temuan.
 		</section>
 	{/if}
 
 	{#if effectiveSystemStatus && !effectiveSystemStatus.ai_ready && effectiveSystemStatus.mode !== 'manual'}
-		<section
-			class="readiness-warning-banner"
-			role="alert"
-			data-testid="ai-not-ready-banner"
-		>
-			<h2>Layanan AI / Model Belum Siap ({modeLabel})</h2>
+		<section class="readiness-warning-banner" role="alert" data-testid="ai-not-ready-banner">
+			<h2>Deteksi belum siap</h2>
 			<p>
-				Endpoint kesiapan server (<code>/api/v1/system/status</code>) melaporkan
-				<code>ai_reachable={String(effectiveSystemStatus.ai_reachable)}</code> dan
-				<code>ai_ready={String(effectiveSystemStatus.ai_ready)}</code>. Memulai sesi monitoring
-				pada mode <strong>{modeLabel}</strong> akan ditolak oleh server (HTTP 503
-				<code>AI_UNAVAILABLE</code> / <code>MODEL_NOT_READY</code>) dan aplikasi tidak akan
-				beralih diam-diam ke mode simulasi. Kondisi ini bukan indikasi lokasi aman.
+				Hubungi operator untuk mengaktifkan model, lalu cek lagi. Tanpa hasil deteksi, kondisi
+				lokasi belum bisa dinilai.
 			</p>
 		</section>
 	{/if}
@@ -663,12 +645,6 @@
 		>
 			<div class="error-header">
 				<h2>{errorState.title}</h2>
-				<span class="error-code-badge">
-					Kode: {errorState.code}
-					{#if errorState.status > 0}
-						(HTTP {errorState.status})
-					{/if}
-				</span>
 			</div>
 			<p class="error-msg">{errorState.message}</p>
 			<p class="error-hint">{errorState.recoveryHint}</p>
@@ -685,67 +661,10 @@
 	{/if}
 
 	<!-- Readiness and Capabilities Strip -->
-	<section class="readiness-strip" aria-label="Status kesiapan model dan cakupan APD">
-		<div class="stat-box">
-			<span class="stat-label">Mode Operasi Server</span>
-			<strong class="stat-value" data-testid="monitoring-mode-value">{modeLabel}</strong>
-		</div>
-
-		<div class="stat-box">
-			<span class="stat-label">Kesiapan AI & Model</span>
-			<strong
-				class="stat-value"
-				data-ready={effectiveSystemStatus?.ai_ready ?? false}
-				data-testid="monitoring-readiness-value"
-			>
-				{#if loadingSystemStatus && !effectiveSystemStatus}
-					Memeriksa...
-				{:else if systemStatusError && !effectiveSystemStatus}
-					Gagal Memuat Status
-				{:else if effectiveSystemStatus?.ai_ready}
-					Siap ({effectiveSystemStatus.model_version ?? 'Mode Manual'})
-				{:else}
-					Belum Siap ({effectiveSystemStatus?.model_version ?? 'Model tidak aktif'})
-				{/if}
-			</strong>
-		</div>
-
-		<div class="stat-box">
-			<span class="stat-label">Cakupan Deteksi Otomatis</span>
-			<div class="category-pills" data-testid="supported-categories-list">
-				<span
-					class="cat-pill"
-					data-supported={isHelmetSupported}
-					data-testid="category-no-helmet"
-				>
-					NO_HELMET: {isHelmetSupported ? 'Didukung' : 'Tidak Aktif'}
-				</span>
-				<span
-					class="cat-pill"
-					data-supported={isVestSupported}
-					data-testid="category-no-vest"
-				>
-					NO_VEST: {isVestSupported ? 'Didukung' : 'Tidak Aktif'}
-				</span>
-			</div>
-		</div>
-
-		<div class="stat-box">
-			<span class="stat-label">Sampling & Transport</span>
-			<strong class="stat-value" data-testid="sampling-metrics-value">
-				Target {activeSession?.config?.sample_fps ?? TARGET_SAMPLE_FPS} FPS • Efektif
-				{(captureState?.effectiveFps ?? 0).toFixed(2).replace('.', ',')} FPS
-			</strong>
-			<span class="stat-note">
-				1 in-flight maks • Dilewati sibuk: {captureState?.skippedBusyTicks ?? 0} • Backstop idle:
-				{SERVER_IDLE_TIMEOUT_SECONDS} dtk
-			</span>
-		</div>
-	</section>
 
 	<!-- Control Bar: Project & Zone Selection + Start/Stop -->
 	<section class="control-card" aria-labelledby="session-control-heading">
-		<h2 id="session-control-heading" class="sr-only">Kontrol Sesi Monitoring</h2>
+		<h2 id="session-control-heading" class="sr-only">Kontrol Sesi inspeksi</h2>
 
 		{#if lookupError}
 			<p class="lookup-error" role="alert">{lookupError}</p>
@@ -759,7 +678,7 @@
 			}}
 		>
 			<div class="field-group">
-				<label for="monitoring-project-select">Proyek Aktif</label>
+				<label for="monitoring-project-select">Proyek</label>
 				<select
 					id="monitoring-project-select"
 					value={selectedProjectId}
@@ -780,7 +699,7 @@
 			</div>
 
 			<div class="field-group">
-				<label for="monitoring-zone-select">Zona Inspeksi Aktif</label>
+				<label for="monitoring-zone-select">Zona</label>
 				<select
 					id="monitoring-zone-select"
 					bind:value={selectedZoneId}
@@ -789,9 +708,7 @@
 				>
 					{#if zones.length === 0}
 						<option value={0}>
-							{loadingZones
-								? 'Memuat daftar zona...'
-								: 'Belum ada zona aktif pada proyek ini'}
+							{loadingZones ? 'Memuat daftar zona...' : 'Belum ada zona aktif pada proyek ini'}
 						</option>
 					{:else}
 						{#each zones as z (z.id)}
@@ -810,11 +727,11 @@
 						disabled={!canStartMonitoring}
 					>
 						{#if startingSession}
-							Meminta Kamera & Memulai...
+							Menyalakan kamera...
 						{:else if effectiveSystemStatus?.mode === 'manual'}
 							Buat Sesi Manual
 						{:else}
-							Mulai Monitoring
+							Mulai inspeksi
 						{/if}
 					</button>
 				{:else}
@@ -825,17 +742,16 @@
 						onclick={() => void stopMonitoringSession('user_stop', false)}
 						disabled={stoppingSession}
 					>
-						{stoppingSession ? 'Menghentikan...' : 'Hentikan Monitoring'}
+						{stoppingSession ? 'Menghentikan...' : 'Akhiri inspeksi'}
 					</button>
 				{/if}
 			</div>
 		</form>
 
-		<p class="control-footnote">
-			Izin kamera diminta setelah Anda menekan tombol mulai (hanya video
-			<code>audio: {String(DEFAULT_CAMERA_CONSTRAINTS.audio)}</code>). Mengganti proyek, zona,
-			atau kamera memerlukan penghentian sesi aktif terlebih dahulu.
-		</p>
+		<p class="control-footnote">Kamera tanpa audio. Akhiri inspeksi sebelum mengganti lokasi.</p>
+		{#if !loadingProjects && projects.length === 0}<a class="setup-link" href="/projects"
+				>Tambah proyek dan zona dulu <Icon name="arrow" size={14} /></a
+			>{/if}
 	</section>
 
 	<!-- Two-column Main Monitoring Grid: Left (Live Preview + Snapshot Overlay), Right (Recent Captures + Session History) -->
@@ -845,16 +761,18 @@
 			<section class="preview-card" aria-labelledby="live-preview-heading">
 				<div class="preview-header">
 					<div>
-						<h2 id="live-preview-heading">Pratinjau Video Browser (Live)</h2>
+						<h2 id="live-preview-heading">Kamera langsung</h2>
 						<p class="preview-sub">
-							Aliran langsung dari kamera tanpa kotak overlay tertunda. Hanya foto saat event
-							terkonfirmasi yang disimpan ke server.
+							Kotak deteksi ada di foto hasil deteksi, bukan video langsung.
 						</p>
 					</div>
 
-					<label class="mirror-toggle">
+					<label
+						class="mirror-toggle"
+						title="Hanya mengubah pratinjau; foto bukti asli tetap sama."
+					>
 						<input type="checkbox" bind:checked={mirrorPreview} />
-						<span>Cerminkan Pratinjau (Tidak Mengubah Bukti JPEG)</span>
+						<span>Cerminkan video</span>
 					</label>
 				</div>
 
@@ -871,10 +789,10 @@
 
 					{#if !isSessionActive}
 						<div class="video-placeholder">
-							<p class="placeholder-title">Kamera Tidak Aktif</p>
+							<Icon name="camera" size={34} />
+							<p class="placeholder-title">Kamera belum menyala</p>
 							<p class="placeholder-desc">
-								Pilih proyek serta zona aktif, lalu klik <strong>Mulai Monitoring</strong> untuk
-								mengaktifkan webcam.
+								Pilih proyek dan zona, lalu tekan <strong>Mulai inspeksi</strong>.
 							</p>
 						</div>
 					{/if}
@@ -882,12 +800,19 @@
 
 				<div class="preview-status-bar">
 					<span class="status-indicator" data-active={isSessionActive}>
-						{isSessionActive ? 'Kamera Aktif (1 FPS JPEG)' : 'Kamera Dilepaskan'}
+						{isSessionActive ? 'Kamera menyala' : 'Kamera mati'}
 					</span>
 					{#if activeSession}
 						<span class="session-chip" data-testid="active-session-badge">
-							Sesi #{activeSession.id} • Status: <strong>{activeSession.status}</strong> •
-							Sequence terkirim: <strong>{captureState?.sequence ?? 0}</strong>
+							Sesi #{activeSession.id} ·
+							<strong
+								>{activeSession.status === 'active'
+									? 'Berjalan'
+									: activeSession.status === 'stopped'
+										? 'Selesai'
+										: 'Terhenti'}</strong
+							>
+							· Foto terkirim: <strong>{captureState?.sequence ?? 0}</strong>
 						</span>
 					{/if}
 				</div>
@@ -906,27 +831,26 @@
 			<!-- Captured Events & Evidence Links -->
 			<section class="captures-card" aria-labelledby="captures-heading">
 				<div class="captures-header">
-					<h2 id="captures-heading">Capture Temuan Terbaru</h2>
+					<h2 id="captures-heading">Temuan sesi ini</h2>
 					<span class="count-pill" data-testid="captured-events-count">
 						{capturedEvents.length} temuan
 					</span>
 				</div>
-				<p class="captures-sub">
-					Temuan dibuat otomatis oleh Go ketika aturan konfirmasi temporal (minimal 2 positif
-					dari 3 frame valid dalam 2 detik) terpenuhi. Status awal selalu
-					<code>pending</code> hingga diverifikasi petugas.
-				</p>
+				<p class="captures-sub">Periksa foto sebelum mengonfirmasi temuan.</p>
 
 				{#if capturedEvents.length === 0}
 					<div class="empty-captures" data-testid="empty-captures-state">
-						<p>Belum ada event temuan yang terekam pada sesi ini.</p>
+						<p>Belum ada temuan di sesi ini.</p>
 					</div>
 				{:else}
 					<ul class="capture-list" data-testid="captured-events-list">
 						{#each capturedEvents as item (item.findingId)}
 							{@const thumb = thumbStates[item.findingId]}
 							<li class="capture-item" data-testid={`captured-finding-${item.findingId}`}>
-								<div class="capture-thumb-wrap" data-testid={`capture-thumb-wrap-${item.findingId}`}>
+								<div
+									class="capture-thumb-wrap"
+									data-testid={`capture-thumb-wrap-${item.findingId}`}
+								>
 									{#if !thumb || thumb.state === 'loading'}
 										<div
 											class="capture-thumb-status"
@@ -941,11 +865,11 @@
 											data-error-code={thumb.code}
 										>
 											{#if thumb.isMissingEvidence}
-												Bukti hilang (410 EVIDENCE_MISSING)
+												Foto bukti tidak ditemukan
 											{:else if thumb.isUnauthorized}
-												Sesi berakhir (401)
+												Sesi berakhir
 											{:else if thumb.isForbidden}
-												Akses ditolak (403)
+												Akses ditolak
 											{:else}
 												{thumb.message}
 											{/if}
@@ -964,7 +888,7 @@
 									<div class="capture-top-row">
 										<strong>Temuan #{item.findingId}</strong>
 										<span class="verif-badge" data-status={item.verificationStatus}>
-											Menunggu Verifikasi ({item.verificationStatus})
+											Belum diperiksa
 										</span>
 									</div>
 									<p class="capture-meta">
@@ -972,7 +896,7 @@
 										kategori &amp; track tersedia pada halaman temuan
 									</p>
 									<p class="capture-time">
-										Waktu capture: {formatJakartaTime(item.capturedAtUtc)}
+										Diambil: {formatJakartaTime(item.capturedAtUtc)}
 									</p>
 									<div class="capture-links">
 										<a
@@ -988,7 +912,7 @@
 											rel="noopener noreferrer"
 											class="evidence-link"
 										>
-											Lihat Foto Bukti Asli
+											Lihat foto asli
 										</a>
 									</div>
 								</div>
@@ -1001,7 +925,7 @@
 			<!-- Recent Monitoring Sessions -->
 			<section class="sessions-card" aria-labelledby="sessions-history-heading">
 				<div class="captures-header">
-					<h2 id="sessions-history-heading">Riwayat Sesi Monitoring</h2>
+					<h2 id="sessions-history-heading">Riwayat inspeksi</h2>
 					{#if loadingSessions}
 						<span class="loading-tag">Memuat...</span>
 					{/if}
@@ -1016,14 +940,32 @@
 								<div class="sess-row">
 									<strong>Sesi #{sess.id}</strong>
 									<span class="sess-status-pill" data-status={sess.status}>
-										{sess.status}
+										{sess.status === 'active'
+											? 'Berjalan'
+											: sess.status === 'stopped'
+												? 'Selesai'
+												: 'Terhenti'}
 									</span>
 								</div>
 								<p class="sess-meta">
-									Mode: <strong>{sess.mode.toUpperCase()}</strong> • Sumber:
-									<code>{sess.source}</code>
+									Mode: <strong
+										>{sess.mode === 'real'
+											? 'NYATA'
+											: sess.mode === 'simulated'
+												? 'SIMULASI'
+												: 'MANUAL'}</strong
+									>
+									· {sess.source === 'browser_webcam' ? 'Kamera' : 'Foto manual'}
 									{#if sess.end_reason}
-										• Alasan selesai: <code>{sess.end_reason}</code>
+										· {(
+											{
+												user_stop: 'Dihentikan petugas',
+												page_hidden: 'Tab ditinggalkan',
+												idle_timeout: 'Tidak ada foto baru',
+												tracker_reset: 'Layanan deteksi dimulai ulang',
+												server_restart: 'Server dimulai ulang'
+											} as Record<string, string>
+										)[sess.end_reason] ?? 'Inspeksi terhenti'}
 									{/if}
 								</p>
 								<p class="sess-time">
@@ -1036,9 +978,100 @@
 			</section>
 		</aside>
 	</div>
+	<details class="monitoring-details">
+		<summary>Detail deteksi & pengiriman</summary>
+		<section class="readiness-strip" aria-label="Status kesiapan model dan cakupan APD">
+			<div class="stat-box">
+				<span class="stat-label">Mode deteksi</span>
+				<strong class="stat-value" data-testid="monitoring-mode-value">{modeLabel}</strong>
+			</div>
+
+			<div class="stat-box">
+				<span class="stat-label">Status model</span>
+				<strong
+					class="stat-value"
+					data-ready={effectiveSystemStatus?.ai_ready ?? false}
+					data-testid="monitoring-readiness-value"
+				>
+					{#if loadingSystemStatus && !effectiveSystemStatus}
+						Memeriksa...
+					{:else if systemStatusError && !effectiveSystemStatus}
+						Gagal Memuat Status
+					{:else if effectiveSystemStatus?.ai_ready}
+						Siap ({effectiveSystemStatus.model_version ?? 'Mode Manual'})
+					{:else}
+						Belum Siap ({effectiveSystemStatus?.model_version ?? 'Model tidak aktif'})
+					{/if}
+				</strong>
+			</div>
+
+			<div class="stat-box">
+				<span class="stat-label">Kategori deteksi</span>
+				<div class="category-pills" data-testid="supported-categories-list">
+					<span
+						class="cat-pill"
+						data-supported={isHelmetSupported}
+						data-testid="category-no-helmet"
+					>
+						NO_HELMET: {isHelmetSupported ? 'Didukung' : 'Tidak Aktif'}
+					</span>
+					<span class="cat-pill" data-supported={isVestSupported} data-testid="category-no-vest">
+						NO_VEST: {isVestSupported ? 'Didukung' : 'Tidak Aktif'}
+					</span>
+				</div>
+			</div>
+
+			<div class="stat-box">
+				<span class="stat-label">Pengiriman gambar</span>
+				<strong class="stat-value" data-testid="sampling-metrics-value">
+					Target {activeSession?.config?.sample_fps ?? TARGET_SAMPLE_FPS} FPS • Efektif
+					{(captureState?.effectiveFps ?? 0).toFixed(2).replace('.', ',')} FPS
+				</strong>
+				<span class="stat-note">
+					Foto dilewati: {captureState?.skippedBusyTicks ?? 0} • Batas jeda:
+					{SERVER_IDLE_TIMEOUT_SECONDS} dtk
+				</span>
+			</div>
+			<p class="transport-detail">
+				Ukuran kiriman: {MAX_JPEG_WIDTH} x {MAX_JPEG_HEIGHT} piksel. Kualitas JPEG: {JPEG_QUALITY}.
+				Audio: {String(DEFAULT_CAMERA_CONSTRAINTS.audio)}.
+			</p>
+		</section>
+	</details>
 </div>
 
 <style>
+	.monitoring-details {
+		border-top: 1px solid var(--border-default);
+		padding-top: 1rem;
+		color: var(--ink-secondary);
+		font-size: 0.8rem;
+	}
+	.monitoring-details summary {
+		width: fit-content;
+		padding-block: 0.3rem;
+	}
+	.monitoring-details[open] .readiness-strip {
+		margin-top: 1rem;
+	}
+	.transport-detail {
+		grid-column: 1 / -1;
+		font-size: 0.73rem;
+		margin: 0.5rem 0 0;
+	}
+	.setup-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.8rem;
+		margin-top: 0.65rem;
+		text-decoration: none;
+	}
+	.video-placeholder > :global(svg) {
+		color: #a5bfce;
+		margin-bottom: 1rem;
+	}
+
 	.monitoring-workspace {
 		display: flex;
 		flex-direction: column;
@@ -1067,23 +1100,9 @@
 		gap: 1rem;
 	}
 
-	.eyebrow {
-		margin: 0 0 0.25rem 0;
-		font-size: 0.75rem;
-		font-weight: 700;
-		letter-spacing: 0.06em;
-		color: var(--accent-primary, #9a3412);
-	}
-
 	.workspace-header h1 {
 		margin: 0 0 0.35rem 0;
 		font-size: 1.5rem;
-	}
-
-	.subtitle {
-		margin: 0;
-		font-size: 0.9rem;
-		color: var(--ink-secondary, #4a453d);
 	}
 
 	.provenance-banner {
@@ -1109,7 +1128,7 @@
 		background: var(--status-warn-bg, #fffbeb);
 		border: 1px solid var(--status-warn-border, #fcd34d);
 		color: var(--status-warn-ink, #92400e);
-		border-radius: 10px;
+		border-radius: 12px;
 		padding: 1rem 1.125rem;
 	}
 
@@ -1128,7 +1147,7 @@
 		background: var(--status-err-bg, #fef2f2);
 		border: 1px solid var(--status-err-border, #fca5a5);
 		color: var(--status-err-ink, #991b1b);
-		border-radius: 10px;
+		border-radius: 12px;
 		padding: 1rem 1.125rem;
 	}
 
@@ -1145,14 +1164,6 @@
 		margin: 0;
 		font-size: 1rem;
 		color: var(--status-err-ink, #991b1b);
-	}
-
-	.error-code-badge {
-		font-size: 0.75rem;
-		font-weight: 700;
-		padding: 0.15rem 0.5rem;
-		border-radius: 4px;
-		background: rgba(153, 27, 27, 0.1);
 	}
 
 	.error-msg {
@@ -1190,13 +1201,10 @@
 	}
 
 	.stat-box {
-		background: var(--bg-surface, #ffffff);
-		border: 1px solid var(--border-default, #dcd7cb);
-		border-radius: 8px;
-		padding: 0.75rem 0.9rem;
+		padding: 0.5rem 0.75rem;
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
+		gap: 0.35rem;
 		min-width: 0;
 	}
 
@@ -1204,8 +1212,8 @@
 		font-size: 0.75rem;
 		font-weight: 600;
 		color: var(--ink-muted, #655e53);
-		text-transform: uppercase;
-		letter-spacing: 0.03em;
+		text-transform: none;
+		letter-spacing: 0;
 	}
 
 	.stat-value {
@@ -1252,7 +1260,7 @@
 	.control-card {
 		background: var(--bg-surface, #ffffff);
 		border: 1px solid var(--border-strong, #c9c3b6);
-		border-radius: 10px;
+		border-radius: 12px;
 		padding: 1rem 1.125rem;
 		min-width: 0;
 	}
@@ -1368,7 +1376,7 @@
 	.sessions-card {
 		background: var(--bg-surface, #ffffff);
 		border: 1px solid var(--border-default, #dcd7cb);
-		border-radius: 10px;
+		border-radius: 12px;
 		padding: 1.125rem;
 		min-width: 0;
 	}
@@ -1399,22 +1407,18 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 0.4rem;
-		min-height: 2.75rem;
-		font-size: 0.78rem;
-		font-weight: 600;
+		min-height: 40px;
+		font-size: 0.73rem;
+		color: var(--ink-secondary);
 		cursor: pointer;
-		padding: 0.35rem 0.65rem;
-		border-radius: 6px;
-		background: var(--bg-subtle, #ece9e1);
-		border: 1px solid var(--border-strong, #c9c3b6);
 	}
 
 	.video-container {
 		position: relative;
 		width: 100%;
-		max-width: 640px;
+		max-width: 100%;
 		aspect-ratio: 4 / 3;
-		background: #141311;
+		background: #172e3b;
 		border-radius: 8px;
 		overflow: hidden;
 		border: 1px solid var(--border-strong, #c9c3b6);
@@ -1440,8 +1444,8 @@
 		justify-content: center;
 		padding: 1.5rem;
 		text-align: center;
-		background: rgba(20, 19, 17, 0.88);
-		color: #f5f3ee;
+		background: #172e3b;
+		color: #edf4f8;
 	}
 
 	.placeholder-title {
@@ -1453,7 +1457,7 @@
 	.placeholder-desc {
 		margin: 0;
 		font-size: 0.85rem;
-		color: #d6d1c7;
+		color: #c3d3dc;
 	}
 
 	.preview-status-bar {
@@ -1493,9 +1497,9 @@
 		font-weight: 700;
 		padding: 0.15rem 0.5rem;
 		border-radius: 999px;
-		background: var(--accent-surface, #ffedd5);
-		color: var(--accent-primary, #9a3412);
-		border: 1px solid var(--accent-border, #fdba74);
+		background: var(--bg-subtle);
+		color: var(--ink-secondary);
+		border: 0;
 	}
 
 	.empty-captures,
@@ -1504,7 +1508,7 @@
 		padding: 1rem;
 		border-radius: 7px;
 		background: var(--bg-canvas, #f5f3ee);
-		border: 1px dashed var(--border-strong, #c9c3b6);
+		border: 0;
 		font-size: 0.85rem;
 		color: var(--ink-secondary, #4a453d);
 	}
@@ -1539,7 +1543,7 @@
 		height: 84px;
 		border-radius: 6px;
 		overflow: hidden;
-		background: #141311;
+		background: #172e3b;
 		border: 1px solid var(--border-strong, #c9c3b6);
 	}
 
@@ -1690,7 +1694,13 @@
 		}
 
 		.mirror-toggle {
-			width: 100%;
+			display: inline-flex;
+			align-items: center;
+			gap: 0.4rem;
+			min-height: 40px;
+			font-size: 0.73rem;
+			color: var(--ink-secondary);
+			cursor: pointer;
 		}
 
 		.video-placeholder {

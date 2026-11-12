@@ -16,8 +16,7 @@ const TEST_USERNAME = process.env.TEST_SEED_USERNAME ?? 'petugas';
 const TEST_PASSWORD = process.env.TEST_SEED_PASSWORD ?? 'K3-Disp0sable-Test-Pass!2026';
 
 const DEFAULT_CAPTURE_DIR =
-	process.env.TEST_ACCEPTANCE_CAPTURE_DIR ??
-	path.join(frontendDir, 'test-results', 'acceptance');
+	process.env.TEST_ACCEPTANCE_CAPTURE_DIR ?? path.join(frontendDir, 'test-results', 'acceptance');
 
 interface ReceivedAiFrame {
 	sessionKey: string;
@@ -71,11 +70,7 @@ function readJpegDimensions(buf: Buffer): { width: number; height: number } {
 		if (segLen < 2 || offset + segLen > buf.length) break;
 
 		const isSof =
-			marker >= 0xc0 &&
-			marker <= 0xcf &&
-			marker !== 0xc4 &&
-			marker !== 0xc8 &&
-			marker !== 0xcc;
+			marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc;
 		if (isSof && offset + 7 <= buf.length) {
 			const height = buf.readUInt16BE(offset + 3);
 			const width = buf.readUInt16BE(offset + 5);
@@ -249,10 +244,12 @@ async function startDisposableJourneyStack(options: {
 
 		if (
 			req.method === 'POST' &&
-			(url.startsWith('/internal/v1/sessions/start') ||
-				url.startsWith('/internal/v1/tracks/reset'))
+			(url.startsWith('/internal/v1/sessions/start') || url.startsWith('/internal/v1/tracks/reset'))
 		) {
-			const parsed = rawBody.length > 0 ? (JSON.parse(rawBody.toString('utf8')) as { session_key?: string }) : {};
+			const parsed =
+				rawBody.length > 0
+					? (JSON.parse(rawBody.toString('utf8')) as { session_key?: string })
+					: {};
 			const sessionKey = parsed.session_key ?? 'unknown';
 			startedSessionKeys.push(sessionKey);
 			res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -261,7 +258,10 @@ async function startDisposableJourneyStack(options: {
 		}
 
 		if (req.method === 'POST' && url.startsWith('/internal/v1/sessions/stop')) {
-			const parsed = rawBody.length > 0 ? (JSON.parse(rawBody.toString('utf8')) as { session_key?: string }) : {};
+			const parsed =
+				rawBody.length > 0
+					? (JSON.parse(rawBody.toString('utf8')) as { session_key?: string })
+					: {};
 			const sessionKey = parsed.session_key ?? 'unknown';
 			stoppedSessionKeys.push(sessionKey);
 			res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -287,9 +287,7 @@ async function startDisposableJourneyStack(options: {
 			const sampleElapsedMs = Number(formData.get('sample_elapsed_ms') ?? '0');
 			const reportedSha256 = String(formData.get('sha256') ?? '').toLowerCase();
 			const frameFile = formData.get('frame') as File | null;
-			const jpegBytes = frameFile
-				? Buffer.from(await frameFile.arrayBuffer())
-				: Buffer.alloc(0);
+			const jpegBytes = frameFile ? Buffer.from(await frameFile.arrayBuffer()) : Buffer.alloc(0);
 			const computedSha256 = crypto.createHash('sha256').update(jpegBytes).digest('hex');
 
 			if (computedSha256 !== reportedSha256) {
@@ -379,10 +377,7 @@ async function startDisposableJourneyStack(options: {
 	const seedBin = path.join(tempRoot, `seed${exeExt}`);
 	const apiBin = path.join(tempRoot, `api${exeExt}`);
 
-	const migrationSql = fs.readFileSync(
-		path.join(backendDir, 'migrations', '001_init.sql'),
-		'utf8'
-	);
+	const migrationSql = fs.readFileSync(path.join(backendDir, 'migrations', '001_init.sql'), 'utf8');
 	const [upSql] = migrationSql.split('-- migrate:down');
 	const db = new DatabaseSync(dbPath);
 	db.exec(upSql);
@@ -577,10 +572,10 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 		// 1. Login through real browser UI
 		await page.goto(`${stack.baseUrl}/`);
 		await expect(page).toHaveURL(/\/login$/);
-		await expect(page.getByRole('heading', { name: /Masuk Petugas K3/i })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /Masuk/i })).toBeVisible();
 
-		await page.getByLabel(/Username/i).fill(TEST_USERNAME);
-		await page.getByLabel(/Password/i).fill(TEST_PASSWORD);
+		await page.getByLabel('Nama pengguna', { exact: true }).fill(TEST_USERNAME);
+		await page.getByLabel('Kata sandi', { exact: true }).fill(TEST_PASSWORD);
 		await page.getByRole('button', { name: /Masuk/i }).click();
 
 		await expect(page).toHaveURL(/\/$/);
@@ -592,11 +587,13 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 		const primaryNav = page.getByRole('navigation', { name: /Navigasi utama/i });
 		await primaryNav.getByRole('link', { name: /Proyek & Zona/i }).click();
 		await expect(page).toHaveURL(/\/projects$/);
-		await expect(page.getByRole('heading', { name: /Manajemen Proyek & Zona/i })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /Proyek & zona/i })).toBeVisible();
 
 		const projectName = 'Proyek Gedung Utama P0-07';
 		const zoneName = 'Zona Perancah Lantai 3';
 
+		if (!(await page.getByLabel(/^Nama Proyek/i).isVisible()))
+			await page.locator('summary.create-trigger').click();
 		await page.getByLabel(/^Nama Proyek/i).fill(projectName);
 		await page.getByLabel(/Lokasi/i).fill('Malang');
 		await page
@@ -607,7 +604,7 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 		const projectCard = page.locator('[data-testid="project-item"]', { hasText: projectName });
 		await expect(projectCard).toBeVisible();
 
-		await projectCard.getByRole('link', { name: /Kelola Zona|Detail/i }).click();
+		await projectCard.getByRole('link', { name: /Buka proyek/i }).click();
 		await expect(page).toHaveURL(/\/projects\/1$/);
 		await expect(page.getByRole('heading', { name: projectName })).toBeVisible();
 
@@ -622,12 +619,10 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 		//    send real JPEG frames through Go to external AI fixture, and wait for Go 2-of-3 temporal findings
 		await primaryNav.getByRole('link', { name: /Monitoring/i }).click();
 		await expect(page).toHaveURL(/\/monitoring$/);
-		await expect(
-			page.getByRole('heading', { name: /Monitoring Kamera & Sesi Inspeksi/i })
-		).toBeVisible();
+		await expect(page.getByRole('heading', { name: /Monitoring/i })).toBeVisible();
 
-		const projectSelect = page.getByLabel(/Proyek Aktif/i);
-		const zoneSelect = page.getByLabel(/Zona Inspeksi Aktif/i);
+		const projectSelect = page.getByLabel(/Proyek/i);
+		const zoneSelect = page.getByLabel(/Zona/i);
 		await expect(projectSelect).toContainText(projectName);
 		await expect(zoneSelect).toContainText(zoneName);
 
@@ -665,7 +660,9 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 		// Verify separate inferred snapshot overlay vs live video preview (zero bbox on live video)
 		await expect(page.getByTestId('inference-snapshot-stage')).toBeVisible();
 		await expect(page.getByTestId('snapshot-overlay-layer')).toBeVisible();
-		await expect(page.locator('[data-testid="snapshot-overlay-layer"] .person-bbox')).toHaveCount(2);
+		await expect(page.locator('[data-testid="snapshot-overlay-layer"] .person-bbox')).toHaveCount(
+			2
+		);
 		await expect(page.locator('[data-testid="snapshot-overlay-layer"] .obs-bbox')).toHaveCount(2);
 		const liveVideoOverlayCount = await page
 			.locator('.video-container .bbox, .video-container .overlay-layer')
@@ -699,8 +696,8 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 		await page.getByTestId('stop-monitoring-btn').click();
 		await expect(page.getByTestId('start-monitoring-btn')).toBeVisible();
 		await expect(page.getByTestId('monitoring-status-banner')).toContainText(/dihentikan/i);
-		await expect(page.getByTestId('session-history-list')).toContainText('stopped');
-		await expect(page.getByTestId('session-history-list')).toContainText('user_stop');
+		await expect(page.getByTestId('session-history-list')).toContainText('Selesai');
+		await expect(page.getByTestId('session-history-list')).toContainText('Dihentikan petugas');
 
 		const tracksStoppedAfterStop = await page.evaluate(() => {
 			const w = window as unknown as { __fakeTracksStopped: number };
@@ -767,44 +764,48 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 		// 5. Navigate via the Monitoring finding link to /findings/1, review/correct, and record follow-up
 		await page.getByTestId('open-finding-link-1').click();
 		await expect(page).toHaveURL(/\/findings\/1$/);
-		await expect(page.getByRole('heading', { name: /Detail Temuan #1/i })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /Temuan #1/i })).toBeVisible();
 
 		await expect(page.getByTestId('finding-evidence-img')).toBeVisible();
 		await expect(page.getByTestId('finding-bbox-overlay')).toBeVisible();
-		await expect(page.getByTestId('immutable-detected-violation')).toContainText('NO_HELMET');
+		await expect(page.getByTestId('immutable-detected-violation')).toContainText(
+			'Indikasi tanpa helm'
+		);
 		await expect(page.getByTestId('temporary-track-reference')).toContainText('101:1');
 		await expect(page.getByTestId('temporary-track-reference')).toContainText(
 			/bukan identitas pekerja/i
 		);
 
 		// Keyboard focus & dialog behavior on evidence preview modal
-		const zoomBtn = page.getByRole('button', { name: /Perbesar Bukti/i });
+		const zoomBtn = page.getByRole('button', { name: /Perbesar foto/i });
 		await zoomBtn.focus();
 		await page.keyboard.press('Enter');
-		const previewDialog = page.getByRole('dialog', { name: /Pratinjau Penuh Foto Bukti/i });
+		const previewDialog = page.getByRole('dialog', { name: /Foto bukti/i });
 		await expect(previewDialog).toBeVisible();
 		await page.keyboard.press('Escape');
 		await expect(previewDialog).toBeHidden();
 
 		// Confirm Finding #1 first (version 1 -> 2)
 		await page
-			.getByLabel(/Catatan Verifikasi/i)
+			.getByLabel(/Catatan pemeriksaan/i)
 			.fill('Terverifikasi pekerja pada perancah lantai 3 tidak mengenakan helm.');
 		await page.getByRole('button', { name: /Konfirmasi Temuan/i }).click();
 		await expect(page.getByTestId('verification-status-badge')).toContainText(/Terkonfirmasi/i);
 		await expect(page.getByTestId('finding-version-badge')).toContainText('Versi #2');
 
 		// Officer correction before report approval: update final category to NO_VEST while model indication stays NO_HELMET (version 2 -> 3)
-		await page.getByLabel(/Jenis Hasil Petugas/i).selectOption('NO_VEST');
+		await page.getByLabel(/Kategori hasil pemeriksaan/i).selectOption('NO_VEST');
 		await page
-			.getByLabel(/Catatan Verifikasi/i)
+			.getByLabel(/Catatan pemeriksaan/i)
 			.fill(
 				'Koreksi petugas sebelum laporan: helm tertutup bayangan namun rompi reflektif belum dikancingkan.'
 			);
-		await page.getByRole('button', { name: /Simpan Kategori \/ Catatan Saja/i }).click();
+		await page.getByRole('button', { name: /Simpan kategori dan catatan/i }).click();
 		await expect(page.getByTestId('finding-version-badge')).toContainText('Versi #3');
-		await expect(page.getByTestId('immutable-detected-violation')).toContainText('NO_HELMET');
-		await expect(page.getByTestId('final-violation-type')).toContainText('NO_VEST');
+		await expect(page.getByTestId('immutable-detected-violation')).toContainText(
+			'Indikasi tanpa helm'
+		);
+		await expect(page.getByTestId('final-violation-type')).toContainText('Indikasi tanpa rompi');
 
 		// Record follow-up on Confirmed Finding #1: mark completed with required notes (version 3 -> 4)
 		await page.getByLabel(/Status Tindak Lanjut/i).selectOption('completed');
@@ -837,7 +838,7 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 		await page.getByRole('link', { name: /Buka Temuan #2/i }).click();
 		await expect(page).toHaveURL(/\/findings\/2$/);
 		await page
-			.getByLabel(/Catatan Verifikasi/i)
+			.getByLabel(/Catatan pemeriksaan/i)
 			.fill('Ditolak petugas: pekerja sedang berada di luar batas area wajib rompi.');
 		await page.getByRole('button', { name: /Tolak Temuan/i }).click();
 		await expect(page.getByTestId('verification-status-badge')).toContainText(/Ditolak/i);
@@ -847,21 +848,25 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 		//    edit title & narrative, human-acknowledge review, approve, and verify source/report lock
 		await primaryNav.getByRole('link', { name: /Laporan/i }).click();
 		await expect(page).toHaveURL(/\/reports$/);
-		await expect(page.getByRole('heading', { name: /Laporan Inspeksi K3/i })).toBeVisible();
+		await expect(page.getByRole('heading', { name: /^Laporan$/i })).toBeVisible();
 
+		if (!(await page.getByTestId('create-session-select').isVisible()))
+			await page.locator('summary.create-trigger').click();
 		await page.getByTestId('create-session-select').selectOption('1');
 		await expect(page.getByTestId('session-eligibility-status')).toHaveAttribute(
 			'data-eligible',
 			'true'
 		);
 
-		await page.getByRole('radio', { name: /Draft Template Terstruktur/i }).check();
+		if (!(await page.getByTestId('create-session-select').isVisible()))
+			await page.locator('summary.create-trigger').click();
+		await page.getByRole('radio', { name: /Gunakan templat/i }).check();
 		await page.getByTestId('submit-create-template').click();
 
 		await expect(page).toHaveURL(/\/reports\/1$/);
-		await expect(page.getByTestId('report-status-badge')).toContainText(/Draft/i);
+		await expect(page.getByTestId('report-status-badge')).toContainText(/Draf/i);
 		await expect(page.getByTestId('report-provenance-badge')).toContainText(
-			/Provenance: TEMPLATE/i
+			/Dibuat dengan: TEMPLATE/i
 		);
 		await expect(page.getByTestId('report-fresh-badge')).toBeVisible();
 		await expect(page.getByTestId('report-version-badge')).toContainText('Versi #1');
@@ -877,7 +882,7 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 		const approvedContent =
 			'Proyek: Proyek Gedung Utama P0-07\nZona: Zona Perancah Lantai 3\n\nRingkasan: 1 temuan terkonfirmasi [F-1] telah ditindaklanjuti selesai di lapangan.';
 		await page.getByLabel(/Judul Laporan/i).fill(approvedTitle);
-		await page.getByLabel(/^Isi Narasi Laporan/i).fill(approvedContent);
+		await page.getByLabel(/^Isi laporan/i).fill(approvedContent);
 		await page.getByTestId('save-report-narrative-btn').click();
 		await expect(page.getByTestId('report-version-badge')).toContainText('Versi #2');
 
@@ -909,36 +914,36 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 		await page.getByTestId('snapshot-finding-link-1').click();
 		await expect(page).toHaveURL(/\/findings\/1$/);
 		await page
-			.getByLabel(/Catatan Verifikasi/i)
+			.getByLabel(/Catatan pemeriksaan/i)
 			.fill('Percobaan mengubah temuan setelah laporan disetujui');
-		await page.getByRole('button', { name: /Simpan Kategori \/ Catatan Saja/i }).click();
+		await page.getByRole('button', { name: /Simpan kategori dan catatan/i }).click();
 		await expect(page.getByTestId('finding-mutation-error')).toHaveAttribute(
 			'data-error-code',
 			'REPORT_LOCKED'
 		);
 		await expect(page.getByTestId('approved-report-lock-banner')).toBeVisible();
 
-		// 7. Navigate to Dashboard ('/') and verify mode separation (real = 0, simulated = 1 session, 1 confirmed, 1 rejected, 0 open actions)
-		await primaryNav.getByRole('link', { name: /^Dashboard$/i }).click();
+		// 7. Navigate to Beranda ('/') and verify mode separation (real = 0, simulated = 1 session, 1 confirmed, 1 rejected, 0 open actions)
+		await primaryNav.getByRole('link', { name: /^Beranda$/i }).click();
 		await expect(page).toHaveURL(/\/$/);
 
 		// Default mode is 'real' -> simulated session & findings must NOT appear in real totals
-		await expect(page.getByLabel(/Mode Data/i)).toHaveValue('real');
+		await expect(page.getByLabel(/Jenis data/i)).toHaveValue('real');
 		await expect(page.getByTestId('metric-sessions')).toHaveText('0');
 		await expect(page.getByTestId('metric-findings-pending')).toHaveText('0');
 		await expect(page.getByTestId('metric-findings-confirmed')).toHaveText('0');
 		await expect(page.getByTestId('metric-findings-rejected')).toHaveText('0');
 		await expect(page.getByTestId('metric-actions-open')).toHaveText('0');
 
-		// Switch Mode Data to 'simulated' -> shows exact persisted simulated totals
-		await page.getByLabel(/Mode Data/i).selectOption('simulated');
+		// Switch Jenis data to 'simulated' -> shows exact persisted simulated totals
+		await page.getByLabel(/Jenis data/i).selectOption('simulated');
 		await expect(page.getByTestId('metric-sessions')).toHaveText('1');
 		await expect(page.getByTestId('metric-findings-pending')).toHaveText('0');
 		await expect(page.getByTestId('metric-findings-confirmed')).toHaveText('1');
 		await expect(page.getByTestId('metric-findings-rejected')).toHaveText('1');
 		await expect(page.getByTestId('metric-actions-open')).toHaveText('0');
 
-		// Capture Dashboard screenshots at 1280x800 and 390x844
+		// Capture Beranda screenshots at 1280x800 and 390x844
 		await assertNoHorizontalOverflow(page, 'dashboard-1280x800');
 		await page.screenshot({
 			path: path.join(DEFAULT_CAPTURE_DIR, 'dashboard-1280x800.png'),
@@ -960,7 +965,7 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 		await expect(page).toHaveURL(/\/$/);
 		await expect(page.getByTestId('officer-identity')).toContainText('Petugas: Anisa');
 
-		await page.getByLabel(/Mode Data/i).selectOption('simulated');
+		await page.getByLabel(/Jenis data/i).selectOption('simulated');
 		await expect(page.getByTestId('metric-sessions')).toHaveText('1');
 		await expect(page.getByTestId('metric-findings-confirmed')).toHaveText('1');
 		await expect(page.getByTestId('metric-findings-rejected')).toHaveText('1');
@@ -990,7 +995,10 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 		await primaryNav.getByRole('link', { name: /Laporan/i }).click();
 		await expect(page).toHaveURL(/\/reports$/);
 		await expect(page.getByTestId('reports-total-count')).toHaveText('1');
-		await page.getByTestId('report-card-1').getByRole('link', { name: /Buka Laporan/i }).click();
+		await page
+			.getByTestId('report-card-1')
+			.getByRole('link', { name: /Buka Laporan/i })
+			.click();
 		await expect(page).toHaveURL(/\/reports\/1$/);
 		await expect(page.getByTestId('report-status-badge')).toContainText(/Disetujui/i);
 		await expect(page.getByTestId('approved-report-title')).toHaveText(approvedTitle);
@@ -1025,7 +1033,12 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 	}) => {
 		test.setTimeout(120_000);
 		const capturePhase = process.env.TEST_PHONE_CAPTURE_PHASE ?? 'after';
-		const phoneCaptureDir = path.join(frontendDir, 'test-results', 'phone-responsive', capturePhase);
+		const phoneCaptureDir = path.join(
+			frontendDir,
+			'test-results',
+			'phone-responsive',
+			capturePhase
+		);
 		fs.mkdirSync(phoneCaptureDir, { recursive: true });
 
 		const context = await browser.newContext({
@@ -1054,15 +1067,20 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 			screenshotSlug?: string
 		) {
 			await page.setViewportSize({ width, height });
+			await page.evaluate(() => document.fonts.ready);
+			await page.waitForTimeout(200);
 			const vpLabel = `${width}x${height}`;
 			if (routeLabel.endsWith('#modal')) {
-				const imageSize = await page.getByRole('dialog').locator('img').evaluate((image) => {
-					const rect = image.getBoundingClientRect();
-					return {
-						renderedRatio: rect.width / rect.height,
-						originalRatio: image.naturalWidth / image.naturalHeight
-					};
-				});
+				const imageSize = await page
+					.getByRole('dialog')
+					.locator('img')
+					.evaluate((image) => {
+						const rect = image.getBoundingClientRect();
+						return {
+							renderedRatio: rect.width / rect.height,
+							originalRatio: image.naturalWidth / image.naturalHeight
+						};
+					});
 				expect(Math.abs(imageSize.renderedRatio - imageSize.originalRatio)).toBeLessThan(0.02);
 			}
 			const res = await page.evaluate(() => {
@@ -1104,8 +1122,7 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 
 					const tag = el.tagName.toLowerCase();
 					const type = (el as HTMLInputElement).type?.toLowerCase();
-					const isCheckboxOrRadio =
-						tag === 'input' && (type === 'checkbox' || type === 'radio');
+					const isCheckboxOrRadio = tag === 'input' && (type === 'checkbox' || type === 'radio');
 
 					if (isTouchLayout && !isCheckboxOrRadio && rect.height < 43.5) {
 						smallTouchTargets.push(
@@ -1142,10 +1159,13 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 			});
 
 			if (screenshotSlug) {
+				const previousScroll = await page.evaluate(() => ({ x: scrollX, y: scrollY }));
+				await page.evaluate(() => window.scrollTo(0, 0));
 				await page.screenshot({
 					path: path.join(phoneCaptureDir, `${screenshotSlug}-${vpLabel}.png`),
-					fullPage: false
+					fullPage: !routeLabel.endsWith('#modal')
 				});
+				await page.evaluate(({ x, y }) => window.scrollTo(x, y), previousScroll);
 			}
 
 			return res;
@@ -1154,24 +1174,24 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 		try {
 			// 1. Login page at 320, 375, 390, 430
 			await page.goto(`${stack.baseUrl}/login`);
-			await expect(page.getByRole('heading', { name: /Masuk Petugas K3/i })).toBeVisible();
+			await expect(page.getByRole('heading', { name: /Masuk/i })).toBeVisible();
 			for (const w of [320, 375, 390, 430]) {
 				await auditViewport('/login', w, 844, w === 320 || w === 390 ? 'login' : undefined);
 			}
 
 			// Real touch tap login at 320x568
 			await page.setViewportSize({ width: 320, height: 568 });
-			await page.getByLabel(/Username/i).tap();
-			await page.getByLabel(/Username/i).fill(TEST_USERNAME);
-			await page.getByLabel(/Password/i).tap();
-			await page.getByLabel(/Password/i).fill(TEST_PASSWORD);
+			await page.getByLabel('Nama pengguna', { exact: true }).tap();
+			await page.getByLabel('Nama pengguna', { exact: true }).fill(TEST_USERNAME);
+			await page.getByLabel('Kata sandi', { exact: true }).tap();
+			await page.getByLabel('Kata sandi', { exact: true }).fill(TEST_PASSWORD);
 			await page.getByRole('button', { name: /Masuk/i }).tap();
 
 			await expect(page).toHaveURL(/\/$/);
 			await expect(page.getByTestId('officer-identity')).toContainText('Petugas: Anisa');
 
-			// 2. Dashboard at 320, 375, 390, 430, 844x390 landscape, 1280x800 desktop
-			await page.getByLabel(/Mode Data/i).selectOption('simulated');
+			// 2. Beranda at 320, 375, 390, 430, 844x390 landscape, 1280x800 desktop
+			await page.getByLabel(/Jenis data/i).selectOption('simulated');
 			await expect(page.getByTestId('metric-sessions')).toHaveText('1');
 			for (const [w, h] of [
 				[320, 568],
@@ -1199,6 +1219,8 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 				'Proyek Pembangunan Struktur Menara Terpadu Sektor Timur Blok K3-konstruksi-panjang-sekali-2026';
 			const longLocation =
 				'Kawasan Industri Terpadu Koridor SelatanKavling108B-TanpaSpasiPanjangSekali, Malang, Jawa Timur';
+			if (!(await page.getByLabel(/^Nama Proyek/i).isVisible()))
+				await page.locator('summary.create-trigger').click();
 			await page.getByLabel(/^Nama Proyek/i).fill(longProjectName);
 			await page.getByLabel(/Lokasi/i).fill(longLocation);
 			await page
@@ -1215,9 +1237,7 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 
 			// Open inline edit on the project card to audit the edit form on phone widths
 			await longProjCard.getByRole('button', { name: /^Edit$/i }).tap();
-			await expect(
-				longProjCard.getByRole('button', { name: /Simpan Perubahan Proyek/i })
-			).toBeVisible();
+			await expect(longProjCard.getByRole('button', { name: /Simpan proyek/i })).toBeVisible();
 
 			for (const [w, h] of [
 				[320, 568],
@@ -1232,7 +1252,7 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 
 			// 4. Open /projects/[id] detail & zone forms with long zone name
 			const firstProjCard = page.locator('[data-testid="project-item"]').first();
-			await firstProjCard.getByRole('link', { name: /Kelola Zona & Detail/i }).click();
+			await firstProjCard.getByRole('link', { name: /Buka proyek/i }).click();
 			await expect(page).toHaveURL(/\/projects\/\d+$/);
 
 			const longZoneName =
@@ -1248,9 +1268,7 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 			await expect(longZoneCard).toBeVisible();
 
 			await longZoneCard.getByRole('button', { name: /Edit Zona/i }).click();
-			await expect(
-				longZoneCard.getByRole('button', { name: /Simpan Perubahan Zona/i })
-			).toBeVisible();
+			await expect(longZoneCard.getByRole('button', { name: /Simpan zona/i })).toBeVisible();
 			for (const [w, h] of [
 				[320, 568],
 				[375, 812],
@@ -1273,13 +1291,13 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 			await primaryNav.getByRole('link', { name: /Monitoring/i }).tap();
 			await expect(page).toHaveURL(/\/monitoring$/);
 			// Select Project #1 and Zone #1 so session history is visible and we can start a live session on phone
-			await page.getByLabel(/Proyek Aktif/i).selectOption('1');
+			await page.getByLabel(/Proyek/i).selectOption('1');
 			await expect(page.getByTestId('session-history-list')).toBeVisible();
-			await page.getByLabel(/Zona Inspeksi Aktif/i).selectOption('1');
+			await page.getByLabel(/Zona/i).selectOption('1');
 
 			// Start live monitoring session on phone to audit live video + SnapshotOverlay + captured finding cards
 			await page.getByTestId('start-monitoring-btn').tap();
-			await expect(page.getByTestId('active-session-badge')).toContainText('active', {
+			await expect(page.getByTestId('active-session-badge')).toContainText('Berjalan', {
 				timeout: 15_000
 			});
 			await expect(page.getByTestId('captured-events-list')).toBeVisible({ timeout: 25_000 });
@@ -1314,8 +1332,8 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 			await expect(page.getByTestId('finding-card-2')).toBeVisible();
 
 			// Expand ManualFindingForm to verify manual form responsiveness too
-			await page.getByRole('button', { name: /Tambah Temuan Manual/i }).tap();
-			await expect(page.getByLabel(/Jenis Indikasi APD/i)).toBeVisible();
+			await page.getByRole('button', { name: /Tambah foto/i }).tap();
+			await expect(page.getByLabel('Kategori APD *', { exact: true })).toBeVisible();
 
 			for (const [w, h] of [
 				[320, 568],
@@ -1355,20 +1373,20 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 
 			// Open full-image modal on 320x568, verify dialog bounds and close button
 			await page.setViewportSize({ width: 320, height: 568 });
-			await page.getByRole('button', { name: /Perbesar Bukti/i }).tap();
-			const modalDialog = page.getByRole('dialog', { name: /Pratinjau Penuh Foto Bukti/i });
+			await page.getByRole('button', { name: /Perbesar foto/i }).tap();
+			const modalDialog = page.getByRole('dialog', { name: /Foto bukti/i });
 			await expect(modalDialog).toBeVisible();
 			await auditViewport('/findings/1#modal', 320, 568, 'finding-modal');
 			await auditViewport('/findings/1#modal', 844, 390, 'finding-modal-landscape');
 			await page.setViewportSize({ width: 320, height: 568 });
-			await modalDialog.getByRole('button', { name: /Tutup Pratinjau/i }).tap();
+			await modalDialog.getByRole('button', { name: /Tutup foto/i }).tap();
 			await expect(modalDialog).toBeHidden();
 
 			// Also confirm finding #3 (from session #2) via touch so session #2 is eligible for a draft report
 			await page.goto(`${stack.baseUrl}/findings/3`);
 			await expect(page.getByTestId('finding-evidence-img')).toBeVisible();
 			await page
-				.getByLabel(/Catatan Verifikasi/i)
+				.getByLabel(/Catatan pemeriksaan/i)
 				.fill('Dikonfirmasi melalui layar ponsel 320px untuk pembuatan draft laporan sesi ke-2.');
 			await page.getByRole('button', { name: /Konfirmasi Temuan/i }).tap();
 			await expect(page.getByTestId('verification-status-badge')).toContainText('Terkonfirmasi');
@@ -1380,7 +1398,9 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 			await expect(page.getByTestId('report-card-1')).toBeVisible();
 
 			// Switch to manual mode to expose manual title/content inputs
-			await page.getByRole('radio', { name: /Draft Tulis Manual Petugas/i }).check();
+			if (!(await page.getByTestId('create-session-select').isVisible()))
+				await page.locator('summary.create-trigger').click();
+			await page.getByRole('radio', { name: /Tulis manual/i }).check();
 			await expect(page.getByTestId('manual-report-inputs')).toBeVisible();
 
 			for (const [w, h] of [
@@ -1393,11 +1413,17 @@ test.describe('P0-07: Perjalanan inspeksi terintegrasi penuh melalui Go API, SQL
 			}
 
 			// Switch to gemini mode to audit long request_key / info box
-			await page.getByRole('radio', { name: /Generasi Narasi Gemini Backend/i }).check();
+			if (!(await page.getByTestId('create-session-select').isVisible()))
+				await page.locator('summary.create-trigger').click();
+			await page.getByRole('radio', { name: /Gunakan Gemini/i }).check();
 			await auditViewport('/reports#gemini', 320, 568);
 
 			// Create a draft report on phone for Session #2 to also audit /reports/[id] draft editor + regenerate dialog + approval form
-			await page.getByRole('radio', { name: /Draft Template Terstruktur/i }).check();
+			if (!(await page.getByTestId('create-session-select').isVisible()))
+				await page.locator('summary.create-trigger').click();
+			await page.getByRole('radio', { name: /Gunakan templat/i }).check();
+			if (!(await page.getByTestId('create-session-select').isVisible()))
+				await page.locator('summary.create-trigger').click();
 			await page.getByTestId('create-session-select').selectOption('2');
 			await page.getByTestId('submit-create-template').tap();
 			await expect(page).toHaveURL(/\/reports\/\d+$/);

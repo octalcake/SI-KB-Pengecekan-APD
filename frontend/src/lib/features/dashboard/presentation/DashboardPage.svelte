@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '#lib/shared/presentation/Icon.svelte';
 	import { onMount } from 'svelte';
 	import { isApiError } from '#lib/shared/errors';
 	import { authSession } from '#lib/app/auth';
@@ -10,12 +11,12 @@
 	const ALL_CATEGORIES: Array<{ code: ViolationType; label: string; description: string }> = [
 		{
 			code: 'NO_HELMET',
-			label: 'Indikasi Tanpa Helm (NO_HELMET)',
+			label: 'Tanpa helm',
 			description: 'Deteksi kepala terlihat tanpa pelindung helm proyek.'
 		},
 		{
 			code: 'NO_VEST',
-			label: 'Indikasi Tanpa Rompi (NO_VEST)',
+			label: 'Tanpa rompi',
 			description: 'Deteksi torso terlihat tanpa rompi keselamatan.'
 		}
 	];
@@ -44,44 +45,42 @@
 	const configuredTimezone = $derived(summary?.timezone || 'Asia/Jakarta');
 
 	const summaryTotalFindings = $derived(
-		summary
-			? summary.findings_pending + summary.findings_confirmed + summary.findings_rejected
-			: 0
+		summary ? summary.findings_pending + summary.findings_confirmed + summary.findings_rejected : 0
 	);
 
 	const summaryModeBadge = $derived.by(() => {
 		const m = summary?.mode ?? filterMode;
-		if(m === 'real') {
+		if (m === 'real') {
 			return {
-				label: 'MODE NYATA (real)',
+				label: 'Data nyata',
 				tone: 'ok' as const,
-				note: 'Menampilkan statistik sesi & temuan dari inferensi model nyata saja (tidak dicampur simulasi/manual).'
+				note: 'Hanya data inspeksi nyata. Data simulasi dan manual ditampilkan terpisah.'
 			};
 		}
-		if(m === 'simulated') {
+		if (m === 'simulated') {
 			return {
-				label: 'MODE SIMULASI (simulated)',
+				label: 'Data simulasi',
 				tone: 'warn' as const,
-				note: 'Menampilkan hasil simulasi deterministik secara terpisah; bukan aktivitas inspeksi kamera nyata.'
+				note: 'Data simulasi untuk pengujian, bukan hasil inspeksi nyata.'
 			};
 		}
 		return {
-			label: 'MODE MANUAL (manual)',
+			label: 'Data manual',
 			tone: 'warn' as const,
-			note: 'Menampilkan pencatatan observasi manual petugas secara terpisah tanpa inferensi otomatis.'
+			note: 'Observasi yang dicatat petugas tanpa deteksi otomatis.'
 		};
 	});
 
 	const modeDisplay = $derived.by(() => {
-		if(!status) return { label: 'Memuat...', code: '-', detail: 'Mengambil konfigurasi server.' };
-		if(status.mode === 'real') {
+		if (!status) return { label: 'Memuat...', code: '-', detail: 'Mengambil konfigurasi server.' };
+		if (status.mode === 'real') {
 			return {
 				label: 'NYATA',
 				code: 'real',
 				detail: 'Inferensi model YOLO + ByteTrack pada layanan AI lokal.'
 			};
 		}
-		if(status.mode === 'simulated') {
+		if (status.mode === 'simulated') {
 			return {
 				label: 'SIMULASI',
 				code: 'simulated',
@@ -96,33 +95,33 @@
 	});
 
 	const aiReadinessDisplay = $derived.by(() => {
-		if(!status) {
+		if (!status) {
 			return {
 				badge: 'Memeriksa...',
 				tone: 'warn' as const,
-				summary: 'Sedang memeriksa kesiapan layanan AI melalui backend Go.'
+				summary: 'Memeriksa layanan deteksi otomatis.'
 			};
 		}
-		if(status.mode === 'manual') {
+		if (status.mode === 'manual') {
 			return {
 				badge: 'Siap (Mode Manual)',
 				tone: 'ok' as const,
-				summary: 'Mode manual tidak memerlukan model inferensi aktif.'
+				summary: 'Temuan dicatat dari foto yang diunggah petugas.'
 			};
 		}
-		if(status.ai_ready) {
+		if (status.ai_ready) {
 			return {
 				badge: 'Siap',
 				tone: 'ok' as const,
-				summary: 'Layanan AI terjangkau dan model siap menerima sampel frame sesi.'
+				summary: 'Deteksi otomatis siap digunakan.'
 			};
 		}
 		return {
 			badge: 'Belum Siap',
 			tone: 'warn' as const,
 			summary: status.ai_reachable
-				? 'Layanan AI terjangkau, tetapi bobot model atau mode belum siap. Sesi monitoring otomatis belum dapat dimulai.'
-				: 'Layanan inferensi AI tidak terjangkau atau belum siap. CRUD data tetap dapat digunakan, namun sesi monitoring kamera otomatis akan ditolak (503).'
+				? 'Model belum siap. Hubungi operator untuk mengaktifkan deteksi.'
+				: 'Deteksi otomatis belum tersedia. Proyek, temuan, dan laporan tetap bisa dibuka.'
 		};
 	});
 
@@ -145,13 +144,13 @@
 		lookupError = null;
 		try {
 			const res = await dashboardWorkflow.loadProjects();
-			if(seq !== projectsReqSeq) return;
+			if (seq !== projectsReqSeq) return;
 			projects = res;
-		} catch(err) {
-			if(seq !== projectsReqSeq) return;
+		} catch (err) {
+			if (seq !== projectsReqSeq) return;
 			lookupError = isApiError(err) ? err.message : 'Gagal memuat daftar proyek untuk filter.';
 		} finally {
-			if(seq === projectsReqSeq) {
+			if (seq === projectsReqSeq) {
 				loadingLookups = false;
 			}
 		}
@@ -163,18 +162,20 @@
 		zones = [];
 		lookupError = null;
 		const pid = Number(filterProjectId);
-		if(Number.isFinite(pid) && pid > 0) {
+		if (Number.isFinite(pid) && pid > 0) {
 			loadingZones = true;
 			void loadSummary();
 			try {
 				const res = await dashboardWorkflow.loadZones(pid);
-				if(zSeq !== zonesReqSeq || Number(filterProjectId) !== pid) return;
+				if (zSeq !== zonesReqSeq || Number(filterProjectId) !== pid) return;
 				zones = res;
-			} catch(err) {
-				if(zSeq !== zonesReqSeq || Number(filterProjectId) !== pid) return;
-				lookupError = isApiError(err) ? err.message : 'Gagal memuat daftar zona untuk proyek terpilih.';
+			} catch (err) {
+				if (zSeq !== zonesReqSeq || Number(filterProjectId) !== pid) return;
+				lookupError = isApiError(err)
+					? err.message
+					: 'Gagal memuat daftar zona untuk proyek terpilih.';
 			} finally {
-				if(zSeq === zonesReqSeq) {
+				if (zSeq === zonesReqSeq) {
 					loadingZones = false;
 				}
 			}
@@ -187,7 +188,7 @@
 	async function loadSummary() {
 		const seq = ++summaryReqSeq;
 		dateValidationError = null;
-		if(filterFromDate && filterToDate && filterFromDate > filterToDate) {
+		if (filterFromDate && filterToDate && filterFromDate > filterToDate) {
 			summaryLoading = false;
 			dateValidationError = 'Tanggal mulai tidak boleh melebihi tanggal akhir.';
 			return;
@@ -197,18 +198,22 @@
 		summaryError = null;
 		try {
 			const nextSummary = await dashboardWorkflow.fetchSummary({
-				mode: filterMode, projectId: filterProjectId, zoneId: filterZoneId,
-				fromDate: filterFromDate, toDate: filterToDate, timeZone: summary?.timezone
+				mode: filterMode,
+				projectId: filterProjectId,
+				zoneId: filterZoneId,
+				fromDate: filterFromDate,
+				toDate: filterToDate,
+				timeZone: summary?.timezone
 			});
-			if(seq !== summaryReqSeq) return;
+			if (seq !== summaryReqSeq) return;
 			summary = nextSummary;
-		} catch(err) {
-			if(seq !== summaryReqSeq) return;
+		} catch (err) {
+			if (seq !== summaryReqSeq) return;
 			summaryError = isApiError(err)
 				? err.message
 				: 'Gagal memuat ringkasan dashboard dari server backend.';
 		} finally {
-			if(seq === summaryReqSeq) {
+			if (seq === summaryReqSeq) {
 				summaryLoading = false;
 			}
 		}
@@ -233,48 +238,25 @@
 	}
 </script>
 
-<svelte:head>
-	<title>Dashboard & Ruang Kerja Inspeksi K3</title>
-</svelte:head>
+<svelte:head><title>Beranda - Inspeksi K3</title></svelte:head>
 
 <div class="workspace-stack">
 	<header class="workspace-header">
 		<div>
-			<h1>Ruang Kerja Inspeksi K3</h1>
-			<p class="lead">
-				Ringkasan statistik inspeksi terfilter berdasarkan data persisten serta status kesiapan aktual layanan lokal.
-			</p>
+			<h1>Beranda</h1>
 		</div>
-		<div class="header-actions">
-			<a href="/projects" class="secondary-link">Kelola Proyek & Zona</a>
-			<button
-				type="button"
-				class="refresh-button"
-				onclick={handleRefreshAll}
-				disabled={authSession.systemStatusLoading || summaryLoading}
-			>
-				{authSession.systemStatusLoading || summaryLoading
-					? 'Memperbarui...'
-					: 'Perbarui Status Sistem'}
-			</button>
-		</div>
+		<a href="/monitoring" class="button-primary"><Icon name="camera" size={18} />Mulai inspeksi</a>
 	</header>
 
-	<section class="panel" aria-labelledby="dashboard-summary-heading">
-		<div class="panel-header">
-			<div>
-				<h2 id="dashboard-summary-heading">Ringkasan Dashboard Inspeksi</h2>
-				<p class="panel-summary">
-					{summaryModeBadge.note}
-				</p>
-			</div>
-			<span class="status-tag" data-tone={summaryModeBadge.tone} data-testid="summary-mode-badge">
-				{summaryModeBadge.label}
-			</span>
+	<section class="overview" aria-labelledby="dashboard-summary-heading">
+		<div class="section-heading">
+			<h2 id="dashboard-summary-heading">Ringkasan inspeksi</h2>
+			<span class="mode-tag" data-testid="summary-mode-badge" data-tone={summaryModeBadge.tone}
+				>{summaryModeBadge.label}</span
+			>
 		</div>
-
 		<form
-			class="filter-grid"
+			class="filter-row"
 			aria-label="Filter ringkasan dashboard"
 			onsubmit={(e) => {
 				e.preventDefault();
@@ -282,694 +264,651 @@
 			}}
 		>
 			<div class="field-group">
-				<label for="dashboard-filter-mode">Mode Data</label>
-				<select
+				<label for="dashboard-filter-mode">Jenis data</label><select
 					id="dashboard-filter-mode"
 					bind:value={filterMode}
 					onchange={() => void loadSummary()}
+					><option value="real">Nyata</option><option value="simulated">Simulasi</option><option
+						value="manual">Manual</option
+					></select
 				>
-					<option value="real">Nyata (real)</option>
-					<option value="simulated">Simulasi (simulated)</option>
-					<option value="manual">Manual (manual)</option>
-				</select>
 			</div>
-
 			<div class="field-group">
-				<label for="dashboard-filter-project">Filter Proyek</label>
-				<select
+				<label for="dashboard-filter-project">Proyek</label><select
 					id="dashboard-filter-project"
 					bind:value={filterProjectId}
 					onchange={() => void handleProjectFilterChange()}
 					disabled={loadingLookups}
+					><option value="">Semua proyek</option>{#each projects as proj (proj.id)}<option
+							value={String(proj.id)}
+							>{proj.name}{proj.status === 'archived' ? ' (Diarsipkan)' : ''}</option
+						>{/each}</select
 				>
-					<option value="">Semua Proyek</option>
-					{#each projects as proj (proj.id)}
-						<option value={String(proj.id)}>
-							{proj.name}{proj.status === 'archived' ? ' (Diarsipkan)' : ''}
-						</option>
-					{/each}
-				</select>
 			</div>
-
 			<div class="field-group">
-				<label for="dashboard-filter-zone">Filter Zona</label>
-				<select
+				<label for="dashboard-filter-zone">Zona</label><select
 					id="dashboard-filter-zone"
 					bind:value={filterZoneId}
 					onchange={() => void loadSummary()}
 					disabled={!filterProjectId || loadingZones}
-					title={!filterProjectId ? 'Pilih proyek terlebih dahulu untuk memfilter zona' : undefined}
+					><option value="">{!filterProjectId ? 'Pilih proyek dahulu' : 'Semua zona'}</option
+					>{#each zones as z (z.id)}<option value={String(z.id)}
+							>{z.name}{z.status === 'archived' ? ' (Diarsipkan)' : ''}</option
+						>{/each}</select
 				>
-					<option value="">
-						{!filterProjectId ? 'Semua Zona (Pilih proyek dulu)' : 'Semua Zona pada Proyek'}
-					</option>
-					{#each zones as z (z.id)}
-						<option value={String(z.id)}>
-							{z.name}{z.status === 'archived' ? ' (Diarsipkan)' : ''}
-						</option>
-					{/each}
-				</select>
 			</div>
-
-			<div class="field-group">
-				<label for="dashboard-filter-from">Dari Tanggal ({configuredTimezone})</label>
-				<input
-					id="dashboard-filter-from"
-					type="date"
-					bind:value={filterFromDate}
-					onchange={() => void loadSummary()}
-				/>
-			</div>
-
-			<div class="field-group">
-				<label for="dashboard-filter-to">Sampai Tanggal ({configuredTimezone})</label>
-				<input
-					id="dashboard-filter-to"
-					type="date"
-					bind:value={filterToDate}
-					onchange={() => void loadSummary()}
-				/>
-			</div>
-
-			<div class="filter-actions">
-				<button
-					type="button"
-					class="secondary-button"
-					onclick={handleResetDashboardFilters}
-					disabled={
-						summaryLoading &&
-						filterMode === 'real' &&
-						!filterProjectId &&
-						!filterZoneId &&
-						!filterFromDate &&
-						!filterToDate
-					}
+			<details class="period-filter">
+				<summary class="period-trigger"
+					><Icon name="filter" size={16} />Periode{filterFromDate || filterToDate
+						? ' (aktif)'
+						: ''}</summary
 				>
-					Reset Filter
-				</button>
-			</div>
-		</form>
-
-		{#if lookupError}
-			<div class="warn-banner" role="alert">
-				<strong>Catatan Filter:</strong> {lookupError}
-			</div>
-		{/if}
-
-		{#if dateValidationError}
-			<div class="error-banner" role="alert" data-error-kind="validation">
-				<strong>Rentang Tanggal Tidak Valid:</strong> {dateValidationError}
-			</div>
-		{/if}
-
-		{#if summaryError}
-			<div class="error-banner" role="alert" data-error-kind="backend">
-				<div class="banner-row">
-					<div>
-						<strong>Gagal Memuat Ringkasan Dashboard:</strong> {summaryError}
+				<div class="period-fields">
+					<div class="field-group">
+						<label for="dashboard-filter-from">Dari tanggal ({configuredTimezone})</label><input
+							id="dashboard-filter-from"
+							type="date"
+							bind:value={filterFromDate}
+							onchange={() => void loadSummary()}
+						/>
 					</div>
-					<button type="button" class="secondary-button" onclick={loadSummary}>
-						Coba Lagi
-					</button>
+					<div class="field-group">
+						<label for="dashboard-filter-to">Sampai tanggal ({configuredTimezone})</label><input
+							id="dashboard-filter-to"
+							type="date"
+							bind:value={filterToDate}
+							onchange={() => void loadSummary()}
+						/>
+					</div>
 				</div>
+			</details>
+			<button type="button" class="button-quiet reset-button" onclick={handleResetDashboardFilters}
+				>Reset filter</button
+			>
+		</form>
+		{#if lookupError}<div class="inline-message warning" role="alert">{lookupError}</div>{/if}
+		{#if dateValidationError}<div
+				class="inline-message error"
+				role="alert"
+				data-error-kind="validation"
+			>
+				{dateValidationError}
+			</div>{/if}
+		{#if summaryError}
+			<div class="inline-message error" role="alert" data-error-kind="backend">
+				<span><strong>Ringkasan belum bisa dimuat.</strong> {summaryError}</span><button
+					type="button"
+					class="button-secondary"
+					onclick={loadSummary}>Coba lagi</button
+				>
 			</div>
 		{:else if summaryLoading && !summary}
-			<div class="state-box" role="status" aria-busy="true">
-				Memuat angka ringkasan dashboard dari server...
+			<div class="metrics-loading" role="status" aria-busy="true">
+				<span class="sr-only">Memuat ringkasan inspeksi...</span
+				>{#each [1, 2, 3, 4, 5] as item (item)}<div class="skeleton-metric">
+						<span></span><strong></strong>
+					</div>{/each}
 			</div>
 		{:else if summary}
-			<div class="metrics-grid" aria-busy={summaryLoading ? 'true' : undefined}>
-				<article class="metric-card">
-					<span class="metric-label">Sesi Inspeksi</span>
-					<strong class="metric-value" data-testid="metric-sessions">{summary.sessions}</strong>
-					<span class="metric-hint">Dihitung berdasarkan waktu mulai sesi (started_at)</span>
-				</article>
-
-				<article class="metric-card">
-					<span class="metric-label">Temuan Menunggu Review</span>
-					<strong class="metric-value" data-testid="metric-findings-pending">
-						{summary.findings_pending}
-					</strong>
-					<span class="metric-hint">Status verifikasi pending (captured_at)</span>
-				</article>
-
-				<article class="metric-card">
-					<span class="metric-label">Temuan Terkonfirmasi</span>
-					<strong class="metric-value" data-testid="metric-findings-confirmed">
-						{summary.findings_confirmed}
-					</strong>
-					<span class="metric-hint">Diverifikasi positif oleh petugas K3</span>
-				</article>
-
-				<article class="metric-card">
-					<span class="metric-label">Temuan Ditolak</span>
-					<strong class="metric-value" data-testid="metric-findings-rejected">
-						{summary.findings_rejected}
-					</strong>
-					<span class="metric-hint">Indikasi palsu/ditolak setelah pemeriksaan bukti</span>
-				</article>
-
-				<article class="metric-card highlight">
-					<span class="metric-label">Tindakan Terbuka</span>
-					<strong class="metric-value" data-testid="metric-actions-open">
-						{summary.confirmed_actions_open}
-					</strong>
-					<span class="metric-hint">Temuan confirmed dengan tindak lanjut belum selesai</span>
-				</article>
-			</div>
-
-			{#if summary.sessions === 0 && summaryTotalFindings === 0}
-				<div class="state-box empty" role="status">
-					<strong>Belum ada sesi atau temuan yang tercatat untuk filter ini.</strong>
-					<span>
-						Pastikan proyek dan zona aktif telah disiapkan di halaman <a href="/projects">Proyek & Zona</a> sebelum memulai sesi inspeksi.
-					</span>
+			<div class="metrics-strip" aria-busy={summaryLoading}>
+				<div class="metric">
+					<span>Sesi inspeksi</span><strong data-testid="metric-sessions">{summary.sessions}</strong
+					>
 				</div>
-			{/if}
-
-			<div class="summary-meta-note" data-testid="dashboard-summary-meta">
-				<span>
-					<strong>Satuan hitung (<code>{summary.count_unit}</code>):</strong> Jumlah catatan temuan (<em>finding</em>), <strong>bukan jumlah pekerja unik</strong>.
-				</span>
-				<span>
-					<strong>Zona waktu tampilan:</strong> <code>{summary.timezone}</code> (batas tanggal filter lokal dikonversi ke interval UTC).
-				</span>
-				<span>
-					<strong>Mode ringkasan:</strong> <code>{summary.mode}</code> (data nyata, simulasi, dan manual tidak pernah digabung).
-				</span>
+				<div class="metric">
+					<span>Belum diperiksa</span><strong data-testid="metric-findings-pending"
+						>{summary.findings_pending}</strong
+					>
+				</div>
+				<div class="metric">
+					<span>Terkonfirmasi</span><strong data-testid="metric-findings-confirmed"
+						>{summary.findings_confirmed}</strong
+					>
+				</div>
+				<div class="metric">
+					<span>Ditolak</span><strong data-testid="metric-findings-rejected"
+						>{summary.findings_rejected}</strong
+					>
+				</div>
+				<div class="metric">
+					<span>Belum ditindaklanjuti</span><strong data-testid="metric-actions-open"
+						>{summary.confirmed_actions_open}</strong
+					>
+				</div>
 			</div>
+			<p class="count-note" data-testid="dashboard-summary-meta">
+				Jumlah temuan, <strong>bukan jumlah pekerja unik</strong>. Waktu: {summary.timezone}.
+			</p>
 		{/if}
 	</section>
 
-	{#if authSession.systemStatusError}
-		<div class="error-banner" role="alert">
-			<strong>Gagal memuat status sistem:</strong> {authSession.systemStatusError}
-		</div>
-	{/if}
-
-	<section class="panel" aria-labelledby="readiness-heading">
-		<div class="panel-header">
-			<h2 id="readiness-heading">Kesiapan Sistem & Provenance</h2>
-			<span class="status-tag" data-tone={aiReadinessDisplay.tone}>
-				{aiReadinessDisplay.badge}
-			</span>
-		</div>
-
-		<p class="panel-summary">{aiReadinessDisplay.summary}</p>
-
-		<dl class="spec-grid">
-			<div class="spec-row">
-				<dt>Petugas Aktif</dt>
-				<dd>
-					<strong>{authSession.user?.display_name ?? '-'}</strong>
-					<span class="muted">
-						(ID #{authSession.user?.id ?? '-'} • peran: {authSession.user?.role ?? '-'})
-					</span>
-				</dd>
+	<div class="dashboard-columns">
+		<section class="attention-panel" aria-labelledby="attention-heading">
+			<div class="section-heading">
+				<h2 id="attention-heading">Lanjutkan pekerjaan</h2>
+				<Icon name="findings" size={18} />
 			</div>
+			{#if summary && summary.sessions === 0 && summaryTotalFindings === 0}
+				<div class="first-inspection">
+					<h3>
+						{projects.length === 0 ? 'Belum ada proyek' : 'Belum ada inspeksi'}
+					</h3>
+					<p>
+						{projects.length === 0
+							? 'Tambah proyek dan zona sebelum mulai inspeksi.'
+							: 'Coba ubah filter atau mulai inspeksi baru.'}
+					</p>
+					<a href={projects.length === 0 ? '/projects' : '/monitoring'} class="button-secondary"
+						>{projects.length === 0 ? 'Tambah proyek & zona' : 'Buka monitoring'}<Icon
+							name="arrow"
+							size={16}
+						/></a
+					>
+				</div>
+			{/if}
+			<a class="agenda-row" href="/findings?verification_status=pending"
+				><Icon name="clock" size={20} /><span><strong>Periksa temuan</strong></span><Icon
+					name="chevron"
+					size={15}
+				/></a
+			>
+			<a class="agenda-row" href="/findings?verification_status=confirmed"
+				><Icon name="check" size={20} /><span><strong>Catat tindak lanjut</strong></span><Icon
+					name="chevron"
+					size={15}
+				/></a
+			>
+			<a class="agenda-row" href="/reports"
+				><Icon name="reports" size={20} /><span><strong>Buat laporan</strong></span><Icon
+					name="chevron"
+					size={15}
+				/></a
+			>
+		</section>
 
-			<div class="spec-row">
-				<dt>Mode Operasi Server</dt>
-				<dd>
-					<strong>{modeDisplay.label}</strong>
-					<code>{modeDisplay.code}</code>
-					<span class="block-note">{modeDisplay.detail}</span>
-				</dd>
+		<section class="readiness-panel" aria-labelledby="readiness-heading">
+			<div class="section-heading">
+				<h2 id="readiness-heading">Status deteksi</h2>
+				<span class="status-label" data-tone={aiReadinessDisplay.tone}
+					><span class="status-dot"></span>{aiReadinessDisplay.badge}</span
+				>
 			</div>
-
-			<div class="spec-row">
-				<dt>Keterjangkauan Layanan AI</dt>
-				<dd>
-					{#if status}
-						<strong>{status.ai_reachable ? 'Terjangkau' : 'Tidak Terjangkau'}</strong>
-						<span class="muted">
-							({status.ai_ready ? 'Siap' : 'Belum Siap'})
-						</span>
-					{:else}
-						<span class="muted">Memuat...</span>
-					{/if}
-				</dd>
-			</div>
-
-			<div class="spec-row">
-				<dt>Versi Model Deteksi</dt>
-				<dd>
-					{#if status?.model_version}
-						<code>{status.model_version}</code>
-					{:else}
-						<span class="muted">Belum dimuat / tidak tersedia</span>
-					{/if}
-				</dd>
-			</div>
-
-			<div class="spec-row">
-				<dt>Layanan Draft Laporan Gemini</dt>
-				<dd>
-					{#if status?.gemini_configured}
-						<strong>Terkonfigurasi</strong>
-						<span class="block-note">
-							Kunci API tersedia di backend; ketersediaan kuota tetap diverifikasi saat pembuatan draft laporan.
-						</span>
-					{:else}
-						<strong>Tidak Dikonfigurasi</strong>
-						<span class="block-note">
-							Pembuatan narasi otomatis Gemini nonaktif; gunakan pembuatan draft template atau manual.
-						</span>
-					{/if}
-				</dd>
-			</div>
-		</dl>
-	</section>
-
-	<section class="panel" aria-labelledby="categories-heading">
-		<h2 id="categories-heading">Cakupan Kategori APD Otomatis</h2>
-		<p class="panel-summary">
-			Kategori yang tidak tercantum pada manifest model dinonaktifkan agar antarmuka tidak mengklaim cakupan deteksi otomatis yang belum ada.
-		</p>
-
-		<ul class="category-list">
-			{#each ALL_CATEGORIES as cat (cat.code)}
-				{@const supported = status?.supported_violations.includes(cat.code) ?? false}
-				<li class="category-row" data-supported={supported}>
-					<div class="category-info">
-						<strong>{cat.label}</strong>
-						<span>{cat.description}</span>
+			{#if authSession.systemStatusError}<div class="inline-message error" role="alert">
+					<strong>Gagal memuat status sistem.</strong>
+					{authSession.systemStatusError}
+				</div>{:else}<p class="readiness-summary">{aiReadinessDisplay.summary}</p>{/if}
+			<div class="category-heading">Kategori deteksi</div>
+			<ul class="category-list" aria-label="Cakupan kategori APD otomatis">
+				{#each ALL_CATEGORIES as cat (cat.code)}{@const supported =
+						status?.supported_violations.includes(cat.code) ?? false}
+					<li data-supported={supported}>
+						<span>{cat.label}</span><strong data-supported={supported}
+							>{supported ? 'Aktif' : 'Tidak aktif'}</strong
+						>
+					</li>{/each}
+			</ul>
+			<details class="system-details">
+				<summary>Detail sistem</summary>
+				<dl>
+					<div>
+						<dt>Mode operasi</dt>
+						<dd>{modeDisplay.label} ({modeDisplay.code})</dd>
 					</div>
-					<span class="status-tag" data-tone={supported ? 'ok' : 'neutral'}>
-						{supported ? 'Didukung Otomatis' : 'Tidak Aktif / Belum Didukung'}
-					</span>
-				</li>
-			{/each}
-		</ul>
-	</section>
-
-	<section class="panel notice-panel" aria-labelledby="principles-heading">
-		<h2 id="principles-heading">Prinsip Operasional Inspeksi K3</h2>
-		<p>
-			Sistem mendeteksi <strong>indikasi visual</strong>, bukan membuktikan pelanggaran hukum atau memastikan keselamatan seluruh lokasi. <strong>Tracking ID sementara bukan identitas pekerja.</strong> Petugas K3 wajib memeriksa bukti foto asli sebelum mengonfirmasi atau menolak setiap temuan.
-		</p>
-	</section>
+					<div>
+						<dt>Layanan AI</dt>
+						<dd>
+							{status
+								? status.ai_reachable
+									? 'Terjangkau'
+									: 'Tidak terjangkau'
+								: 'Belum diketahui'}
+						</dd>
+					</div>
+					<div>
+						<dt>Versi model</dt>
+						<dd>{status?.model_version ?? 'Belum tersedia'}</dd>
+					</div>
+					<div>
+						<dt>Draft Gemini</dt>
+						<dd>
+							{status?.gemini_configured
+								? 'Terhubung; kuota dicek saat digunakan'
+								: 'Belum diaktifkan. Gunakan templat atau tulis manual.'}
+						</dd>
+					</div>
+				</dl>
+			</details>
+			<button
+				type="button"
+				class="button-quiet refresh-button"
+				onclick={handleRefreshAll}
+				disabled={authSession.systemStatusLoading || summaryLoading}
+				><Icon name="refresh" size={15} />{authSession.systemStatusLoading || summaryLoading
+					? 'Memperbarui...'
+					: 'Cek lagi'}</button
+			>
+		</section>
+	</div>
+	<footer class="workspace-note">
+		<Icon name="info" size={17} />
+		<p>Periksa foto sebelum mengonfirmasi temuan. Hasil deteksi bukan jaminan lokasi aman.</p>
+	</footer>
 </div>
 
 <style>
 	.workspace-stack {
 		display: flex;
 		flex-direction: column;
-		gap: 1.25rem;
+		gap: 2rem;
 	}
-
 	.workspace-header {
 		display: flex;
-		flex-wrap: wrap;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 1rem;
-		padding-bottom: 0.5rem;
-		border-bottom: 1px solid var(--border-default);
-	}
-
-	.workspace-header h1 {
-		margin: 0 0 0.35rem 0;
-		font-size: 1.5rem;
-	}
-
-	.lead {
-		margin: 0;
-		font-size: 0.9375rem;
-		color: var(--ink-secondary);
-	}
-
-	.header-actions {
-		display: flex;
-		flex-wrap: wrap;
 		align-items: center;
-		gap: 0.625rem;
+		justify-content: space-between;
+		gap: 1.5rem;
 	}
-
-	.secondary-link {
-		padding: 0.5rem 0.9rem;
-		border-radius: 8px;
-		border: 1px solid var(--accent-border);
-		background: var(--accent-surface);
-		color: var(--accent-primary);
-		font-weight: 600;
-		font-size: 0.875rem;
-		text-decoration: none;
+	.overview {
+		min-width: 0;
 	}
-
-	.secondary-link:hover {
-		background: #fed7aa;
+	.section-heading {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 1rem;
+		margin-bottom: 1.2rem;
 	}
-
-	.refresh-button,
-	.secondary-button {
-		padding: 0.5rem 0.9rem;
-		border-radius: 8px;
-		border: 1px solid var(--border-strong);
-		background: var(--bg-surface);
-		color: var(--ink-primary);
-		font-weight: 600;
-		font-size: 0.875rem;
-		cursor: pointer;
+	.section-heading h2 {
+		margin: 0;
+		font-size: 1rem;
 	}
-
-	.refresh-button:hover:not(:disabled),
-	.secondary-button:hover:not(:disabled) {
+	.section-heading > :global(svg) {
+		color: var(--ink-muted);
+	}
+	.mode-tag {
+		font-size: 0.75rem;
+		font-weight: 550;
+		color: var(--ink-secondary);
 		background: var(--bg-subtle);
+		padding: 0.25rem 0.5rem;
+		border-radius: 4px;
 	}
-
-	.refresh-button:disabled,
-	.secondary-button:disabled {
-		opacity: 0.65;
-		cursor: not-allowed;
-	}
-
-	.error-banner {
-		padding: 0.75rem 1rem;
-		border-radius: 8px;
-		border: 1px solid var(--status-err-border);
-		background: var(--status-err-bg);
-		color: var(--status-err-ink);
-		font-size: 0.875rem;
-	}
-
-	.warn-banner {
-		padding: 0.75rem 1rem;
-		border-radius: 8px;
-		border: 1px solid var(--status-warn-border);
-		background: var(--status-warn-bg);
+	.mode-tag[data-tone='warn'] {
 		color: var(--status-warn-ink);
-		font-size: 0.875rem;
+		background: var(--status-warn-bg);
 	}
-
-	.banner-row {
+	.filter-row {
 		display: flex;
 		flex-wrap: wrap;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem;
+		align-items: flex-end;
+		gap: 0.85rem;
+		margin-bottom: 1.5rem;
 	}
-
-	.panel {
-		background: var(--bg-surface);
-		border: 1px solid var(--border-default);
-		border-radius: 12px;
-		padding: 1.25rem 1.5rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.panel-header {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 0.75rem;
-	}
-
-	.panel h2 {
-		margin: 0;
-		font-size: 1.125rem;
-	}
-
-	.panel-summary {
-		margin: 0.25rem 0 0 0;
-		font-size: 0.9375rem;
-		color: var(--ink-secondary);
-	}
-
-	.filter-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(min(100%, 185px), 1fr));
-		gap: 0.75rem;
-		align-items: end;
-		padding: 0.875rem;
-		border-radius: 8px;
-		background: var(--bg-subtle);
-		border: 1px solid var(--border-default);
-	}
-
 	.field-group {
 		display: flex;
+		flex: 1;
 		flex-direction: column;
-		gap: 0.3rem;
-		min-width: 0;
+		gap: 0.35rem;
+		min-width: 135px;
 	}
-
 	.field-group label {
-		font-size: 0.8125rem;
-		font-weight: 600;
-		color: var(--ink-primary);
+		font-size: 0.75rem;
 	}
-
-	.field-group select,
-	.field-group input {
+	.field-group input,
+	.field-group select {
 		width: 100%;
-		min-width: 0;
-		padding: 0.45rem 0.65rem;
-		border-radius: 6px;
-		border: 1px solid var(--border-strong);
-		background: var(--bg-surface);
-		font-size: 0.875rem;
+		min-height: 40px;
+		padding: 0.5rem 0.7rem;
 	}
-
-	.field-group select:disabled {
-		background: var(--bg-subtle);
-		color: var(--ink-muted);
-		cursor: not-allowed;
+	.period-filter {
+		flex-basis: auto;
 	}
-
-	.filter-actions {
+	.period-filter:not([open]) .period-fields {
+		display: none;
+	}
+	.period-filter[open] {
+		flex-basis: 100%;
+		order: 2;
+	}
+	.period-trigger {
 		display: flex;
 		align-items: center;
-	}
-
-	.metrics-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
-		gap: 0.75rem;
-	}
-
-	.metric-card {
-		padding: 1rem;
-		border-radius: 10px;
-		border: 1px solid var(--border-default);
+		gap: 0.4rem;
+		min-height: 40px;
+		padding: 0.5rem 0.7rem;
+		font-size: 0.8rem;
+		color: var(--ink-secondary);
+		border: 1px solid var(--border-strong);
+		border-radius: 6px;
 		background: var(--bg-surface);
+		list-style: none;
+	}
+	.period-trigger::-webkit-details-marker {
+		display: none;
+	}
+	.period-filter[open] .period-trigger {
+		width: fit-content;
+		margin-bottom: 0.75rem;
+	}
+	.period-fields {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1rem;
+		padding-bottom: 0.5rem;
+	}
+	.reset-button {
+		font-size: 0.75rem;
+	}
+	.metrics-strip,
+	.metrics-loading {
+		display: grid;
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+		padding: 1.5rem 0;
+		border-block: 1px solid var(--border-default);
+	}
+	.metric {
+		padding: 0 1.2rem;
+		border-right: 1px solid var(--border-default);
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
 	}
-
-	.metric-card.highlight {
-		border-color: var(--accent-border);
-		background: var(--accent-surface);
+	.metric:first-child {
+		padding-left: 0;
 	}
-
-	.metric-label {
-		font-size: 0.8125rem;
-		font-weight: 600;
+	.metric:last-child {
+		padding-right: 0;
+		border-right: 0;
+	}
+	.metric > span {
+		font-size: 0.75rem;
+		font-weight: 500;
 		color: var(--ink-secondary);
 	}
-
-	.metric-value {
-		font-size: 1.75rem;
-		line-height: 1.15;
-		font-weight: 700;
+	.metric strong {
+		margin: 0.35rem 0 0.25rem;
+		font-size: 2.1rem;
+		font-weight: 550;
+		line-height: 1.3;
+		letter-spacing: -0.04em;
 		font-variant-numeric: tabular-nums;
-		color: var(--ink-primary);
 	}
-
-	.metric-hint {
+	.count-note {
+		max-width: none;
+		margin: 0.7rem 0 0;
 		font-size: 0.75rem;
 		color: var(--ink-muted);
 	}
-
-	.state-box {
-		padding: 1rem;
-		border-radius: 8px;
-		border: 1px solid var(--border-default);
-		background: var(--bg-subtle);
-		font-size: 0.875rem;
-		color: var(--ink-secondary);
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
+	.count-note strong {
+		font-weight: 500;
 	}
-
-	.summary-meta-note {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem 1.5rem;
-		padding-top: 0.75rem;
-		border-top: 1px solid var(--border-default);
-		font-size: 0.8125rem;
-		color: var(--ink-secondary);
-		overflow-wrap: anywhere;
-	}
-
-	.summary-meta-note code {
-		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-		font-size: 0.78rem;
-		background: var(--bg-subtle);
-		padding: 0.1rem 0.35rem;
-		border-radius: 4px;
-	}
-
-	.status-tag {
-		display: inline-flex;
-		align-items: center;
-		padding: 0.2rem 0.65rem;
-		border-radius: 6px;
-		font-size: 0.8125rem;
-		font-weight: 600;
-		font-variant-numeric: tabular-nums;
-		border: 1px solid var(--border-default);
-		background: var(--bg-subtle);
-		color: var(--ink-secondary);
-	}
-
-	.status-tag[data-tone='ok'] {
-		background: var(--status-ok-bg);
-		border-color: var(--status-ok-border);
-		color: var(--status-ok-ink);
-	}
-
-	.status-tag[data-tone='warn'] {
-		background: var(--status-warn-bg);
-		border-color: var(--status-warn-border);
-		color: var(--status-warn-ink);
-	}
-
-	.spec-grid {
-		margin: 0;
-		display: flex;
-		flex-direction: column;
-		border-top: 1px solid var(--border-default);
-	}
-
-	.spec-row {
+	.dashboard-columns {
 		display: grid;
-		grid-template-columns: 240px minmax(0, 1fr);
-		gap: 0.75rem 1.25rem;
-		padding: 0.75rem 0;
-		border-bottom: 1px solid var(--border-default);
-		font-size: 0.9375rem;
+		grid-template-columns: minmax(0, 1.3fr) minmax(310px, 1fr);
+		gap: 1.5rem;
 	}
-
-	.spec-row:last-child {
-		border-bottom: none;
+	.attention-panel,
+	.readiness-panel {
+		padding: 1.5rem;
+		background: var(--bg-surface);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius);
+	}
+	.first-inspection {
+		padding-bottom: 1.25rem;
+	}
+	.first-inspection h3 {
+		font-size: 1.1rem;
+		margin: 0 0 0.5rem;
+	}
+	.first-inspection p {
+		margin: 0 0 1rem;
+		color: var(--ink-secondary);
+		font-size: 0.85rem;
+		line-height: 1.7;
+	}
+	.agenda-row {
+		display: flex;
+		align-items: center;
+		gap: 0.9rem;
+		padding: 1.15rem 0;
+		border-top: 1px solid var(--border-default);
+		text-decoration: none;
+		color: var(--ink-secondary);
+	}
+	.agenda-row:last-child {
 		padding-bottom: 0;
 	}
-
-	.spec-row dt {
-		font-weight: 600;
-		color: var(--ink-secondary);
+	.agenda-row > span:first-of-type {
+		flex: 1;
 	}
-
-	.spec-row dd {
-		margin: 0;
+	.agenda-row strong,
+	.agenda-row strong {
+		font-size: 0.85rem;
 		color: var(--ink-primary);
-		font-variant-numeric: tabular-nums;
-		min-width: 0;
-		overflow-wrap: anywhere;
+		font-weight: 550;
 	}
-
-	.spec-row code {
-		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-		font-size: 0.8125rem;
-		background: var(--bg-subtle);
-		padding: 0.1rem 0.4rem;
-		border-radius: 4px;
-		margin-left: 0.35rem;
-		overflow-wrap: anywhere;
+	.agenda-row:hover strong {
+		color: var(--accent-primary);
 	}
-
-	.muted {
+	.status-label {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-size: 0.75rem;
+		white-space: nowrap;
+		color: var(--status-warn-ink);
+	}
+	.status-label[data-tone='ok'] {
+		color: var(--status-ok-ink);
+	}
+	.status-label[data-tone='err'] {
+		color: var(--status-err-ink);
+	}
+	.status-dot {
+		width: 6px;
+		height: 6px;
+		background: currentColor;
+		border-radius: 50%;
+	}
+	.readiness-summary {
+		margin: 0 0 1.4rem;
+		font-size: 0.83rem;
 		color: var(--ink-secondary);
+		line-height: 1.7;
 	}
-
-	.block-note {
-		display: block;
-		margin-top: 0.2rem;
-		font-size: 0.8125rem;
-		color: var(--ink-secondary);
+	.category-heading {
+		font-size: 0.75rem;
+		font-weight: 550;
+		margin-bottom: 0.55rem;
 	}
-
 	.category-list {
 		list-style: none;
 		margin: 0;
 		padding: 0;
-		display: flex;
-		flex-direction: column;
-		border-top: 1px solid var(--border-default);
 	}
-
-	.category-row {
+	.category-list li {
 		display: flex;
-		flex-wrap: wrap;
 		align-items: center;
 		justify-content: space-between;
-		gap: 0.75rem;
-		padding: 0.75rem 0;
+		gap: 1rem;
+		padding: 0.65rem 0;
 		border-bottom: 1px solid var(--border-default);
-	}
-
-	.category-row:last-child {
-		border-bottom: none;
-		padding-bottom: 0;
-	}
-
-	.category-info {
-		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
-		min-width: 0;
-	}
-
-	.category-info strong {
-		font-size: 0.9375rem;
-	}
-
-	.category-info span {
-		font-size: 0.8125rem;
+		font-size: 0.75rem;
 		color: var(--ink-secondary);
 	}
-
-	.notice-panel {
-		background: var(--bg-subtle);
+	.category-list strong {
+		font-size: 0.75rem;
+		font-weight: 500;
+		white-space: nowrap;
 	}
-
-	.notice-panel p {
+	.category-list strong[data-supported='true'] {
+		color: var(--status-ok-ink);
+	}
+	.system-details {
+		margin-top: 1.1rem;
+		font-size: 0.75rem;
+		color: var(--ink-secondary);
+	}
+	.system-details summary {
+		padding-block: 0.25rem;
+	}
+	.system-details dl {
+		margin: 0.75rem 0;
+	}
+	.system-details dl div {
+		display: grid;
+		grid-template-columns: 110px minmax(0, 1fr);
+		gap: 0.5rem;
+		padding: 0.45rem 0;
+	}
+	.system-details dd {
 		margin: 0;
-		font-size: 0.875rem;
-		color: var(--ink-secondary);
+		overflow-wrap: anywhere;
 	}
-
-	@media (max-width: 720px) {
-		.panel {
-			padding: 1rem;
+	.refresh-button {
+		margin: 0.8rem 0 -0.4rem -0.6rem;
+		padding-inline: 0.6rem;
+		font-size: 0.72rem;
+	}
+	.workspace-note {
+		display: flex;
+		gap: 0.65rem;
+		align-items: flex-start;
+		color: var(--ink-muted);
+		padding-top: 0.25rem;
+	}
+	.workspace-note p {
+		margin: 0;
+		font-size: 0.73rem;
+		max-width: 100ch;
+	}
+	.inline-message {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		padding: 0.85rem 1rem;
+		margin-bottom: 1rem;
+		border-radius: 6px;
+		font-size: 0.85rem;
+	}
+	.inline-message.error {
+		background: var(--status-err-bg);
+		color: var(--status-err-ink);
+	}
+	.inline-message.warning {
+		background: var(--status-warn-bg);
+		color: var(--status-warn-ink);
+	}
+	.skeleton-metric {
+		padding: 0 1rem;
+	}
+	.skeleton-metric span,
+	.skeleton-metric strong {
+		display: block;
+		height: 10px;
+		width: 70%;
+		background: var(--bg-subtle);
+		border-radius: 3px;
+	}
+	.skeleton-metric strong {
+		height: 35px;
+		width: 35%;
+		margin-top: 1rem;
+	}
+	@media (max-width: 1150px) {
+		.dashboard-columns {
+			grid-template-columns: 1fr;
 		}
-
-		.header-actions {
+		.metric {
+			padding-inline: 0.8rem;
+		}
+	}
+	@media (max-width: 760px) {
+		.workspace-stack {
+			gap: 1.7rem;
+		}
+		.workspace-header {
+			align-items: flex-start;
+			flex-direction: column;
+			gap: 1rem;
+		}
+		.workspace-header > a {
 			width: 100%;
 		}
-
-		.secondary-link,
-		.refresh-button,
-		.filter-actions .secondary-button {
-			width: 100%;
-			min-height: 2.75rem;
-			text-align: center;
+		.section-heading {
+			margin-bottom: 1rem;
 		}
-
-		.spec-row {
-			grid-template-columns: minmax(0, 1fr);
-			gap: 0.25rem;
+		.mode-tag {
+			font-size: 0.7rem;
 		}
-
-		.spec-row code {
-			margin-left: 0;
+		.filter-row {
+			gap: 0.75rem;
+			margin-bottom: 1.2rem;
+		}
+		.field-group {
+			flex-basis: calc(50% - 0.5rem);
+			min-width: 0;
+		}
+		.filter-row > .field-group:nth-child(3) {
+			flex-basis: 100%;
+		}
+		.period-filter {
+			flex: 1;
+		}
+		.period-trigger {
+			min-height: 44px;
+		}
+		.period-filter[open] {
+			flex-basis: 100%;
+		}
+		.period-fields {
+			flex-direction: column;
+		}
+		.metrics-strip,
+		.metrics-loading {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			padding: 0;
+		}
+		.metric {
+			padding: 1rem 0.5rem;
+			border: 0;
+			border-bottom: 1px solid var(--border-default);
+		}
+		.metric:first-child {
+			padding-left: 0.5rem;
+		}
+		.metric:nth-child(odd) {
+			border-right: 1px solid var(--border-default);
+		}
+		.metric:nth-child(even) {
+			padding-left: 1.2rem;
+		}
+		.metric:last-child {
+			grid-column: 1 / -1;
+			border: 0;
+			padding-left: 0.5rem;
+		}
+		.metric strong {
+			font-size: 1.9rem;
+		}
+		.count-note {
+			line-height: 1.7;
+		}
+		.dashboard-columns {
+			gap: 1rem;
+		}
+		.attention-panel,
+		.readiness-panel {
+			padding: 1.15rem;
+		}
+		.agenda-row {
+			gap: 0.65rem;
+		}
+		.category-list li {
+			font-size: 0.75rem;
+		}
+		.inline-message {
+			flex-wrap: wrap;
 		}
 	}
 </style>

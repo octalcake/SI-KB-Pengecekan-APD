@@ -31,25 +31,19 @@
 {#if authSession.status === 'idle' || authSession.status === 'checking'}
 	<main class="bootstrap-screen" aria-busy="true">
 		<section class="bootstrap-panel" role="status" aria-live="polite">
-			<h1>Memeriksa Sesi Petugas K3...</h1>
-			<p>
-				Menghubungi layanan autentikasi untuk memulihkan sesi dan kesiapan sistem inspeksi.
-			</p>
+			<h1>Memeriksa akun...</h1>
 		</section>
 	</main>
 {:else if authSession.status === 'error'}
 	<main class="bootstrap-screen">
 		<section class="bootstrap-panel error" role="alert">
-			<h1>Layanan Backend Tidak Terjangkau</h1>
+			<h1>Server belum terhubung</h1>
 			<p>
-				{authSession.bootstrapError ??
-					'Tidak dapat memverifikasi sesi ke server Go (/api/v1). Pastikan layanan backend sedang berjalan.'}
+				{authSession.bootstrapError ?? 'Coba lagi. Kalau masih gagal, hubungi operator.'}
 			</p>
 			<div class="recovery-actions">
-				<button type="button" class="retry-btn" onclick={retryBootstrap}>
-					Coba Lagi
-				</button>
-				<a href="/login" class="login-link">Buka Halaman Masuk</a>
+				<button type="button" class="retry-btn" onclick={retryBootstrap}> Coba lagi </button>
+				<a href="/login" class="login-link">Masuk lagi</a>
 			</div>
 		</section>
 	</main>

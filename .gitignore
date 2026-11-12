@@ -4,3 +4,4 @@ backend/storage/
 ai-service/.venv/
 __pycache__/
 *.pyc
+.impeccable/review/
