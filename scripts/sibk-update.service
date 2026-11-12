@@ -1,0 +1,10 @@
+[Unit]
+Description=Pull and activate a CI-approved SIBK release
+After=network-online.target
+
+[Service]
+Type=oneshot
+Environment=PATH=%h/.local/bin:%h/.bun/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/python3 %h/.local/share/sibk/update.py --root %h/apps/sibk
+TimeoutStartSec=30min
+UMask=0077

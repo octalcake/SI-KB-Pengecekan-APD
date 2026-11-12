@@ -1,0 +1,99 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: sibk-production
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Publish production release
+    if: >-
+      github.repository == 'octalcake/SI-KB-Pengecekan-APD' &&
+      (github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      REVISION: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - name: Require passing CI for the current main commit
+        id: gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          main=$(gh api "repos/$GH_REPO/commits/main" --jq .sha)
+          if [[ "$REVISION" != "$main" ]]; then
+            echo 'A newer main commit exists; skip this release.'
+            echo 'current=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          passed=$(gh api "repos/$GH_REPO/actions/workflows/ci.yml/runs?branch=main&event=push&status=success&per_page=100" \
+            --jq ".workflow_runs[] | select(.head_sha == \"$REVISION\") | .id" | head -n 1)
+          test -n "$passed"
+          echo 'current=true' >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v7
+        if: steps.gate.outputs.current == 'true'
+        with:
+          ref: ${{ env.REVISION }}
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        if: steps.gate.outputs.current == 'true'
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Check the deployment updater
+        if: steps.gate.outputs.current == 'true'
+        run: python3 -m unittest discover -s scripts -p 'test_*.py' -v
+      - name: Package Linux release
+        if: steps.gate.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir dist
+          git archive HEAD | tar -x -C dist
+          (cd backend && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -o ../dist/backend/bin/api ./cmd/api)
+          printf '%s\n' "$REVISION" > dist/REVISION
+          tar -czf sibk-linux-amd64.tar.gz -C dist .
+          sha256sum sibk-linux-amd64.tar.gz > SHA256SUMS
+      - name: Publish complete release for the host updater
+        if: steps.gate.outputs.current == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          main=$(gh api "repos/$GH_REPO/commits/main" --jq .sha)
+          if [[ "$REVISION" != "$main" ]]; then
+            echo 'Main changed during packaging; the next passing CI run will release it.'
+            exit 0
+          fi
+          tag="sibk-$REVISION"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --target "$REVISION" --draft \
+              --title "SIBK production ${REVISION:0:12}" \
+              --notes 'CI passed. The host updater downloads this bundle, verifies its checksum, stages dependencies, backs up SQLite, and activates it with health checks and rollback.'
+          fi
+          # A failed draft upload can be retried without exposing a partial release.
+          draft=$(gh release view "$tag" --json isDraft --jq .isDraft)
+          if [[ "$draft" == true ]]; then
+            gh release upload "$tag" sibk-linux-amd64.tar.gz SHA256SUMS --clobber
+            gh release edit "$tag" --draft=false --latest
+          fi
+          echo "### Release: [$tag](https://github.com/$GH_REPO/releases/tag/$tag)" >> "$GITHUB_STEP_SUMMARY"
+          echo 'The host checks for releases every two minutes. This job confirms publication; activation is recorded in the host updater journal and .deploy/status.json.' >> "$GITHUB_STEP_SUMMARY"
