@@ -73,6 +73,6 @@ GitHub Actions menjalankan [CI](.github/workflows/ci.yml) pada setiap pull reque
 - **Backend**: `go vet`, seluruh pengujian unit/HTTP dengan race detector, dan `go build`.
 - **AI service**: Python 3.12, dependensi API yang dibatasi `requirements.lock`, pemeriksaan dependensi, kompilasi modul, dan `pytest tests`. Pengujian memakai fake detector/simulasi; akurasi model YOLO dan API Gemini nyata tidak diuji.
 
-Pengujian memakai SQLite dan direktori bukti sementara, tanpa kredensial produksi atau GitHub Secrets. Tidak ada deployment otomatis. Agar kegagalan CI memblokir merge, administrator repositori perlu mewajibkan status **Frontend**, **Backend**, dan **AI service** pada branch protection/ruleset `main` setelah workflow pertama berjalan.
+Pengujian memakai SQLite dan direktori bukti sementara, tanpa kredensial produksi atau GitHub Secrets. Setelah CI pada `main` lulus, workflow [CD](.github/workflows/cd.yml) memublikasikan release yang dipasang otomatis oleh host; lihat [panduan deployment](docs/continuous-deployment.md) untuk verifikasi, backup, dan rollback. Agar kegagalan CI memblokir merge, administrator repositori perlu mewajibkan status **Frontend**, **Backend**, dan **AI service** pada branch protection/ruleset `main` setelah workflow pertama berjalan.
 
 dbmate: https://github.com/amacneil/dbmate#installation (atau pakai `docker compose run --rm migrate`).
